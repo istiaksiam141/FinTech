@@ -2,11 +2,19 @@
 
 ## Exchange rate
 
-The app contains no hard-coded FX rates. The student enters the current rate in BDT per unit of tuition currency, along with its source/reference and timestamp. Tuition cost in BDT is:
+The planner expects `1 unit of destination currency = rate BDT` (for example, BDT per GBP). The rate can be entered manually with a source and timestamp, or fetched on request as an indicative reference. Tuition cost in BDT is:
 
-`tuition × student-entered BDT-per-destination-currency rate`
+`tuition × BDT-per-destination-currency rate`
 
-The app does not query or verify the source and reports that limitation beside the result and in the exported report. Verify current rates directly with a payment provider or authorized-dealer bank.
+### Bangladesh Bank published rates
+
+The Vercel function `GET /api/exchange-rates` fetches the official [Bangladesh Bank exchange-rate sheet](https://www.bb.org.bd/en/index.php/econdata/exchangerate) server-side. The official page currently presents a dated HTML table and links to date-specific XLS and PDF files. On 13 October 2026, the linked files were `https://www.bb.org.bd/econdata/exchange_rate/exchange_rate_13_10_2026.xls` (XLS) and `https://www.bb.org.bd/econdata/exchange_rate/exchange_rate_13_10_2026.pdf` (PDF); the date in the file path changes with the sheet. No documented JSON API for this sheet was found. The HTML parser validates the publication date, expected bid/ask table headers, supported rows, numeric values, and response content type. It fails closed on missing or changed layout. This is still page scraping and an upstream markup change can require parser maintenance; it is not represented as a guaranteed stable feed.
+
+The tested sheet includes GBP/BDT, USD/BDT, and CAD/BDT. Those are directly quoted as BDT per one unit of the named currency, matching the planner direction; no inversion is required. The planner estimate uses the published **ask** for all three currencies because a student planning to buy foreign currency should use the higher side for a conservative estimate. The UI and source field identify this ASK selection. The published USD weighted-average rate (WAR) is preserved and shown separately; it is not substituted for ask. The source explains USD bid/ask represent highest/lowest interbank rates at the previous Dhaka close and cross rates use New York and Dhaka closing rates. Bangladesh Bank says the schedule applies to its purchase/sale transactions with the Government and international organizations, so it is not a student's guaranteed bank or payment-provider rate.
+
+The endpoint returns source name and URL, official publication date, server retrieval timestamp, bid, ask, and USD WAR. It returns a 502 error on upstream failures or malformed data, with no invented fallback. Vercel caches successful responses for 30 minutes and may serve them stale-while-revalidating for another 30 minutes; the original publication and retrieval times remain in the response. The client reads Vercel's `x-vercel-cache: STALE` response state and also marks data stale after either five days without a newer official sheet (an application assumption allowing weekends/holidays) or two hours without a successful server retrieval. Stale values cannot be applied, and the original dates remain visible. Students can always enter a sourced manual rate; fetching never overwrites it automatically. Static local previews without Vercel's `/api` route will show an API error and retain manual entry.
+
+The rate is used at full numeric precision and formatted for display only. These are official published reference rates, not executable bank, university, or payment-provider prices. Confirm actual payment terms with the authorized dealer or university-approved provider. Exchange-rate handling does not change the Phase 1 30-day savings contribution schedule.
 
 ## Tuition gap and usable funds
 
@@ -14,16 +22,24 @@ The app does not query or verify the source and reports that limitation beside t
 - `usableFunds = max(0, savings − protectedEmergencyFund − committedFunds)`
 - `fundingGap = max(0, requiredFunds − usableFunds)`
 - `monthlySurplus = monthlyIncome − monthlyLivingCosts`
-- `monthlySavingsTarget = fundingGap ÷ monthsUntilDeadline`
-- `projectedSavingsCapacity = max(0, monthlySurplus) × floor(daysToDeadline ÷ 30)`
+- A contribution date occurs every 30 full days, starting 30 days from today. Contributions before the first date are not assumed.
+- `contributionDates = floor(daysToDeadline ÷ 30)`
+- `monthlySavingsTarget = fundingGap ÷ contributionDates` when `contributionDates > 0` and the funding gap is positive; if there is no gap, the target is zero.
+- If a positive gap remains but there are no contribution dates before the deadline, the monthly target is unavailable; no monthly contribution can be counted.
+- `projectedSavingsCapacity = max(0, monthlySurplus) × contributionDates`
+- `projectedShortfall = max(0, fundingGap − projectedSavingsCapacity)`
 
-Known one-time payment fees should be entered once in the planner. Quote comparison is separate; do not add those quote fees to the profile fee estimate again. The deadline projection assumes full 30-day savings cycles and no income, expense, exchange-rate, or fee changes. It is not a guarantee.
+When there is at least one contribution date, the target is divided evenly over those scheduled dates, so saving the target on every date sums to the funding gap. Known one-time payment fees should be entered once in the planner. Quote comparison is separate; do not add those quote fees to the profile fee estimate again. The deadline projection assumes each full 30-day contribution is made on time and no income, expense, exchange-rate, or fee changes. It is not a guarantee.
 
 ## Quote comparison
 
-The student must enter quotes for the same principal, payment purpose, destination, and recipient: total amount debited in BDT (including provider costs), recipient amount, any separately stated fee, delivery estimate, quote timestamp, and quote source/reference. Effective rate is derived as `total BDT sender cost ÷ destination-currency recipient amount`.
+Each manually entered quote must provide a provider/name, a recipient currency matching the selected corridor, a positive BDT payment principal in the comparison controls, a total sender cost in BDT that is at least that principal, a positive recipient amount, a quote source/reference, and a valid local timestamp in `YYYY-MM-DDTHH:mm` form. The principal, total sender cost, recipient amount, fee, and quoted rate must be finite and no greater than 1,000,000,000,000; total and recipient amounts must be positive, fees non-negative and no greater than the sender total, and a supplied quoted rate positive. A separately stated fee and quoted rate are optional. Delivery days are optional except for speed ranking. A valid supplied estimate must be a whole number from 0 to 365. A missing or invalid estimate is displayed as “not provided” and does not disqualify a quote from cost or recipient-amount ranking; it does disqualify that quote from speed ranking.
 
-Quotes rank by lowest entered sender cost, highest entered recipient amount, or fastest entered delivery days. Quotes without valid cost/recipient values or a timestamp and source reference are excluded. Quotes without a delivery estimate are excluded from speed rankings. The app does not validate whether entries are authentic, current, available for the student's institution, or inclusive of intermediary/receiving-bank charges.
+**Freshness rule:** timestamps use the student's device local time because the quote form uses a local date/time input. Future-dated timestamps are rejected. Quotes more than 24 hours old are rejected; a quote exactly 24 hours old is accepted. This 24-hour maximum is a conservative application default (`QUOTE_MAX_AGE_MS`) that can be changed in the finance module. It is not a provider expiry rule; students must still check the provider's stated expiry and terms.
+
+The same quote validation and ranking result feeds the comparison view and the exported report. Only eligible quotes are listed as comparison results in the report; excluded quote entries are listed with their validation reason. A missing delivery estimate excludes a quote only from speed ranking, not from cost or recipient-amount ranking. Quotes are compared only when their recipient currency matches the selected destination currency.
+
+These checks validate the fields the student typed. They do **not** authenticate the source/reference, verify that a provider issued the quote, confirm route availability for the student's institution, or check the fee scope/intermediary charges. A quote passing validation is still a manually entered, unverified quote. Effective rate can be calculated for explanation as `total BDT sender cost ÷ destination-currency recipient amount`, but the application does not independently confirm that rate against the provider.
 
 ## Validation
 

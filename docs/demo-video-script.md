@@ -1,10 +1,10 @@
 # CampusBridge walkthrough (about 3 minutes)
 
 **0:00–0:25 — Scope**  
-“CampusBridge helps Bangladesh-based students plan tuition and compare payment quotes. It does not supply exchange rates or fabricate provider offers. No direct payment connection is configured.”
+ “CampusBridge helps Bangladesh-based students plan tuition and compare payment quotes. It can retrieve Bangladesh Bank's latest published FX sheet through a Vercel endpoint, but the reference rate is not a guaranteed bank or payment-provider price. No payment connection is configured.”
 
 **0:25–1:10 — Enter current student data**  
-Choose Bangladesh → UK, enter tuition and the student's actual financial figures, then enter the exchange rate from a current bank or provider quote with its source and timestamp. Explain that the result is only as current and accurate as those inputs.
+Choose Bangladesh → UK, enter tuition and the student's actual financial figures, then either enter a sourced manual rate or load the Bangladesh Bank sheet and explicitly apply its ask value as an estimate. Explain that the official reference is not a student payment price and show its publication and retrieval timestamps.
 
 **1:10–1:45 — Plan and what-if**  
 Calculate the funding gap, protected reserve, monthly target, and deadline projection. Adjust scenario savings and monthly savings, preview the change, then apply or reset it.

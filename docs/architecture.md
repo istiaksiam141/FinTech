@@ -2,7 +2,7 @@
 
 ## Current app
 
-Static browser app. `index.html` holds the student journey; `app.js` manages local state, provider handoff links, quote forms, report generation, and UI; `lib/finance.js` validates and calculates tuition affordability and ranks user-entered quotes. There is no server or remote API.
+Static browser app deployed with one Vercel serverless function. `index.html` holds the student journey; `app.js` manages local state, provider handoff links, quote forms, report generation, and UI; `lib/finance.js` validates and calculates tuition affordability and ranks user-entered quotes; `lib/exchange-rates.js` validates responses; `lib/bangladesh-bank-rates.js` fetches/parses the official Bangladesh Bank HTML page; `api/exchange-rates.js` exposes validated data at `/api/exchange-rates`. The Vercel function is the only server-side component; it does not receive or store student financial profiles. The official source currently has no documented JSON API, so its HTML parser is strict and may need maintenance if the bank changes the page markup.
 
 ```mermaid
 flowchart LR
