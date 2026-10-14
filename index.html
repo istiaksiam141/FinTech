@@ -50,7 +50,8 @@
         <div class="rateApiTools"><div class="inlineButtons"><button class="button" id="refreshExchangeRate" type="button">Refresh Bangladesh Bank rates</button><button class="button" id="useExchangeRate" type="button" hidden disabled>Use this official rate</button></div><p id="exchangeRateStatus" class="assumptionNote" role="status" aria-live="polite">Manual rate entry is available. Official Bangladesh Bank data loads automatically when available and applies only after you choose it.</p><p class="small muted">Official published reference rates are not guaranteed tuition-payment prices. Source: <a href="https://www.bb.org.bd/en/index.php/econdata/exchangerate" target="_blank" rel="noreferrer">Bangladesh Bank exchange-rate sheet ↗</a>. The published reference may differ from your authorized-dealer/provider quote.</p></div>
         <label>Rate source (bank/provider or official reference)<input id="rateSource" type="text" maxlength="180" required></label>
         <label>Rate timestamp (local time)<input id="rateTimestamp" type="datetime-local" required></label>
-        <label>Savings (BDT)<input id="savings" type="number" min="0" step="any" required></label>
+        <label>Other savings outside listed accounts (BDT)<input id="savings" type="number" min="0" step="any"></label>
+        <div class="rateApiTools" id="bankAccountsPanel"><h3>Bank accounts (manual balances)</h3><p class="small muted">Add a label and current BDT balance. Do not enter an account number, password, card number, or one-time code. CampusBridge does not connect to your bank. Entries stay in this browser tab and clear when you reload or clear the planner.</p><div class="fieldGrid"><label for="bankAccountLabel">Account label<input id="bankAccountLabel" type="text" maxlength="60" placeholder="For example, Student savings"></label><label for="bankAccountBalance">Balance (BDT)<input id="bankAccountBalance" type="number" min="0" step="any" inputmode="decimal"></label></div><div class="inlineButtons"><button class="button" id="addBankAccount" type="button">Add account balance</button></div><div id="bankAccountError" class="error" role="alert"></div><ul id="bankAccountList" class="activityLog" aria-live="polite"></ul><p id="bankAccountTotal" class="assumptionNote" aria-live="polite">Added account balances: 0 BDT. The planner adds listed balances to other savings.</p></div>
         <label>Protected emergency fund (BDT)<input id="emergency" type="number" min="0" step="any" required></label>
         <label>Committed savings (BDT)<input id="committed" type="number" min="0" step="any"></label>
         <label>Monthly income (BDT)<input id="income" type="number" min="0" step="any" required></label>
@@ -100,6 +101,7 @@
   </main>
   <footer class="footer"><div class="wrap footerRow"><a class="brand" href="#home"><span class="brandmark" aria-hidden="true">C</span>CampusBridge</a><span>Live bank and payment integrations are not configured in this build.</span><span>© 2026 CampusBridge · Product prototype</span></div></footer>
   <script src="lib/finance.js"></script>
+  <script src="lib/bank-accounts.js"></script>
   <script src="data/finance-guidance.js"></script>
   <script src="lib/exchange-rates.js"></script>
   <script src="app.js"></script>

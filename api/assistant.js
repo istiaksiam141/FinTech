@@ -82,7 +82,7 @@ function createAssistantHandler({ env = process.env, createClient, rateLimiter =
 
     const limit = rateLimiter(requestIdentity(request));
     if (!limit.allowed) return sendJson(response, 429, { error: "Too many assistant requests. Please wait before trying again." }, { "Retry-After": String(limit.retryAfterSeconds) });
-
+    console.log("CampusBridge key loaded:", Boolean(env.OPENAI_API_KEY?.trim()));
     const apiKey = typeof env.OPENAI_API_KEY === "string" ? env.OPENAI_API_KEY.trim() : "";
     if (!apiKey) {
       const requestId = randomUUID();

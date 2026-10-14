@@ -18,6 +18,7 @@ navlinks.querySelectorAll("a").forEach(link => link.addEventListener("click", ()
 window.addEventListener("scroll", updateHeader, { passive: true }); window.addEventListener("resize", updateHeader, { passive: true }); updateHeader();
 
 const Finance = window.CampusBridgeFinance;
+const BankAccounts = window.CampusBridgeBankAccounts;
 const guidance = window.CampusBridgeGuidance || [];
 const ExchangeRates = window.CampusBridgeExchangeRates;
 const byId = id => document.getElementById(id);
@@ -25,7 +26,7 @@ const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&am
 const corridorMap = { UK: { country: "United Kingdom", currency: "GBP", label: "United Kingdom" }, US: { country: "United States", currency: "USD", label: "United States" }, CA: { country: "Canada", currency: "CAD", label: "Canada" } };
 const providerDefs=[{id:"convera",name:"Convera GlobalPay for Students",note:"Institution participation and Bangladesh-origin route must be confirmed."},{id:"flywire",name:"Flywire",note:"Use the payment link supplied by your university; origin options vary."},{id:"bank",name:"Authorized-dealer bank wire",note:"Get current written terms directly from your bank."}];
 const localDate = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
-let latest = null; let activity = [];
+let latest = null; let activity = []; let bankAccounts = []; let nextBankAccountId = 1;
 const exchangeRateState = { lastResponse: null, nextRequestAt: 0, pending: false, mode: "manual", appliedCurrency: null, appliedUpdatedAtMs: null, appliedNextUpdateAtMs: null, selectedCurrency: "GBP", staleTimer: null };
 const FX_MIN_REQUEST_INTERVAL = 30 * 60 * 1000;
 const money = (n, cur = "BDT") => `${new Intl.NumberFormat("en", { maximumFractionDigits: cur === "BDT" ? 0 : 2 }).format(n)} ${cur}`;
@@ -125,8 +126,31 @@ function handleManualRateEdit(event) {
 }
 function profile() {
   const c = corridorMap[byId("corridor").value];
-  return { homeCountry: "Bangladesh", destinationCountry: c.country, homeCur: "BDT", tuitionCur: c.currency, tuition: byId("tuition").value, exchangeRate: byId("exchangeRate").value, rateSource: byId("rateSource").value, rateTimestamp: byId("rateTimestamp").value, savings: byId("savings").value, emergency: byId("emergency").value, committed: byId("committed").value || 0, income: byId("income").value, expenses: byId("expenses").value, paymentFee: byId("paymentFee").value || 0, deadline: byId("deadline").value };
+  const manualSavings = byId("savings").value;
+  const savings = manualSavings === "" && bankAccounts.length === 0 ? "" : String(BankAccounts.totalSavings(manualSavings, bankAccounts));
+  return { homeCountry: "Bangladesh", destinationCountry: c.country, homeCur: "BDT", tuitionCur: c.currency, tuition: byId("tuition").value, exchangeRate: byId("exchangeRate").value, rateSource: byId("rateSource").value, rateTimestamp: byId("rateTimestamp").value, savings, emergency: byId("emergency").value, committed: byId("committed").value || 0, income: byId("income").value, expenses: byId("expenses").value, paymentFee: byId("paymentFee").value || 0, deadline: byId("deadline").value };
 }
+function renderBankAccounts() {
+  const list = byId("bankAccountList");
+  list.replaceChildren(...bankAccounts.map(account => {
+    const item = document.createElement("li");
+    const text = document.createElement("span"); text.textContent = `${account.label} — ${money(account.balance)}`;
+    const remove = document.createElement("button"); remove.type = "button"; remove.className = "button smallbtn"; remove.textContent = "Remove"; remove.setAttribute("aria-label", `Remove ${account.label}`);
+    remove.addEventListener("click", () => { bankAccounts = bankAccounts.filter(entry => entry.id !== account.id); renderBankAccounts(); if (latest) compute(); });
+    item.append(text, document.createTextNode(" "), remove);
+    return item;
+  }));
+  byId("bankAccountTotal").textContent = `Added account balances: ${money(BankAccounts.totalBalance(bankAccounts))}. The planner adds listed balances to other savings.`;
+}
+byId("addBankAccount").addEventListener("click", () => {
+  const validated = BankAccounts.validateAccount({ label: byId("bankAccountLabel").value, balance: byId("bankAccountBalance").value });
+  byId("bankAccountError").textContent = validated.ok ? "" : validated.error;
+  if (!validated.ok) return;
+  bankAccounts.push({ id: nextBankAccountId++, ...validated.account });
+  byId("bankAccountLabel").value = ""; byId("bankAccountBalance").value = "";
+  renderBankAccounts(); if (latest) compute();
+});
+renderBankAccounts();
 function refreshRate() { const c = corridorMap[byId("corridor").value]; byId("tuitionCurrencyLabel").textContent = `(${c.currency})`; byId("rateCurrencyLabel").textContent = `(BDT per ${c.currency})`; }
 function logEvent(tool, status, summary) {
   activity.unshift({ at: new Date().toLocaleString(), tool, status, summary }); activity = activity.slice(0, 20); renderLog();
@@ -161,7 +185,7 @@ byId("profileForm").addEventListener("submit", e=>{e.preventDefault();compute();
 byId("corridor").addEventListener("change",()=>{const currency=corridorMap[byId("corridor").value].currency;const changed=currency!==exchangeRateState.selectedCurrency;exchangeRateState.selectedCurrency=currency;if(changed&&["exchangeRate","rateSource","rateTimestamp"].some(id=>byId(id).value!=="")){for(const id of ["exchangeRate","rateSource","rateTimestamp"])byId(id).value="";exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;latest=null;if(exchangeRateState.lastResponse)renderFetchedRateStatus("Destination currency changed; the previous rate and its source/time were cleared.");else setExchangeRateStatus("Destination currency changed. The previous rate, source, and timestamp were cleared to avoid using the wrong currency. Enter or fetch a rate for the new currency.");}else renderFetchedRateStatus();refreshRate();renderQuoteForms();renderTransfers();if(byId("tuition").value||byId("exchangeRate").value)compute();});
 byId("transferAmount").addEventListener("input",renderTransfers); byId("sortBy").addEventListener("change",renderTransfers);
 byId("providerQuoteForms").addEventListener("input",renderTransfers);
-byId("resetProfile").addEventListener("click",()=>{byId("profileForm").reset();byId("corridor").value="UK";exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="GBP";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();byId("plannerResults").innerHTML='<p class="muted">Enter your figures and a current, source-identified exchange rate to calculate.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
+byId("resetProfile").addEventListener("click",()=>{byId("profileForm").reset();bankAccounts=[];nextBankAccountId=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="UK";exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="GBP";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();byId("plannerResults").innerHTML='<p class="muted">Enter your figures and a current, source-identified exchange rate to calculate.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
 byId("refreshExchangeRate").addEventListener("click",refreshExchangeRate);
 byId("useExchangeRate").addEventListener("click",useFetchedExchangeRate);
 for(const id of ["exchangeRate","rateSource","rateTimestamp"])byId(id).addEventListener("input",handleManualRateEdit);

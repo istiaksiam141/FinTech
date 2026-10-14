@@ -8,9 +8,9 @@
 
 ## Executive summary
 
-CampusBridge AI is a browser-based financial planning tool for students in Bangladesh who need to prepare for overseas tuition payments. It helps students organize their financial profile, calculate a tuition funding gap and savings target, compare payment quotes they obtain themselves, explore a what-if scenario, review explainable guidance, and download a report.
+CampusBridge AI is a browser-based financial planning tool for students in Bangladesh who need to prepare for overseas tuition payments. It helps students organize their financial profile, add manually entered bank account balances, calculate a tuition funding gap and savings target, compare payment quotes they obtain themselves, explore a what-if scenario, review explainable guidance, and download a report.
 
-The application is designed to use real student inputs rather than preset demo balances, fees, or provider offers. Calculations run locally in the browser. A Vercel endpoint retrieves Bangladesh Bank's dated exchange-rate sheet; the official reference is not a guaranteed student payment price. The app does not retrieve payment quotes, verify manually entered quotes, connect to bank accounts, or move money. Students can open official provider or university payment pages and enter the quote details they receive for comparison.
+The application is designed to use real student inputs rather than preset demo balances, fees, or provider offers. Calculations run locally in the browser. A Vercel endpoint retrieves Bangladesh Bank's dated exchange-rate sheet; the official reference is not a guaranteed student payment price. Students can enter account labels and current BDT balances manually; those values are combined with other savings in the planner and held only in page memory. The app does not retrieve payment quotes, verify manually entered quotes, connect to bank accounts, or move money. Students can open official provider or university payment pages and enter the quote details they receive for comparison.
 
 ## Problem and motivation
 
@@ -48,7 +48,7 @@ In scope are local financial planning, student-entered exchange-rate provenance,
 
 | Feature | Current status |
 |---|---|
-| Student financial profile and editable inputs | Implemented in browser; no account or server persistence |
+| Student financial profile and manual bank balances | Implemented in browser memory; no user login or server persistence |
 | Affordability and savings calculations | Implemented locally with validation and explicit input assumptions |
 | FX conversion | Supports student-entered rates and Bangladesh Bank published bid/ask data; planner estimate uses ask and is not a payment-provider price |
 | Transfer quote comparison | Compares quotes entered by the student; no provider quote API |

@@ -4,7 +4,7 @@ CampusBridge helps Bangladesh-based students plan tuition costs and compare curr
 
 ## Use
 
-Deploy the project to Vercel to use the official Bangladesh Bank rates endpoint. The planner starts blank. Enter your tuition, savings, protected emergency fund, income, living costs, and tuition deadline. You may enter a rate and its source/timestamp manually, or load the latest published Bangladesh Bank sheet. The fetched rate is only applied after you choose to use it. Calculations run locally in your browser.
+Deploy the project to Vercel to use the official Bangladesh Bank rates endpoint. The planner starts blank. Enter your tuition, other savings, protected emergency fund, income, living costs, and tuition deadline. You may add one or more bank account labels and current BDT balances; the planner adds those balances to other savings. You may enter a rate and its source/timestamp manually, or load the latest published Bangladesh Bank sheet. The fetched rate is only applied after you choose to use it. Calculations run locally in your browser.
 
 For payment comparison, enter the same payment principal and collect current quotes through the payment link listed by your university. CampusBridge compares student-entered total sender cost, recipient amount, fee detail, and delivery days. It requires a timestamp and quote source/reference; delivery time is required to rank by speed.
 
@@ -15,6 +15,7 @@ For payment comparison, enter the same payment principal and collect current quo
 - A comparison is only as accurate as the quote the student enters. CampusBridge cannot verify quote authenticity, currency conversion, expiry, eligibility, institution, or additional fees.
 - No preset user balances, tuition amounts, conversion rates, provider fees, or delivery estimates are included. Bangladesh Bank publishes dated rates; availability and freshness are shown in the interface.
 - Profile data and activity entries remain in the current page memory. Downloaded reports are generated locally.
+- Bank account entries are manual labels and BDT balances only. They remain in browser memory and are cleared on reload or when the planner is cleared. Do not enter account numbers or bank credentials. This feature does not connect to banks; bank-linking requires a separately approved provider integration.
 - General assistant questions can use the server-side OpenAI Responses API. The browser sends only the question; financial-plan and quote questions continue through the existing deterministic local code.
 
 ## Optional OpenAI assistant setup

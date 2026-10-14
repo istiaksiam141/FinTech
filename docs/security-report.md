@@ -2,8 +2,8 @@
 
 ## Current controls
 
-- Monetary fields start blank; the app does not provide balances, bank/payment-provider prices, fees, or provider quotes. It displays a dated Bangladesh Bank reference sheet through a validated Vercel endpoint.
-- Profile, quote comparison, deterministic financial assistant behavior, and report generation run locally in the browser. A narrow server-side assistant endpoint accepts only a question for general explanation; it does not accept profile or provider quote data. There is no account, database, analytics, or local-storage persistence.
+- Monetary fields start blank; the app does not provide preset balances, bank/payment-provider prices, fees, or provider quotes. Students may enter bank account labels and balances manually. It displays a dated Bangladesh Bank reference sheet through a validated Vercel endpoint.
+- Profile, manually entered bank account labels/balances, quote comparison, deterministic financial assistant behavior, and report generation run locally in the browser. Bank entries are memory-only and clear on reload/reset; they are not connected to a bank and must not include account numbers or credentials. A narrow server-side assistant endpoint accepts only a question for general explanation; it does not accept profile or provider quote data. There is no login, database, analytics, or local-storage persistence.
 - The planner requires a rate source and timestamp; comparison requires quote source/reference and timestamp. User-entered data is still unverified and labeled accordingly.
 - Numeric, date, corridor, and quote values are validated by the calculation engine.
 - Financial calculations and quote decisions stay on the local deterministic path. General questions may be sent to OpenAI through the backend; the OpenAI key remains server-side, and no profile or quote data is sent.
