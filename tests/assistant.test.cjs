@@ -86,16 +86,32 @@ test('assistant model is configurable server-side and has a documented default',
 });
 
 test('missing key and OpenAI errors return safe errors without leaking provider error details', async () => {
-  const missing = assistant.createAssistantHandler({ env: {}, createClient: () => { throw new Error('must not create'); } });
-  const unavailable = await invoke(missing, makeRequest());
-  assert.equal(unavailable.statusCode, 503);
-  assert.match(unavailable.body.error, /not configured/);
+  const logs = [];
+  const originalError = console.error, originalWarn = console.warn;
+  console.error = (...args) => logs.push(args);
+  console.warn = (...args) => logs.push(args);
+  try {
+    const missing = assistant.createAssistantHandler({ env: {}, createClient: () => { throw new Error('must not create'); } });
+    const unavailable = await invoke(missing, makeRequest());
+    assert.equal(unavailable.statusCode, 503);
+    assert.match(unavailable.body.error, /not configured/);
+    assert.match(unavailable.body.requestId, /^[0-9a-f-]{36}$/i);
 
-  const failing = assistant.createAssistantHandler({ env: { OPENAI_API_KEY: 'secret-value' }, createClient: () => ({ responses: { create: async () => { throw new Error('secret-value provider stack and prompt contents'); } } }) });
-  const failed = await invoke(failing, makeRequest());
-  assert.equal(failed.statusCode, 502);
-  assert.match(failed.body.error, /temporarily unavailable/);
-  assert.doesNotMatch(JSON.stringify(failed.body), /secret-value|prompt contents|provider stack/);
+    const failing = assistant.createAssistantHandler({ env: { OPENAI_API_KEY: 'secret-value' }, createClient: () => ({ responses: { create: async () => { const error = new Error('secret-value provider stack and prompt contents'); error.status = 401; error.code = 'invalid_api_key'; throw error; } } }) });
+    const failed = await invoke(failing, makeRequest());
+    assert.equal(failed.statusCode, 502);
+    assert.match(failed.body.error, /temporarily unavailable/);
+    assert.match(failed.body.requestId, /^[0-9a-f-]{36}$/i);
+    assert.doesNotMatch(JSON.stringify(failed.body), /secret-value|prompt contents|provider stack/);
+  } finally {
+    console.error = originalError;
+    console.warn = originalWarn;
+  }
+  const logText = JSON.stringify(logs);
+  assert.match(logText, /MISSING_OPENAI_API_KEY/);
+  assert.match(logText, /invalid_api_key/);
+  assert.match(logText, /401/);
+  assert.doesNotMatch(logText, /secret-value|prompt contents|provider stack/);
 });
 
 test('assistant applies per-instance request limits and returns Retry-After', async () => {
@@ -117,13 +133,15 @@ test('assistant frontend sends only the prompt while local deterministic finance
   assert.match(app, /JSON\.stringify\(\{question:rawQuestion\}\)/);
   assert.match(app, /Finance\.calculateTuition/);
   assert.match(app, /Finance\.compareEnteredQuotes/);
-  assert.match(app, /AI assistant unavailable\. Here is local guidance instead/);
+  assert.match(app, /AI assistant unavailable\. \$\{safeFailure\}\\nHere is local guidance instead/);
+  assert.match(app, /typeof payload\.error==="string"\?payload\.error/);
   assert.match(app, /prompt and response omitted/);
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'api', 'assistant.js'), 'utf8'), /Only a question is accepted/);
   const questionSubmission = app.slice(app.indexOf('fetch("/api/assistant"'), app.indexOf('finally{button.disabled=false', app.indexOf('fetch("/api/assistant"')));
   assert.doesNotMatch(questionSubmission, /latest\.input|enteredQuotes\(|transferResults|profile\(\)/);
   const packageInfo = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
   assert.equal(packageInfo.dependencies.openai, '7.28.0');
+  assert.doesNotMatch(`${app}\n${fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8')}`, /OPENAI_API_KEY/);
   const ignore = fs.readFileSync(path.join(__dirname, '..', '.gitignore'), 'utf8');
   assert.match(ignore, /^\.env\.\*/m);
   assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '..', '.env.example'), 'utf8'), /sk-[A-Za-z0-9]{10,}/);

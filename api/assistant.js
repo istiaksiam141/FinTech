@@ -1,5 +1,6 @@
 "use strict";
 
+const { randomUUID } = require("node:crypto");
 const DEFAULT_MODEL = "gpt-4.1-mini";
 const MAX_QUESTION_CHARS = 1000;
 const MAX_BODY_BYTES = 4096;
@@ -61,6 +62,13 @@ function requestIdentity(request) {
   return String(raw).split(",")[0].trim().slice(0, 128) || "unknown";
 }
 
+function safeDiagnostic(error) {
+  const diagnostic = { type: typeof error?.name === "string" && /^[A-Za-z][A-Za-z0-9]{0,63}$/.test(error.name) ? error.name : "Error" };
+  if (Number.isInteger(error?.status) && error.status >= 100 && error.status <= 599) diagnostic.status = error.status;
+  if (typeof error?.code === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(error.code)) diagnostic.code = error.code;
+  return diagnostic;
+}
+
 function createAssistantHandler({ env = process.env, createClient, rateLimiter = createRateLimiter() } = {}) {
   let client;
   return async function assistantHandler(request, response) {
@@ -76,8 +84,13 @@ function createAssistantHandler({ env = process.env, createClient, rateLimiter =
     if (!limit.allowed) return sendJson(response, 429, { error: "Too many assistant requests. Please wait before trying again." }, { "Retry-After": String(limit.retryAfterSeconds) });
 
     const apiKey = typeof env.OPENAI_API_KEY === "string" ? env.OPENAI_API_KEY.trim() : "";
-    if (!apiKey) return sendJson(response, 503, { error: "The AI assistant is not configured. Local guidance is still available." });
+    if (!apiKey) {
+      const requestId = randomUUID();
+      console.warn("CampusBridge assistant is missing server configuration", { requestId, code: "MISSING_OPENAI_API_KEY" });
+      return sendJson(response, 503, { error: "The AI assistant is not configured. Local guidance is still available.", requestId });
+    }
 
+    const requestId = randomUUID();
     try {
       if (!client) {
         const OpenAI = createClient ? null : require("openai");
@@ -92,10 +105,14 @@ function createAssistantHandler({ env = process.env, createClient, rateLimiter =
         store: false
       });
       const answer = typeof result.output_text === "string" ? result.output_text.trim().slice(0, MAX_OUTPUT_CHARS) : "";
-      if (!answer) return sendJson(response, 502, { error: "The AI assistant returned no usable answer. Local guidance is still available." });
+      if (!answer) {
+        console.error("CampusBridge assistant returned no usable output", { requestId, code: "EMPTY_MODEL_OUTPUT" });
+        return sendJson(response, 502, { error: "The AI assistant returned no usable answer. Local guidance is still available.", requestId });
+      }
       return sendJson(response, 200, { answer });
-    } catch {
-      return sendJson(response, 502, { error: "The AI assistant is temporarily unavailable. Local guidance is still available." });
+    } catch (error) {
+      console.error("CampusBridge OpenAI request failed", { requestId, ...safeDiagnostic(error) });
+      return sendJson(response, 502, { error: "The AI assistant is temporarily unavailable. Local guidance is still available.", requestId });
     }
   };
 }
@@ -103,5 +120,5 @@ function createAssistantHandler({ env = process.env, createClient, rateLimiter =
 const handler = createAssistantHandler();
 handler.createAssistantHandler = createAssistantHandler;
 handler.createRateLimiter = createRateLimiter;
-handler.constants = Object.freeze({ DEFAULT_MODEL, MAX_QUESTION_CHARS, MAX_BODY_BYTES, MAX_OUTPUT_TOKENS, MAX_OUTPUT_CHARS, RATE_LIMIT_WINDOW_MS, RATE_LIMIT_REQUESTS });
+handler.constants = Object.freeze({ DEFAULT_MODEL, MAX_QUESTION_CHARS, MAX_BODY_BYTES, MAX_OUTPUT_TOKENS, MAX_OUTPUT_CHARS, RATE_LIMIT_WINDOW_MS, RATE_LIMIT_REQUESTS, safeDiagnostic });
 module.exports = handler;
