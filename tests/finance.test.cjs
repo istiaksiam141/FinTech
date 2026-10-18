@@ -18,43 +18,42 @@ function compare(input,quotes,now=quoteNow) { return Finance.compareEnteredQuote
 const apiNow = Date.UTC(2026,9,13,12,0,0);
 function officialHtml(overrides={}) {
   const { date='13/10/2026', gbp='162.8300', gbpAsk='163.0484', usd='123.3000', usdAsk='123.4000', war='123.3600', cad='86.3264', cadAsk='86.4025' }=overrides;
-  return `<html><p>FX Rate Sheet effective for ${date}</p><table><tr><th>Currency</th><th>Bid Rate</th><th>Ask Rate</th><th>WAR</th></tr><tr><td>USD</td><td>${usd}</td><td>${usdAsk}</td><td>${war}</td></tr></table><table><tr><th>Currency</th><th>Bid Rate</th><th>Ask Rate</th></tr><tr><td>GBP</td><td>${gbp}</td><td>${gbpAsk}</td></tr><tr><td>CAD</td><td>${cad}</td><td>${cadAsk}</td></tr><tr><td>JPY</td><td>0.7771</td><td>0.7780</td></tr><tr><td>SGD</td><td>96.2604</td><td>96.3611</td></tr><tr><td>CNH</td><td>18.4173</td><td>18.4325</td></tr></table></html>`;
+  return `<html><p>FX Rate Sheet effective for ${date}</p><table><tr><th>Currency</th><th>Bid Rate</th><th>Ask Rate</th><th>WAR</th></tr><tr><td>USD</td><td>${usd}</td><td>${usdAsk}</td><td>${war}</td></tr></table><table><tr><th>Currency</th><th>Bid Rate</th><th>Ask Rate</th></tr><tr><td>EUR</td><td>137.5165</td><td>137.6774</td></tr><tr><td>GBP</td><td>${gbp}</td><td>${gbpAsk}</td></tr><tr><td>AUD</td><td>85.8045</td><td>85.8864</td></tr><tr><td>JPY</td><td>0.7771</td><td>0.7780</td></tr><tr><td>CAD</td><td>${cad}</td><td>${cadAsk}</td></tr><tr><td>SEK</td><td>12.2722</td><td>12.2979</td></tr><tr><td>SGD</td><td>96.2604</td><td>96.3611</td></tr><tr><td>CNH</td><td>18.4173</td><td>18.4325</td></tr><tr><td>INR</td><td>1.2873</td><td>1.2885</td></tr><tr><td>LKR</td><td>2.6815</td><td>2.6849</td></tr></table></html>`;
 }
-function bbResponse(overrides={}) { const row=(baseCurrency,bid,ask,weightedAverage=null,rateType='Bangladesh Bank cross rate')=>({baseCurrency,quoteCurrency:'BDT',bid,ask,weightedAverage,rateType});return {source:'Bangladesh Bank FX Rate Sheet',sourceUrl:BangladeshBankRates.SOURCE_URL,publicationDate:'2026-10-13',retrievedAt:'2026-10-13T12:00:00.000Z',rates:{GBP:row('GBP',162.83,163.0484),USD:row('USD',123.3,123.4,123.36,'USD/BDT interbank rate'),CAD:row('CAD',86.3264,86.4025),JPY:row('JPY',0.7771,0.7780),SGD:row('SGD',96.2604,96.3611),CNH:row('CNH',18.4173,18.4325)},...overrides}; }
+function bbResponse(overrides={}) { const row=(baseCurrency,bid,ask,weightedAverage=null,rateType='Bangladesh Bank cross rate')=>({baseCurrency,quoteCurrency:'BDT',bid,ask,weightedAverage,rateType});return {source:'Bangladesh Bank FX Rate Sheet',sourceUrl:BangladeshBankRates.SOURCE_URL,publicationDate:'2026-10-13',retrievedAt:'2026-10-13T12:00:00.000Z',rates:{USD:row('USD',123.3,123.4,123.36,'USD/BDT interbank rate'),EUR:row('EUR',137.5165,137.6774),GBP:row('GBP',162.83,163.0484),AUD:row('AUD',85.8045,85.8864),JPY:row('JPY',0.7771,0.7780),CAD:row('CAD',86.3264,86.4025),SEK:row('SEK',12.2722,12.2979),SGD:row('SGD',96.2604,96.3611),CNH:row('CNH',18.4173,18.4325),INR:row('INR',1.2873,1.2885),LKR:row('LKR',2.6815,2.6849)},...overrides}; }
 
 test('all primary corridors have real-currency support without preset conversion rates',()=>{
-  for(const c of ['GBP','USD','CAD','CNY','CNH','JPY','KRW','MYR','SGD']) assert.ok(Finance.CURRENCIES.includes(c));
-  assert.match(Finance.CURRENCY_NAMES.CNY,/onshore/);assert.match(Finance.CURRENCY_NAMES.CNH,/offshore/);
+  const wanted=['USD','EUR','GBP','AUD','JPY','CAD','SEK','SGD','CNH','INR','LKR'];
+  assert.deepEqual(Finance.CURRENCIES,['BDT',...wanted]);
+  assert.deepEqual(BangladeshBankRates.CURRENCIES,wanted);
+  assert.deepEqual(ExchangeRates.DESTINATION_CURRENCIES,wanted);
+  for(const c of wanted) assert.ok(Finance.CURRENCIES.includes(c));
+  for(const unwanted of ['CNY','KRW','MYR']) assert.ok(!Finance.CURRENCIES.includes(unwanted),`${unwanted} is outside the requested set`);
+  assert.match(Finance.CURRENCY_NAMES.CNH,/offshore/);
   const referenceRates={GBP:0.79,BDT:120};
   assert.ok(Math.abs(Finance.convert(100,'GBP','BDT',referenceRates)-100*120/.79)<1e-8);
   assert.throws(()=>Finance.convert(1,'GBP','BDT'),/source-identified rate/);
   assert.throws(()=>Finance.convert(1e12,'GBP','BDT',{GBP:1,BDT:2}),/supported maximum/);
 });
 
-test('currency conversion works in both directions with distinct CNY and CNH rate units',()=>{
-  const bdtPerUnit={BDT:1,CNY:1/17,CNH:1/18.5,JPY:1/0.778,KRW:1/0.092,MYR:1/26,SGD:1/96.36};
-  for(const [currency,rate] of [['CNY',17],['CNH',18.5],['JPY',0.778],['KRW',0.092],['MYR',26],['SGD',96.36]]){
+test('requested currencies convert both ways using exact BDT-per-unit rates',()=>{
+  const bdtPerUnit={BDT:1,USD:1/123.4,EUR:1/137.6774,GBP:1/163.0484,AUD:1/85.8864,JPY:1/0.778,CAD:1/86.4025,SEK:1/12.2979,SGD:1/96.3611,CNH:1/18.4325,INR:1/1.2885,LKR:1/2.6849};
+  for(const [currency,rate] of [['USD',123.4],['EUR',137.6774],['GBP',163.0484],['AUD',85.8864],['JPY',0.778],['CAD',86.4025],['SEK',12.2979],['SGD',96.3611],['CNH',18.4325],['INR',1.2885],['LKR',2.6849]]){
     assert.ok(Math.abs(Finance.convert(rate,'BDT',currency,bdtPerUnit)-1)<1e-9,`${currency} BDT-to-foreign conversion`);
     assert.ok(Math.abs(Finance.convert(1,currency,'BDT',bdtPerUnit)-rate)<1e-9,`${currency} foreign-to-BDT conversion`);
   }
-  assert.notEqual(Finance.convert(18.5,'BDT','CNY',bdtPerUnit),Finance.convert(18.5,'BDT','CNH',bdtPerUnit));
 });
 
-test('new destination corridors accept matching manual rates without merging CNY and CNH',()=>{
-  for(const [destinationCountry,tuitionCur] of [['China','CNY'],['China','CNH'],['Japan','JPY'],['South Korea','KRW'],['Malaysia','MYR'],['Singapore','SGD']]){
+test('all requested destination corridors accept matching source-identified rates',()=>{
+  for(const [destinationCountry,tuitionCur] of [['United States','USD'],['Euro area','EUR'],['United Kingdom','GBP'],['Australia','AUD'],['Japan','JPY'],['Canada','CAD'],['Sweden','SEK'],['Singapore','SGD'],['China','CNH'],['India','INR'],['Sri Lanka','LKR']]){
     const result=Finance.calculateTuition(profile({destinationCountry,tuitionCur,exchangeRate:'1',rateSource:`Manual ${tuitionCur} source`}),today);
     assert.equal(result.ok,true,`${destinationCountry} / ${tuitionCur} should be a supported manual-rate corridor`);
   }
-  assert.equal(Finance.calculateTuition(profile({destinationCountry:'China',tuitionCur:'CNY'}),today).ok,true);
-  assert.equal(Finance.calculateTuition(profile({destinationCountry:'China',tuitionCur:'CNH'}),today).ok,true);
-  assert.ok(Finance.calculateTuition(profile({destinationCountry:'Japan',tuitionCur:'CNY'}),today).errors.length,'a mismatched code/country pair is rejected');
-  const chinaPlan=profile({destinationCountry:'China',tuitionCur:'CNY',exchangeRate:'17'});
+  const chinaPlan=profile({destinationCountry:'China',tuitionCur:'CNH',exchangeRate:'18.5'});
   const chinaResult=Finance.calculateTuition(chinaPlan,today);
-  assert.equal(chinaResult.tuitionHome,136000);
-  assert.equal(Finance.buildReadinessReportData(chinaPlan,chinaResult).tuitionCurrencyName,'Chinese yuan (onshore)');
-  const offshorePlan=profile({destinationCountry:'China',tuitionCur:'CNH',exchangeRate:'18.5'});
-  const offshoreResult=Finance.calculateTuition(offshorePlan,today);
-  assert.equal(Finance.buildReadinessReportData(offshorePlan,offshoreResult).tuitionCurrencyName,'Chinese yuan (offshore)');
+  assert.equal(chinaResult.tuitionHome,148000);
+  assert.equal(Finance.buildReadinessReportData(chinaPlan,chinaResult).tuitionCurrencyName,'Chinese yuan (offshore)');
+  assert.ok(Finance.calculateTuition(profile({destinationCountry:'China',tuitionCur:'USD'}),today).errors.length,'mismatched corridor currencies are rejected');
 });
 
 test('Bangladesh Bank HTML sheet parses published BDT-per-currency ask, bid, and USD WAR',()=>{
@@ -66,9 +65,10 @@ test('Bangladesh Bank HTML sheet parses published BDT-per-currency ask, bid, and
   assert.equal(result.rates.CAD.ask,86.4025);
   assert.equal(result.rates.JPY.ask,0.7780,'JPY is quoted in BDT per 1 JPY');
   assert.equal(result.rates.SGD.ask,96.3611);
-  assert.equal(result.rates.CNH.ask,18.4325);
-  assert.equal(result.rates.CNY,undefined,'offshore CNH is never relabeled as onshore CNY');
-  assert.equal(result.rates.KRW,undefined);assert.equal(result.rates.MYR,undefined);
+  for(const currency of ['USD','EUR','GBP','AUD','JPY','CAD','SEK','SGD','CNH','INR','LKR']) assert.ok(result.rates[currency],`${currency} is present in the actual sheet`);
+  assert.equal(result.rates.JPY.ask,0.7780,'JPY is quoted in BDT per 1 JPY');
+  assert.equal(result.rates.CNH.baseCurrency,'CNH','the offshore currency code is preserved');
+  assert.equal(result.rates.CNY,undefined,'the sheet provides CNH, not CNY');
   const validated=ExchangeRates.parseOfficialResponse(result,apiNow);
   assert.equal(validated.rates.GBP,163.0484);
   assert.equal(validated.rates.USD,123.4);
@@ -79,11 +79,11 @@ test('parser extracts current values from a saved fragment of the actual Banglad
   const html=fs.readFileSync(path.join(__dirname,'fixtures','bangladesh-bank-live-2026-10-13.html'),'utf8');
   const data=BangladeshBankRates.parseBangladeshBankPage(html,new Date('2026-10-13T12:00:00Z'));
   assert.equal(data.publicationDate,'2026-10-13');
-  assert.deepEqual(data.rates,{GBP:{bid:162.83,ask:163.0484,weightedAverage:null,baseCurrency:'GBP',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},USD:{bid:123.3,ask:123.4,weightedAverage:123.36,baseCurrency:'USD',quoteCurrency:'BDT',rateType:'USD/BDT interbank rate'},CAD:{bid:86.3264,ask:86.4025,weightedAverage:null,baseCurrency:'CAD',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},JPY:{bid:0.7771,ask:0.778,weightedAverage:null,baseCurrency:'JPY',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},SGD:{bid:96.2604,ask:96.3611,weightedAverage:null,baseCurrency:'SGD',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},CNH:{bid:18.4173,ask:18.4325,weightedAverage:null,baseCurrency:'CNH',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'}});
+  assert.deepEqual(data.rates,{USD:{bid:123.3,ask:123.4,weightedAverage:123.36,baseCurrency:'USD',quoteCurrency:'BDT',rateType:'USD/BDT interbank rate'},EUR:{bid:137.5165,ask:137.6774,weightedAverage:null,baseCurrency:'EUR',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},GBP:{bid:162.83,ask:163.0484,weightedAverage:null,baseCurrency:'GBP',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},AUD:{bid:85.8045,ask:85.8864,weightedAverage:null,baseCurrency:'AUD',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},JPY:{bid:0.7771,ask:0.778,weightedAverage:null,baseCurrency:'JPY',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},CAD:{bid:86.3264,ask:86.4025,weightedAverage:null,baseCurrency:'CAD',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},SEK:{bid:12.2722,ask:12.2979,weightedAverage:null,baseCurrency:'SEK',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},SGD:{bid:96.2604,ask:96.3611,weightedAverage:null,baseCurrency:'SGD',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},CNH:{bid:18.4173,ask:18.4325,weightedAverage:null,baseCurrency:'CNH',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},INR:{bid:1.2873,ask:1.2885,weightedAverage:null,baseCurrency:'INR',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},LKR:{bid:2.6815,ask:2.6849,weightedAverage:null,baseCurrency:'LKR',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'}});
   assert.equal((html.match(/<table>/g)||[]).length,2,'fixture retains the source’s two current rate tables');
-  assert.match(html,/<td>EUR<\/td>/,'unrequested current cross-rate rows are present in the source fragment');
-  assert.equal(data.rates.EUR,undefined,'other currencies are not mistaken for planner currencies');
-  assert.equal(data.rates.CNH.baseCurrency,'CNH');assert.equal(data.rates.CNH.quoteCurrency,'BDT');assert.equal(data.rates.CNY,undefined,'the actual source fragment has no onshore CNY row');
+  assert.match(html,/<td>EUR<\/td>/,'the requested currencies are present in the source fragment');
+  assert.equal(data.rates.EUR.ask,137.6774);
+  assert.equal(data.rates.CNH.baseCurrency,'CNH');assert.equal(data.rates.CNH.quoteCurrency,'BDT');assert.equal(data.rates.CNY,undefined,'the actual source fragment has no CNY row');
   assert.throws(()=>BangladeshBankRates.parseBangladeshBankPage(html.replace('<td>CAD</td>','<td>XXX</td>'),new Date('2026-10-13T12:00:00Z')),/did not publish a CAD rate/);
 });
 
@@ -674,6 +674,8 @@ test('comparison ranking and report export share the same eligible quote list',(
 
 test('active UI has blank financial inputs and working external quote paths; scripts parse',()=>{
   const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  for(const code of ['USD','EUR','GBP','AUD','JPY','CAD','SEK','SGD','CNH','INR','LKR']) assert.ok(html.includes(`BDT → ${code}`),`${code} is selectable as a destination`);
+  assert.doesNotMatch(html,/BDT → (?:CNY|KRW|MYR)/,'the corridor selector contains only the requested currency set');
   for(const marker of ['id="exchangeRate"','id="rateSource"','id="rateTimestamp"','id="rateTimestampHint"','id="rateTimestampTrigger"','id="rateTimestampCalendar"','id="rateTimestampTime"','id="useCurrentRateTimestamp"','id="refreshExchangeRate"','id="useExchangeRate"','id="exchangeRateStatus"','id="providerQuoteForms"','id="deadlineHint"','id="deadlineTrigger"','id="deadlineCalendar"','role="grid"','aria-haspopup="dialog"','.formSection .fieldGrid>label{align-self:start;align-content:start}','.timestampControl{display:flex;width:100%;min-width:0}','#providerQuoteForms .quoteTimestampLabel{grid-column:1/-1}','.calendarDay.isToday:not(.isSelected){background:#eaf6f0','.customSelect{position:relative;width:100%;min-width:0}','.customSelectOption[aria-selected=true]::after{content:"✓"','https://www.bb.org.bd/en/index.php/econdata/exchangerate','convera.com/students/faq','pay.flywire.com','id="applyScenario"','id="resetScenario"','id="stressExpenseIncrease"','id="runStressTest"','id="clearStressTest"','id="stressResults"','id="readinessStudentName"','id="generateReadinessReport"','id="readinessReportPreview"','id="printReadinessReport"','id="closeReadinessReport"','aria-live="polite"','@page{size:A4 portrait','@media print','id="exportReport"','src="lib/exchange-rates.js"']) assert.ok(html.includes(marker),`missing ${marker}`);
   for(const marker of ['@keyframes globeTurn','animation:globeTurn 34s linear infinite','<div class="globeMap">','<g class="globeLand">','<g class="globeGrid">','.heroVisual .orb3d{width:min(430px,82vw)}','.heroVisual .tileB{right:-4%}']) assert.ok(html.includes(marker),`missing ${marker}`);
   assert.doesNotMatch(html,/class="(?:orbit|node)(?:\s|")/,'the hero illustration no longer uses atom-style orbiting particles');

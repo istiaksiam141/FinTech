@@ -56,7 +56,7 @@ In scope are local financial planning, student-entered exchange-rate provenance,
 | Deterministic financial assistant | Implemented as a local fallback using application calculations; no generative AI API connection is configured |
 | What-if scenario controls | Implemented with reset/apply actions and recalculation |
 | Explainable recommendations | Provides deterministic reasoning from available profile and quote inputs |
-| Multi-currency corridor selection | Supports BDT planning corridors for China (CNY onshore and CNH offshore), the UK (GBP), US (USD), Canada (CAD), Japan (JPY), South Korea (KRW), Malaysia (MYR), and Singapore (SGD); live Bangladesh Bank rates are available only for GBP, USD, CAD, JPY, SGD, and CNH, while the other corridors require sourced manual rates; no corridor verifies provider eligibility |
+| Multi-currency corridor selection | Supports BDT planning corridors for USD, EUR, GBP, AUD, JPY, CAD, SEK, SGD, CNH, INR, and LKR; this follows the currencies listed in the Bangladesh Bank sheet, with CNH kept distinct from onshore CNY; no corridor verifies provider eligibility |
 | Report export | Generated locally in the browser |
 | Agent activity log | Local activity with tool/action status and redacted summaries |
 | Authentication and student-profile persistence | Not implemented; the server endpoint only handles public FX data |
@@ -72,7 +72,7 @@ The shared calculation engine is intended to keep the planner, assistant, and re
 
 ## Financial calculation and transparency
 
-The main planning logic uses student-supplied tuition, savings, income, expenses, commitments, emergency reserve, deadline, exchange rate, and any applicable fee assumptions. Bangladesh Bank's GBP, USD, CAD, JPY, SGD, and CNH rows quote BDT per one unit of the exact foreign currency code; the endpoint preserves source currency and rate type, and the planner selects ask. CNY (onshore) remains distinct from CNH (offshore), and the bank feed does not provide CNY, KRW, or MYR. It estimates the funding gap after accounting for available funds and protected reserves, and divides the remaining requirement across the time available to estimate a monthly savings target. Quote comparison uses the submitted sender cost and recipient amount, plus delivery estimates when provided. Ranking can consider lowest sender cost, highest recipient amount, and fastest delivery.
+The main planning logic uses student-supplied tuition, savings, income, expenses, commitments, emergency reserve, deadline, exchange rate, and any applicable fee assumptions. Bangladesh Bank's USD, EUR, GBP, AUD, JPY, CAD, SEK, SGD, CNH, INR, and LKR rows quote BDT per one unit of the exact foreign currency code; the endpoint preserves source currency and rate type, and the planner selects ask. CNH is the offshore yuan code shown in the bank sheet; it is not labeled as onshore CNY. It estimates the funding gap after accounting for available funds and protected reserves, and divides the remaining requirement across the time available to estimate a monthly savings target. Quote comparison uses the submitted sender cost and recipient amount, plus delivery estimates when provided. Ranking can consider lowest sender cost, highest recipient amount, and fastest delivery.
 
 Each result is only as reliable as its inputs. Exchange-rate benchmarks can differ from a provider's executable quote. The app labels the entered source and time so students can judge recency, but it does not certify quotes or guarantee that the provider will honor them.
 
@@ -90,7 +90,7 @@ Before competition or public deployment, perform a fresh test run, accessibility
 
 ## Current limitations and risks
 
-- The official HTML rate sheet is parsed server-side because no documented JSON endpoint was identified. Markup changes can break parsing; the function returns an error rather than a fabricated rate. Students must explicitly apply the fetched ask value. The page supplies effective-dated sheets and explains USD/BDT values refer to the previous business-day close; CampusBridge does not promise intraday or continuous updates. Five days without a new published sheet and two hours since retrieval are app stale thresholds, not Bangladesh Bank service guarantees.
+- The official HTML rate sheet is parsed server-side because no documented JSON endpoint was identified. Markup changes can break parsing; the function returns an error rather than a fabricated rate. Students must explicitly apply the fetched ask value. The page supplies effective-dated sheets and explains USD/BDT values refer to the previous business-day close; CampusBridge does not promise intraday or continuous updates. Five days without a new published sheet and 24 hours since retrieval are app stale thresholds, not Bangladesh Bank service guarantees.
 - Payment-provider quotes are not retrieved automatically.
 - Provider quote entries are not authenticated or verified by the app.
 - Provider and corridor support cannot be inferred from an external portal link; it must be confirmed for the student's institution and payer origin.

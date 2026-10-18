@@ -24,7 +24,7 @@ const ExchangeRates = window.CampusBridgeExchangeRates;
 const AssistantRenderer = window.CampusBridgeAssistantRenderer;
 const byId = id => document.getElementById(id);
 const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const corridorMap = { "CN-CNY": { country: "China", currency: "CNY", label: "China · onshore yuan" }, "CN-CNH": { country: "China", currency: "CNH", label: "China · offshore yuan" }, UK: { country: "United Kingdom", currency: "GBP", label: "United Kingdom" }, US: { country: "United States", currency: "USD", label: "United States" }, CA: { country: "Canada", currency: "CAD", label: "Canada" }, JP: { country: "Japan", currency: "JPY", label: "Japan" }, KR: { country: "South Korea", currency: "KRW", label: "South Korea" }, MY: { country: "Malaysia", currency: "MYR", label: "Malaysia" }, SG: { country: "Singapore", currency: "SGD", label: "Singapore" } };
+const corridorMap = { US: { country: "United States", currency: "USD", label: "United States" }, EU: { country: "Euro area", currency: "EUR", label: "Euro area" }, UK: { country: "United Kingdom", currency: "GBP", label: "United Kingdom" }, AU: { country: "Australia", currency: "AUD", label: "Australia" }, JP: { country: "Japan", currency: "JPY", label: "Japan" }, CA: { country: "Canada", currency: "CAD", label: "Canada" }, SE: { country: "Sweden", currency: "SEK", label: "Sweden" }, SG: { country: "Singapore", currency: "SGD", label: "Singapore" }, CN: { country: "China", currency: "CNH", label: "China · offshore yuan" }, IN: { country: "India", currency: "INR", label: "India" }, LK: { country: "Sri Lanka", currency: "LKR", label: "Sri Lanka" } };
 const providerDefs=[{id:"convera",name:"Convera GlobalPay for Students",note:"Institution participation and Bangladesh-origin route must be confirmed."},{id:"flywire",name:"Flywire",note:"Use the payment link supplied by your university; origin options vary."},{id:"bank",name:"Authorized-dealer bank wire",note:"Get current written terms directly from your bank."}];
 const localDate = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
 function contributionScheduleText(result) {
@@ -499,7 +499,7 @@ document.addEventListener("pointerdown", event => {
 let latest = null; let latestStressTest = null; let latestReadinessReportProfile = null; let activity = []; let bankAccounts = []; let nextBankAccountId = 1;
 let visibleProviderCount = 1;
 const quoteDrafts = new Map();
-const exchangeRateState = { lastResponse: null, nextRequestAt: 0, pending: false, mode: "manual", appliedCurrency: null, appliedUpdatedAtMs: null, appliedNextUpdateAtMs: null, selectedCurrency: "CNY", staleTimer: null };
+const exchangeRateState = { lastResponse: null, nextRequestAt: 0, pending: false, mode: "manual", appliedCurrency: null, appliedUpdatedAtMs: null, appliedNextUpdateAtMs: null, selectedCurrency: "CNH", staleTimer: null };
 const FX_MIN_REQUEST_INTERVAL = 30 * 60 * 1000;
 const money = (n, cur = "BDT") => `${new Intl.NumberFormat("en", { maximumFractionDigits: cur === "BDT" ? 0 : 2 }).format(n)} ${cur}`;
 function localDateTimeForInput(timestamp) { const d = new Date(timestamp); return `${localDate(d)}T${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
@@ -526,9 +526,7 @@ function renderFetchedRateStatus(prefix = "") {
   if (stale) {
     setExchangeRateStatus(`${prefix ? `${prefix} ` : ""}The Bangladesh Bank data is stale${data.cacheStatus.toUpperCase()==="STALE"?" in Vercel's cache":""}. Sheet date: ${data.publicationDate}; retrieved: ${data.retrievedAt} (UTC). Data is also treated as stale after ${data.staleAfterDays} days without a newer sheet or ${data.retrievalStaleAfterHours} hours without a successful retrieval. It cannot be applied as current; use a manual rate or refresh.`, "stale");
   } else if (!Number.isFinite(rate) || !data.rateDetails[currency]) {
-    const note = currency === "CNY"
-      ? "Bangladesh Bank publishes CNH (offshore yuan), not onshore CNY. These currencies are distinct; no CNH rate is used as CNY. Enter an onshore CNY rate manually with its source and timestamp."
-      : `Bangladesh Bank does not publish a ${Finance.CURRENCY_NAMES[currency] || currency} (${currency}) rate in this feed. Enter a rate manually with its source and timestamp. No rate was invented.`;
+    const note = `Bangladesh Bank does not publish a ${Finance.CURRENCY_NAMES[currency] || currency} (${currency}) rate in this feed. Enter a rate manually with its source and timestamp. No rate was invented.`;
     setExchangeRateStatus(`${prefix ? `${prefix} ` : ""}${note}`, "unavailable");
   } else {
     const selection = appliedIsStale ? "A newer response is available but has not been applied; current planner results are cleared." : applied ? "This Bangladesh Bank rate is selected." : "Review it, then choose the button to apply it.";
@@ -832,7 +830,7 @@ byId("addQuoteProvider").addEventListener("click", () => {
   renderTransfers();
   byId("providerQuoteForms").querySelector(`[data-provider="${providerDefs[visibleProviderCount - 1].id}"] .customSelectTrigger`).focus();
 });
-byId("resetProfile").addEventListener("click",()=>{byId("profileForm").reset();syncCustomSelect(byId("corridor"));planRequested=false;updateDeadlineHint();syncRateTimestampPicker();closeRateTimestampCalendar();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="CN-CNY";syncCustomSelect(byId("corridor"));exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="CNY";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
+byId("resetProfile").addEventListener("click",()=>{byId("profileForm").reset();syncCustomSelect(byId("corridor"));planRequested=false;updateDeadlineHint();syncRateTimestampPicker();closeRateTimestampCalendar();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="CN";syncCustomSelect(byId("corridor"));exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="CNH";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
 byId("refreshExchangeRate").addEventListener("click",refreshExchangeRate);
 byId("useExchangeRate").addEventListener("click",useFetchedExchangeRate);
 byId("rateTimestamp").addEventListener("input",syncRateTimestampPicker);
