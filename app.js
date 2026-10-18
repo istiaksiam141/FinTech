@@ -206,6 +206,94 @@ function syncRateTimestampPicker() {
   trigger.setAttribute("aria-invalid", "false");
   if (!byId("rateTimestampCalendar").hidden) renderRateTimestampCalendar(datePart);
 }
+function syncCustomSelect(select) {
+  const root = select.closest(".customSelect");
+  if (!root) return;
+  const selected = select.selectedOptions[0];
+  root.querySelector(".customSelectValue").textContent = selected?.textContent ?? "";
+  root.querySelectorAll(".customSelectOption").forEach(option => {
+    option.setAttribute("aria-selected", String(option.dataset.value === select.value));
+  });
+}
+function initializeCustomSelect(select) {
+  if (select.closest(".customSelect")) return;
+  const label = select.closest("label");
+  const labelText = label?.querySelector(".fieldLabel")?.textContent.trim() || [...(label?.childNodes ?? [])].filter(node => node.nodeType === Node.TEXT_NODE).map(node => node.textContent.trim()).filter(Boolean).join(" ") || "Choose an option";
+  const root = document.createElement("span");
+  root.className = "customSelect";
+  select.before(root);
+  root.append(select);
+  select.tabIndex = -1;
+  select.setAttribute("aria-hidden", "true");
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "customSelectTrigger";
+  trigger.setAttribute("role", "combobox");
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.setAttribute("aria-label", labelText);
+  trigger.innerHTML = '<span class="customSelectValue"></span><span class="customSelectChevron" aria-hidden="true"></span>';
+  const menu = document.createElement("div");
+  menu.className = "customSelectMenu";
+  menu.setAttribute("role", "listbox");
+  menu.setAttribute("aria-label", labelText);
+  menu.hidden = true;
+  root.append(trigger, menu);
+  const close = (restoreFocus = false) => {
+    menu.hidden = true;
+    root.classList.remove("isOpen");
+    trigger.setAttribute("aria-expanded", "false");
+    if (restoreFocus) trigger.focus();
+  };
+  const open = () => {
+    menu.hidden = false;
+    root.classList.add("isOpen");
+    trigger.setAttribute("aria-expanded", "true");
+    menu.querySelector(`[data-value="${CSS.escape(select.value)}"]`)?.focus();
+  };
+  const options = [...select.options].map(option => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "customSelectOption";
+    button.setAttribute("role", "option");
+    button.dataset.value = option.value;
+    button.textContent = option.textContent;
+    button.addEventListener("click", () => {
+      select.value = option.value;
+      syncCustomSelect(select);
+      close(true);
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    menu.append(button);
+    return button;
+  });
+  trigger.addEventListener("click", () => menu.hidden ? open() : close());
+  trigger.addEventListener("keydown", event => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (menu.hidden) open();
+      else menu.querySelector(`[data-value="${CSS.escape(select.value)}"]`)?.focus();
+    } else if (event.key === "Escape" && !menu.hidden) {
+      event.preventDefault(); close(true);
+    }
+  });
+  menu.addEventListener("keydown", event => {
+    const index = options.indexOf(event.target);
+    if (index < 0) return;
+    if (event.key === "Escape") { event.preventDefault(); close(true); return; }
+    let nextIndex = index;
+    if (event.key === "ArrowDown") nextIndex = (index + 1) % options.length;
+    else if (event.key === "ArrowUp") nextIndex = (index - 1 + options.length) % options.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = options.length - 1;
+    else if (event.key === "Tab") { close(); return; }
+    else return;
+    event.preventDefault();
+    options[nextIndex].focus();
+  });
+  select.addEventListener("change", () => syncCustomSelect(select));
+  syncCustomSelect(select);
+}
 function closeRateTimestampCalendar(restoreFocus = false) {
   byId("rateTimestampCalendar").hidden = true;
   byId("rateTimestampTrigger").setAttribute("aria-expanded", "false");
@@ -337,10 +425,24 @@ byId("rateTimestampCalendar").addEventListener("keydown", event => {
 document.addEventListener("pointerdown", event => {
   if (!event.target.closest(".deadlinePicker")) closeDeadlineCalendar();
   if (!event.target.closest(".timestampPicker")) closeRateTimestampCalendar();
+  document.querySelectorAll(".customSelect.isOpen").forEach(root => {
+    if (!root.contains(event.target)) {
+      root.querySelector(".customSelectMenu").hidden = true;
+      root.classList.remove("isOpen");
+      root.querySelector(".customSelectTrigger").setAttribute("aria-expanded", "false");
+    }
+  });
 });
 document.addEventListener("focusin", event => {
   if (!event.target.closest(".deadlinePicker")) closeDeadlineCalendar();
   if (!event.target.closest(".timestampPicker")) closeRateTimestampCalendar();
+  document.querySelectorAll(".customSelect.isOpen").forEach(root => {
+    if (!root.contains(event.target)) {
+      root.querySelector(".customSelectMenu").hidden = true;
+      root.classList.remove("isOpen");
+      root.querySelector(".customSelectTrigger").setAttribute("aria-expanded", "false");
+    }
+  });
   document.querySelectorAll(".quoteTimestampPicker").forEach(picker => {
     if (!picker.contains(event.target)) {
       picker.querySelector(".timestampCalendar").hidden = true;
@@ -647,6 +749,7 @@ function renderQuoteForms() {
       if (draft?.[field.dataset.field] !== undefined && (field.dataset.field !== "currency" || hasQuoteDetails)) field.value = draft[field.dataset.field];
       else if (field.dataset.field === "currency") field.value = currency;
     }
+    initializeCustomSelect(card.querySelector('[data-field="currency"]'));
     initializeQuoteTimestampPicker(card.querySelector('[data-field="timestamp"]'));
   }
   byId("quoteProgress").textContent = `${visibleProviders.length} of ${providerDefs.length} provider quote${providerDefs.length === 1 ? "" : "s"} shown`;
@@ -663,6 +766,8 @@ function currentQuoteComparison(){const cur=corridorMap[byId("corridor").value].
 function renderTransfers(){const amount=byId("transferAmount").value,cur=corridorMap[byId("corridor").value].currency;const root=byId("transferResults");if(!amount||Number(amount)<=0){root.innerHTML='<p class="muted">Enter the same positive BDT principal used for all quotes.</p>';return;}const entered=enteredQuotes();if(entered.every(q=>q.totalCost===""&&q.recipientAmount===""&&q.reference==="")){root.innerHTML='<p class="muted">No provider quotes entered. Get current terms from your institution-approved provider or bank; nothing is estimated here.</p>';return;}const cmp=currentQuoteComparison();if(!cmp.ok){root.innerHTML=`<p class="error">${cmp.errors.join(" ")}</p>`;return;}const usable=cmp.available;if(!usable.length){root.innerHTML=`<p class="muted">No complete quotes can be ranked. ${cmp.unavailable.map(x=>`${escapeHtml(x.quote.name)}: ${escapeHtml(x.reason)}`).join(" ")}</p>`;return;}root.innerHTML=`<div class="quoteGrid">${usable.map((q,i)=>`<article class="quote"><span class="tag">${i===0?"Ranks first by selected objective · student-entered":"Student-entered quote"} · not provider-verified</span><h3>${escapeHtml(q.quote.name)}</h3><dl><dt>Total sender cost</dt><dd><strong>${money(q.totalCost)}</strong></dd><dt>Principal</dt><dd>${money(Number(amount))}</dd><dt>Stated provider fee</dt><dd>${q.fee?money(q.fee):"Not separately stated"}</dd><dt>Recipient amount</dt><dd><strong>${money(q.recipientAmount,cur)}</strong></dd><dt>Quoted rate</dt><dd>${q.quotedRate===null?"Not stated":`1 ${cur} = ${q.quotedRate.toFixed(5)} BDT`}</dd><dt>Delivery estimate</dt><dd>${q.days===null?"Not provided":`${q.days} business days`}</dd></dl><p>Source/reference: ${escapeHtml(q.reference)}. Quote timestamp: ${escapeHtml(q.timestamp)}. Validation does not authenticate this manually entered quote. Verify expiry and all terms on the provider’s official page before paying.</p></article>`).join("")}</div><p class="assumptionNote">${cmp.unavailable.map(x=>`${escapeHtml(x.quote.name)}: ${escapeHtml(x.reason)}`).join(" ")}</p>`;logEvent("compare_payment_options","success",`${usable.length} entered quotes ranked by ${byId("sortBy").selectedOptions[0].text.toLowerCase()}`);}
 byId("profileForm").addEventListener("submit", e=>{e.preventDefault();planRequested=true;updateDeadlineHint();compute();});
 byId("deadline").addEventListener("change",()=>{updateDeadlineHint();if(planRequested)compute();});
+initializeCustomSelect(byId("corridor"));
+initializeCustomSelect(byId("sortBy"));
 byId("corridor").addEventListener("change",()=>{const currency=corridorMap[byId("corridor").value].currency;const changed=currency!==exchangeRateState.selectedCurrency;exchangeRateState.selectedCurrency=currency;if(changed&&["exchangeRate","rateSource","rateTimestamp"].some(id=>byId(id).value!=="")){for(const id of ["exchangeRate","rateSource","rateTimestamp"])byId(id).value="";exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;latest=null;if(exchangeRateState.lastResponse)renderFetchedRateStatus("Destination currency changed; the previous rate and its source/time were cleared.");else setExchangeRateStatus("Destination currency changed. The previous rate, source, and timestamp were cleared to avoid using the wrong currency. Enter or fetch a rate for the new currency.");}else renderFetchedRateStatus();refreshRate();renderQuoteForms();renderTransfers();if(byId("tuition").value||byId("exchangeRate").value)compute();});
 byId("transferAmount").addEventListener("input",renderTransfers); byId("sortBy").addEventListener("change",renderTransfers);
 byId("providerQuoteForms").addEventListener("input",renderTransfers);
@@ -671,9 +776,9 @@ byId("addQuoteProvider").addEventListener("click", () => {
   visibleProviderCount += 1;
   renderQuoteForms();
   renderTransfers();
-  byId("providerQuoteForms").querySelector(`[data-provider="${providerDefs[visibleProviderCount - 1].id}"] select`).focus();
+  byId("providerQuoteForms").querySelector(`[data-provider="${providerDefs[visibleProviderCount - 1].id}"] .customSelectTrigger`).focus();
 });
-byId("resetProfile").addEventListener("click",()=>{byId("profileForm").reset();planRequested=false;updateDeadlineHint();syncRateTimestampPicker();closeRateTimestampCalendar();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="UK";exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="GBP";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
+byId("resetProfile").addEventListener("click",()=>{byId("profileForm").reset();syncCustomSelect(byId("corridor"));planRequested=false;updateDeadlineHint();syncRateTimestampPicker();closeRateTimestampCalendar();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="UK";syncCustomSelect(byId("corridor"));exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="GBP";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
 byId("refreshExchangeRate").addEventListener("click",refreshExchangeRate);
 byId("useExchangeRate").addEventListener("click",useFetchedExchangeRate);
 byId("rateTimestamp").addEventListener("input",syncRateTimestampPicker);
