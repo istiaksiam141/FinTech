@@ -3,7 +3,7 @@
   const pages = [
     ["home", "Home", "/"], ["planner", "Planner", "/planner.html"], ["roadmap", "Savings roadmap", "/roadmap.html"],
     ["stress", "Stress tests", "/stress-tests.html"], ["transfers", "Transfers", "/transfers.html"],
-    ["assistant", "AI assistant", "/assistant.html"], ["report", "Financial report", "/report.html"], ["privacy", "Privacy", "/privacy.html"]
+    ["assistant", "AI assistant", "/assistant.html"], ["report", "Financial report", "/report.html"], ["account", "Account", "/account.html"], ["privacy", "Privacy", "/privacy.html"]
   ];
   const page = document.body.dataset.page || "home";
   const headerTarget = document.getElementById("site-header");
@@ -19,8 +19,9 @@
       if (id === page) link.setAttribute("aria-current", "page");
       nav.append(link);
     }
+    const accountStatus = document.createElement("span"); accountStatus.id = "account-status"; accountStatus.className = "accountStatus"; accountStatus.setAttribute("role", "status"); accountStatus.textContent = "Checking account…";
     const clear = document.createElement("button"); clear.type = "button"; clear.className = "button smallbtn clearPlanButton"; clear.textContent = "Clear plan"; clear.dataset.clearPlan = "";
-    nav.append(clear);
+    nav.append(accountStatus, clear);
     const menu = document.createElement("button"); menu.type = "button"; menu.id = "menu"; menu.className = "burger"; menu.textContent = "☰";
     menu.setAttribute("aria-label", "Open navigation"); menu.setAttribute("aria-expanded", "false"); menu.setAttribute("aria-controls", "navlinks");
     wrap.append(brand, nav, menu); header.append(wrap); headerTarget.replaceWith(header);

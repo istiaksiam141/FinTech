@@ -1,5 +1,7 @@
 # CampusBridge AI
 
+Student accounts and cloud-saved plans are implemented and described in [docs/supabase-setup.md](docs/supabase-setup.md). `js/supabase-config.js` already contains the browser-safe Supabase URL and publishable key. Production authentication redirects, provider settings, and database Row Level Security (RLS) still need verification; production setup has not been confirmed.
+
 CampusBridge AI is a static multi-page financial-planning prototype for students preparing for study abroad. It reuses one local calculation engine to estimate tuition and other entered costs, savings needs, dated contribution cycles, stress scenarios, and report data. These estimates are not guarantees and do not execute payments.
 
 ## Pages
@@ -11,6 +13,7 @@ CampusBridge AI is a static multi-page financial-planning prototype for students
 - `/transfers.html` — Compare manually entered, unverified provider quotes.
 - `/assistant.html` — General AI explanations and deterministic local answers for selected plan questions.
 - `/report.html` — Local readiness report with browser printing / Save as PDF.
+- `/account.html` — Email/password and Google authentication, recovery, and cloud-saved plan management.
 - `/privacy.html` — Session storage details and product limitations.
 
 The shared shell is in `js/site.js` and `styles/site.css`. `lib/plan-state.js` stores a versioned, validated minimum plan snapshot in tab-scoped `sessionStorage`; it does not store report names, account labels, credentials, API keys, or tokens. Clearing the plan is available in the navigation. The planner is the only place where the baseline plan is created or updated.

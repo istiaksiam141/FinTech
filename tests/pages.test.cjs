@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.join(__dirname, '..');
-const routes = ['index.html', 'planner.html', 'roadmap.html', 'stress-tests.html', 'transfers.html', 'assistant.html', 'report.html', 'privacy.html'];
+const routes = ['index.html', 'planner.html', 'roadmap.html', 'stress-tests.html', 'transfers.html', 'assistant.html', 'report.html', 'account.html', 'privacy.html'];
 
 test('all static routes exist with useful titles, shared shell, and page-specific initialization', () => {
   for (const file of routes) {
@@ -35,13 +35,42 @@ test('each dependent page declares every static element its module initializes',
 
 test('shared navigation points to every migrated page and preserves real static destinations', () => {
   const site = fs.readFileSync(path.join(root, 'js/site.js'), 'utf8');
-  for (const href of ['/', '/planner.html', '/roadmap.html', '/stress-tests.html', '/transfers.html', '/assistant.html', '/report.html', '/privacy.html']) {
+  for (const href of ['/', '/planner.html', '/roadmap.html', '/stress-tests.html', '/transfers.html', '/assistant.html', '/report.html', '/account.html', '/privacy.html']) {
     assert.ok(site.includes(`"${href}"`), `navigation should include ${href}`);
     const target = href === '/' ? 'index.html' : href.slice(1);
     assert.ok(fs.existsSync(path.join(root, target)), `route target ${target} should exist`);
   }
   assert.match(site, /aria-current", "page"/);
   assert.match(site, /confirm\(/);
+});
+
+test('all pages load one shared Supabase client after its official CDN and config', () => {
+  for (const file of routes) {
+    const html = fs.readFileSync(path.join(root, file), 'utf8');
+    const cdn = html.indexOf('cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+    const config = html.indexOf('/js/supabase-config.js');
+    const client = html.indexOf('/js/supabase-client.js');
+    const authStatus = html.indexOf('/js/auth-status.js');
+    assert.ok(cdn >= 0 && cdn < config && config < client && client < authStatus, `${file} must load Supabase once in dependency order`);
+    for (const local of ['/lib/cloud-plans.js', '/js/supabase-config.js', '/js/supabase-client.js', '/js/auth-status.js']) assert.ok(fs.existsSync(path.join(root, local.slice(1))), `${file}: missing ${local}`);
+  }
+  const config = fs.readFileSync(path.join(root, 'js/supabase-config.js'), 'utf8');
+  const supabaseUrl = config.match(/\burl\s*:\s*["']([^"']+)["']/)?.[1];
+  const publishableKey = config.match(/\bpublishableKey\s*:\s*["']([^"']+)["']/)?.[1];
+  assert.ok(supabaseUrl && /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(supabaseUrl), 'Supabase URL must be configured');
+  assert.ok(publishableKey && publishableKey !== 'YOUR_SUPABASE_PUBLISHABLE_KEY', 'Supabase publishable key must be configured');
+  assert.match(publishableKey, /^sb_publishable_[A-Za-z0-9_-]+$/, 'key must use the configured publishable-key format');
+  assert.doesNotMatch(config, /service_role|secret/i);
+});
+
+test('account route exposes email, OAuth, recovery, and explicit cloud-plan actions', () => {
+  const html = fs.readFileSync(path.join(root, 'account.html'), 'utf8');
+  for (const id of ['signup-form', 'login-form', 'google-signin', 'reset-request-form', 'recovery-complete-form', 'cloud-save-form', 'cloud-plan-list']) assert.ok(html.includes(`id="${id}"`), `account page is missing #${id}`);
+  const account = fs.readFileSync(path.join(root, 'js/account-page.js'), 'utf8');
+  for (const method of ['signUp(', 'signInWithPassword(', 'signInWithOAuth(', 'resetPasswordForEmail(', 'updateUser({ password']) assert.ok(account.includes(method), `account module is missing ${method}`);
+  assert.match(account, /emailRedirectTo:.*location\.origin/);
+  assert.match(account, /flow=recovery/);
+  assert.match(account, /This cannot be undone/);
 });
 
 test('feature pages reuse the finance engine and assistant remote request contains only question', () => {

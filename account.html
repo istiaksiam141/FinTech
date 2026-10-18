@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Create or access your CampusBridge student account and manage cloud-saved plans.">
+  <title>Student Account — CampusBridge AI</title>
+  <link rel="stylesheet" href="/styles/site.css">
+</head>
+<body data-page="account">
+  <div id="site-header"></div>
+  <main id="main-content">
+    <section class="pageHero accountHero"><div class="wrap">
+      <span class="eyebrow">Student account</span><h1>Your plans, <em>in reach.</em></h1>
+      <p class="lead">Sign in to securely save and manage your own plans. You can still use the planner without an account.</p>
+      <nav class="accountJump" aria-label="Account options"><a href="#signup-form">Create an account</a><a href="#login-form">Sign in</a><a href="#reset-request-form">Reset password</a></nav>
+      <p id="account-message" class="pageSummary" role="status" aria-live="polite">Checking account setup…</p>
+      <section id="auth-panel" class="surface accountPanel">
+        <div class="accountGrid">
+          <form id="signup-form" class="surface accountForm">
+            <h2>Create an account</h2><label for="signup-email">Email</label><input id="signup-email" type="email" autocomplete="email" required maxlength="254">
+            <label for="signup-password">Password</label><input id="signup-password" type="password" autocomplete="new-password" minlength="8" required>
+            <label for="signup-confirm-password">Confirm password</label><input id="signup-confirm-password" type="password" autocomplete="new-password" minlength="8" required>
+            <button class="button primary" type="submit">Sign up</button>
+          </form>
+          <form id="login-form" class="surface accountForm">
+            <h2>Sign in</h2><label for="login-email">Email</label><input id="login-email" type="email" autocomplete="username" required maxlength="254">
+            <label for="login-password">Password</label><input id="login-password" type="password" autocomplete="current-password" required>
+            <button class="button primary" type="submit">Log in</button><button id="google-signin" class="button" type="button">Continue with Google</button>
+          </form>
+        </div>
+        <form id="reset-request-form" class="surface accountForm resetForm"><h2>Reset your password</h2><label for="reset-email">Account email</label><input id="reset-email" type="email" autocomplete="email" required maxlength="254"><button class="button" type="submit">Email me a reset link</button></form>
+        <form id="recovery-complete-form" class="surface accountForm resetForm" hidden><h2>Choose a new password</h2><label for="new-password">New password</label><input id="new-password" type="password" autocomplete="new-password" minlength="8" required><label for="new-password-confirm">Confirm new password</label><input id="new-password-confirm" type="password" autocomplete="new-password" minlength="8" required><button class="button primary" type="submit">Update password</button></form>
+        <p class="small muted">Email confirmation and password reset are handled by Supabase. Use the same email to sign in after confirming.</p>
+      </section>
+      <section id="cloud-plans-panel" class="surface accountPanel" hidden>
+        <h2>Your cloud-saved plans</h2><p class="small muted">Saving is explicit. Each save creates a new copy; it does not replace another plan. Loading validates the saved inputs and recalculates them locally.</p>
+        <form id="cloud-save-form" class="featureForm cloudSaveForm"><label for="cloud-plan-name">Name this plan</label><input id="cloud-plan-name" type="text" maxlength="80" required placeholder="For example, Autumn 2027 plan"><button class="button primary" type="submit">Save current planner plan</button></form>
+        <p id="cloud-plan-loading" class="small muted" hidden>Loading your plans…</p><div id="cloud-plan-list" class="cloudPlanList" aria-live="polite"></div>
+        <button class="button" type="button" data-auth-logout>Log out</button>
+      </section>
+      <p class="small muted accountPrivacyLink">Cloud saving stores selected plan inputs in Supabase. <a href="/privacy.html">Read the privacy details.</a> Clearing local plan data does not delete cloud copies.</p>
+    </div></section>
+  </main>
+  <div id="site-footer"></div>
+  <script src="/lib/finance.js"></script><script src="/lib/plan-state.js"></script><script src="/lib/cloud-plans.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="/js/supabase-config.js"></script><script src="/js/supabase-client.js"></script>
+  <script src="/js/site.js"></script><script src="/js/auth-status.js"></script><script src="/js/account-page.js"></script>
+</body>
+</html>
