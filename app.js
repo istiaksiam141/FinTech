@@ -215,6 +215,7 @@ function syncCustomSelect(select) {
     option.setAttribute("aria-selected", String(option.dataset.value === select.value));
   });
 }
+let customSelectId = 0;
 function initializeCustomSelect(select) {
   if (select.closest(".customSelect")) return;
   const label = select.closest("label");
@@ -235,6 +236,8 @@ function initializeCustomSelect(select) {
   trigger.innerHTML = '<span class="customSelectValue"></span><span class="customSelectChevron" aria-hidden="true"></span>';
   const menu = document.createElement("div");
   menu.className = "customSelectMenu";
+  menu.id = `customSelectMenu-${++customSelectId}`;
+  trigger.setAttribute("aria-controls", menu.id);
   menu.setAttribute("role", "listbox");
   menu.setAttribute("aria-label", labelText);
   menu.hidden = true;
@@ -269,7 +272,11 @@ function initializeCustomSelect(select) {
   });
   trigger.addEventListener("click", () => menu.hidden ? open() : close());
   trigger.addEventListener("keydown", event => {
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (menu.hidden) open();
+      else close();
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       if (menu.hidden) open();
       else menu.querySelector(`[data-value="${CSS.escape(select.value)}"]`)?.focus();

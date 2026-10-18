@@ -293,6 +293,8 @@ test('active UI has blank financial inputs and working external quote paths; scr
   assert.match(app,/function renderRateTimestampCalendar/,'the rate timestamp has an interactive calendar');
   assert.match(app,/function initializeQuoteTimestampPicker/,'provider quote timestamps use the interactive date-time picker');
   assert.match(app,/function initializeCustomSelect/,'dropdowns use the branded accessible menu');
+  assert.match(app,/trigger\.setAttribute\("aria-controls", menu\.id\)/,'dropdown triggers identify their listbox');
+  assert.match(app,/event\.key === "Enter" \|\| event\.key === " "/,'dropdowns support keyboard activation');
   assert.match(app,/ArrowRight/,'the custom calendar supports keyboard navigation');
   assert.match(app,/result\.daysRemaining === 1 \? "day" : "days"/,'deadline results use correct singular and plural labels');
   assert.match(app,/byId\("deadline"\)\.addEventListener\("change"/,'selecting a deadline updates the displayed plan');
