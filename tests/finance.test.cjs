@@ -192,6 +192,91 @@ test('whole-BDT contribution schedule covers a non-divisible funding gap',()=>{
   assert.equal(fractionalSchedule.finalAmount,2,'whole BDT schedule must cover a fractional BDT gap');
 });
 
+test('dated contribution roadmap uses exact 30-day calendar dates and the adjusted final cycle',()=>{
+  const input=profile({deadline:isoAfter(90),savings:'299999'});
+  const result=Finance.calculateTuition(input,today);
+  const inputBefore=structuredClone(input),resultBefore=structuredClone(result);
+  const roadmap=Finance.buildContributionRoadmap(input,result,today);
+  assert.equal(roadmap.ok,true);
+  assert.deepEqual(roadmap.contributions.map(item=>item.dueDate),['2026-11-12','2026-12-12','2027-01-11']);
+  assert.deepEqual(roadmap.contributions.map(item=>item.requiredContributionBdt),[333333,333333,333335]);
+  assert.deepEqual(roadmap.contributions.map(item=>item.cumulativePlannedContributionsBdt),[333333,666666,1000001]);
+  assert.deepEqual(roadmap.contributions.map(item=>item.remainingFundingGapBdt),[975001,950001,925001]);
+  assert.equal(roadmap.contributions[0].projectedSavingsBalanceBdt,result.usable+25000);
+  assert.equal(roadmap.requiredContributionTotalBdt,result.gap);
+  assert.equal(roadmap.targetCanBeReachedByDeadline,false);
+  assert.equal(roadmap.endingRemainingFundingGapBdt,result.shortfall);
+  assert.deepEqual(input,inputBefore);
+  assert.deepEqual(result,resultBefore);
+});
+
+test('dated roadmap separates required contributions from affordable projected capacity',()=>{
+  const insufficientInput=profile({expenses:'60000'});
+  const insufficient=Finance.calculateTuition(insufficientInput,today);
+  const insufficientRoadmap=Finance.buildContributionRoadmap(insufficientInput,insufficient,today);
+  assert.equal(insufficientRoadmap.ok,true);
+  assert.equal(insufficientRoadmap.targetCanBeReachedByDeadline,false);
+  assert.equal(insufficientRoadmap.monthlySavingsCapacityBdt,0);
+  assert.ok(insufficientRoadmap.contributions.every(item=>item.projectedSavingsBalanceBdt===insufficient.usable));
+  assert.ok(insufficientRoadmap.contributions.every(item=>item.remainingFundingGapBdt===insufficient.gap));
+  assert.ok(insufficientRoadmap.contributions.every(item=>item.exceedsMonthlyCapacityBdt===item.requiredContributionBdt));
+
+  const sufficientInput=profile({income:'500000',expenses:'0'});
+  const sufficient=Finance.calculateTuition(sufficientInput,today);
+  const sufficientRoadmap=Finance.buildContributionRoadmap(sufficientInput,sufficient,today);
+  assert.equal(sufficientRoadmap.targetCanBeReachedByDeadline,true);
+  assert.equal(sufficientRoadmap.endingRemainingFundingGapBdt,0);
+  assert.equal(sufficientRoadmap.contributions.at(-1).remainingFundingGapBdt,0);
+});
+
+test('dated roadmap handles covered need, no contribution dates, impossible dates, and limits',()=>{
+  const coveredInput=profile({savings:'1300000',deadline:isoAfter(60)});
+  const covered=Finance.calculateTuition(coveredInput,today);
+  const coveredRoadmap=Finance.buildContributionRoadmap(coveredInput,covered,today);
+  assert.equal(coveredRoadmap.ok,true);
+  assert.equal(coveredRoadmap.state,'covered');
+  assert.equal(coveredRoadmap.targetCanBeReachedByDeadline,true);
+  assert.equal(coveredRoadmap.requiredContributionTotalBdt,0);
+  assert.deepEqual(coveredRoadmap.contributions,[]);
+
+  const noDateInput=profile({deadline:isoAfter(29)});
+  const noDates=Finance.calculateTuition(noDateInput,today);
+  const noDateRoadmap=Finance.buildContributionRoadmap(noDateInput,noDates,today);
+  assert.equal(noDateRoadmap.state,'no-contribution-dates');
+  assert.equal(noDateRoadmap.targetCanBeReachedByDeadline,false);
+  assert.match(noDateRoadmap.summary,/No complete 30-day contribution date/);
+  assert.deepEqual(noDateRoadmap.contributions,[]);
+
+  const invalidInput=profile({deadline:'2026-02-30'});
+  assert.equal(Finance.buildContributionRoadmap(invalidInput,{ok:true,contributionCycles:3},today).ok,false);
+  const overflow=Finance.buildContributionRoadmap(profile(),{ok:true,contributionCycles:2,gap:1e12+1,requiredFunds:1,usable:0,disposable:1,capacity:2,shortfall:1},today);
+  assert.equal(overflow.ok,false);
+  assert.match(overflow.errors.join(' '),/supported maximum/);
+});
+
+test('dated roadmap explains when its display horizon is exceeded without changing the projection',()=>{
+  const input=profile({deadline:isoAfter((Finance.MAX_ROADMAP_CYCLES+1)*30),income:'1000',expenses:'0'});
+  const result=Finance.calculateTuition(input,today);
+  const roadmap=Finance.buildContributionRoadmap(input,result,today);
+  assert.equal(result.ok,true);
+  assert.equal(roadmap.ok,true);
+  assert.equal(roadmap.state,'too-many-cycles');
+  assert.equal(roadmap.contributionCycles,Finance.MAX_ROADMAP_CYCLES+1);
+  assert.deepEqual(roadmap.contributions,[]);
+  assert.equal(roadmap.projectedSavingsCapacityBdt,result.capacity);
+  assert.equal(roadmap.endingRemainingFundingGapBdt,result.shortfall);
+  assert.match(roadmap.summary,/too many dates to display/);
+});
+
+test('dated roadmap uses calendar dates across daylight-saving transitions',()=>{
+  const input=profile({deadline:'2026-04-06',rateTimestamp:'2026-03-07T10:00'});
+  const script=`const F=require('./lib/finance.js');const p=${JSON.stringify(input)};const today=new Date(2026,2,7,12);const r=F.calculateTuition(p,today);process.stdout.write(JSON.stringify(F.buildContributionRoadmap(p,r,today)));`;
+  const roadmap=JSON.parse(execFileSync(process.execPath,['-e',script],{cwd:path.join(__dirname,'..'),env:{...process.env,TZ:'America/New_York'},encoding:'utf8'}));
+  assert.equal(roadmap.ok,true);
+  assert.equal(roadmap.contributionCycles,1);
+  assert.equal(roadmap.contributions[0].dueDate,'2026-04-06');
+});
+
 test('tuition, fees, and projected contributions cannot exceed the supported BDT calculation range',()=>{
   const tuitionOverflow=Finance.calculateTuition(profile({tuition:'1000000000000',exchangeRate:'1000000000000'}),today);
   assert.equal(tuitionOverflow.ok,false);
@@ -203,12 +288,72 @@ test('tuition, fees, and projected contributions cannot exceed the supported BDT
   assert.match(projectionOverflow.errors.join(' '),/Calculated BDT amounts exceed the supported maximum/);
 });
 
+test('optional study-abroad costs add once to tuition funding and preserve the existing plan when blank',()=>{
+  const empty=profile();
+  const original=Finance.calculateTuition(empty,today);
+  const blank=Finance.calculateTuition({...empty,visaCost:'',applicationCost:'',flightCost:'',insuranceCost:'',documentCost:'',accommodationDeposit:'',initialSetupCost:'',otherOneTimeCosts:'',initialLivingMonths:'',monthlyRent:'',monthlyFood:'',monthlyTransport:'',monthlyUtilities:'',monthlyOtherLiving:''},today);
+  assert.equal(blank.ok,true);
+  assert.equal(blank.requiredFunds,original.requiredFunds);
+  assert.equal(blank.gap,original.gap);
+  const costs=Finance.calculateTuition(profile({paymentFee:'1200',visaCost:'5000',applicationCost:'3000',flightCost:'40000',insuranceCost:'6000',documentCost:'2500',accommodationDeposit:'20000',initialSetupCost:'8000',otherOneTimeCosts:'1500',initialLivingMonths:'3',monthlyRent:'30000',monthlyFood:'12000',monthlyTransport:'3000',monthlyUtilities:'4000',monthlyOtherLiving:'2000'}),today);
+  assert.equal(costs.ok,true);
+  assert.equal(costs.oneTimeCostsTotal,86000);
+  assert.equal(costs.monthlyLivingCostsTotal,51000);
+  assert.equal(costs.initialLivingCostsTotal,153000);
+  assert.equal(costs.estimatedOtherCosts,240200,'the existing payment fee is included once, separately from categorized expenses');
+  assert.equal(costs.requiredFunds,costs.tuitionHome+240200);
+  assert.equal(costs.gap,Math.max(0,costs.requiredFunds-costs.usable));
+  assert.equal(costs.contributionCycles,2,'the existing complete-30-day rule remains in effect');
+  assert.equal(costs.capacity,original.capacity,'study cost estimates do not rewrite the current monthly budget surplus');
+});
+
+test('optional cost validation rejects invalid, incomplete, and out-of-range scenarios',()=>{
+  for(const value of ['-1','NaN','Infinity','1000000000001']){
+    const result=Finance.calculateTuition(profile({flightCost:value}),today);
+    assert.equal(result.ok,false,`invalid optional cost ${value}`);
+    assert.match(result.errors.join(' '),/Flights/);
+  }
+  assert.match(Finance.validateProfile(profile({monthlyRent:'100',initialLivingMonths:''}),today).join(' '),/number of months/);
+  assert.match(Finance.validateProfile(profile({initialLivingMonths:'1.5'}),today).join(' '),/whole number of months/);
+  const overflow=Finance.calculateTuition(profile({visaCost:'600000000000',applicationCost:'500000000000'}),today);
+  assert.equal(overflow.ok,false);
+  assert.match(overflow.errors.join(' '),/Calculated BDT amounts exceed/);
+  const livingOverflow=Finance.calculateTuition(profile({initialLivingMonths:'1000000000000',monthlyRent:'2'}),today);
+  assert.equal(livingOverflow.ok,false);
+  assert.match(livingOverflow.errors.join(' '),/Calculated BDT amounts exceed/);
+});
+
+test('readiness report maps optional study costs, currency equivalents, and existing fees without mutation',()=>{
+  const input=profile({visaCost:'5000',paymentFee:'1200',initialLivingMonths:'2',monthlyRent:'10000',monthlyFood:'5000'});
+  const result=Finance.calculateTuition(input,today);
+  const before=structuredClone(input);
+  const report=Finance.buildReadinessReportData(input,result);
+  assert.equal(report.ok,true);
+  assert.equal(report.paymentFeesBdt,1200);
+  assert.equal(report.oneTimeCostsBdt,5000);
+  assert.equal(report.monthlyLivingCostsBdt,15000);
+  assert.equal(report.initialLivingCostsBdt,30000);
+  assert.equal(report.otherEnteredCostsBdt,36200);
+  assert.equal(report.totalRequiredFundsBdt,result.requiredFunds);
+  assert.equal(report.destinationCurrencyCostEquivalent,36200/155);
+  assert.equal(report.destinationCurrencyTotalEquivalent,result.requiredFunds/155);
+  assert.equal(report.oneTimeCostItems.find(item=>item.label==='Flights').amountBdt,null);
+  assert.deepEqual(input,before);
+  const text=Finance.buildFinancialReport(input,result);
+  assert.match(text,/Visa costs: 5000 BDT/);
+  assert.match(text,/initial living estimate 30000 BDT/i);
+  assert.match(text,/payment\/transfer fees 1200 BDT/);
+});
+
 test('stress scenarios recalculate rate, expense, and missed-contribution cases without mutating baseline inputs',()=>{
   const input=profile();
   const before=structuredClone(input);
+  const baselineResult=Finance.calculateTuition(input,today);
+  const baselineResultBefore=structuredClone(baselineResult);
   const stress=Finance.calculateStressScenarios(input,{expenseIncrease:10000,missedContributions:1},today);
   assert.equal(stress.ok,true);
   assert.deepEqual(input,before,'stress tests must not mutate the baseline input');
+  assert.deepEqual(baselineResult,baselineResultBefore,'stress tests must not mutate an existing baseline result');
   const byName=Object.fromEntries(stress.scenarios.map(scenario=>[scenario.name,scenario]));
   assert.equal(byName.Baseline.fundingGap,800000);
   assert.equal(byName['Exchange rate +5%'].exchangeRate,162.75);
@@ -217,12 +362,16 @@ test('stress scenarios recalculate rate, expense, and missed-contribution cases 
   assert.equal(byName['Increased monthly expenses'].monthlySurplus,15000);
   assert.equal(byName['Increased monthly expenses'].projectedCapacity,30000);
   assert.equal(byName['One missed contribution'].contributionCycles,1);
+  assert.equal(byName['One missed contribution'].missedContributionAmount,25000,'missed amount is the scheduled 400,000 BDT installment capped at the 25,000 BDT available monthly surplus');
   assert.equal(byName['One missed contribution'].projectedCapacity,25000);
   assert.equal(byName['Increased expenses + one missed contribution'].projectedCapacity,15000);
   assert.equal(byName['Increased expenses + one missed contribution'].projectedShortfall,785000);
   assert.ok(byName['Increased monthly expenses'].contributionSchedule.regularAmount * (byName['Increased monthly expenses'].contributionCycles - 1) + byName['Increased monthly expenses'].contributionSchedule.finalAmount >= byName['Increased monthly expenses'].fundingGap);
   assert.equal(Finance.calculateStressScenarios(input,{expenseIncrease:-1},today).ok,false);
+  for(const invalid of ['',null,'  ','100',Infinity,NaN]) assert.equal(Finance.calculateStressScenarios(input,{expenseIncrease:invalid},today).ok,false,`invalid expense increase ${String(invalid)} must be rejected`);
   assert.equal(Finance.calculateStressScenarios(input,{missedContributions:2},today).ok,false);
+  const exceededRate=Finance.calculateStressScenarios(profile({tuition:'1',exchangeRate:'1000000000000'}),{},today);
+  assert.equal(exceededRate.ok,false,'rate stress cases exceeding the supported calculated range must be rejected');
 });
 
 test('stress scenarios preserve zero-gap, zero-cycle, and negative-surplus boundaries',()=>{
@@ -234,11 +383,13 @@ test('stress scenarios preserve zero-gap, zero-cycle, and negative-surplus bound
   assert.equal(noCycles.ok,true);
   assert.equal(noCycles.scenarios[0].contributionCycles,0);
   assert.equal(noCycles.scenarios[0].monthlyTarget,null);
+  assert.equal(noCycles.scenarios[0].missedContributionAmount,0);
   assert.equal(noCycles.scenarios[0].projectedShortfall,noCycles.scenarios[0].fundingGap);
   const negative=Finance.calculateStressScenarios(profile({expenses:'70000'}),{expenseIncrease:5000,missedContributions:1},today);
   assert.equal(negative.ok,true);
   assert.equal(negative.scenarios[0].monthlySurplus,-10000);
   assert.equal(negative.scenarios[0].projectedCapacity,0);
+  assert.equal(negative.scenarios.find(scenario=>scenario.name==='One missed contribution').missedContributionAmount,0,'a negative surplus means there is no contribution to miss');
 });
 
 test('financial report includes inputs, formulas, provenance, adjusted schedule, and available stress results',()=>{
@@ -253,9 +404,70 @@ test('financial report includes inputs, formulas, provenance, adjusted schedule,
   assert.match(report,/333333 BDT for 2 cycle\(s\), then 333335 BDT in the final cycle/);
   assert.match(report,/Exchange rate \+5%/);
   assert.match(report,/Exchange rate \+10%/);
+  assert.match(report,/assumed missed amount 20000 BDT/);
   assert.match(report,/Increased monthly expenses/);
   assert.match(report,/One missed contribution/);
   assert.match(report,/projected shortfall/);
+});
+
+test('readiness report maps validated plan data, optional details, and stress results without mutation',()=>{
+  const input=profile({deadline:isoAfter(90),savings:'299999'});
+  const result=Finance.calculateTuition(input,today);
+  const stress=Finance.calculateStressScenarios(input,{expenseIncrease:5000,missedContributions:1},today);
+  const roadmap=Finance.buildContributionRoadmap(input,result,today);
+  const inputBefore=structuredClone(input),resultBefore=structuredClone(result);
+  const report=Finance.buildReadinessReportData(input,result,{reportDate:new Date(2026,9,13),stressScenarios:stress.scenarios,roadmap});
+  assert.equal(report.ok,true);
+  assert.equal(report.branding,'CampusBridge AI');
+  assert.equal(report.title,'Student Financial Readiness Report');
+  assert.equal(report.studentName,null,'name is omitted unless explicitly provided');
+  assert.equal(report.reportDate,'2026-10-13');
+  assert.equal(report.tuitionEstimateBdt,result.tuitionHome);
+  assert.equal(report.totalRequiredFundsBdt,result.requiredFunds);
+  assert.equal(report.fundingGapBdt,result.gap);
+  assert.equal(report.monthlyContributionTargetBdt,result.monthlyTarget);
+  assert.equal(report.contributionCycles,result.contributionCycles);
+  assert.equal(report.rateSource,input.rateSource);
+  assert.equal(report.stressScenarios.length,stress.scenarios.length);
+  assert.equal(report.contributionRoadmap.firstDueDate,roadmap.contributions[0].dueDate);
+  assert.equal(report.contributionRoadmap.lastDueDate,roadmap.contributions.at(-1).dueDate);
+  assert.equal(report.contributionRoadmap.requiredContributionTotalBdt,result.gap);
+  assert.deepEqual(input,inputBefore);
+  assert.deepEqual(result,resultBefore);
+  assert.equal(Finance.buildReadinessReportData(input,result,{studentName:'  Alex Student  '}).studentName,'Alex Student');
+  assert.deepEqual(Finance.buildReadinessReportData(input,result).stressScenarios,[],'stress results are omitted unless available');
+});
+
+test('readiness report clearly maps covered need, no contribution dates, and zero disposable income',()=>{
+  const coveredInput=profile({savings:'1300000',emergency:'50000',committed:'10000',deadline:isoAfter(1)});
+  const covered=Finance.calculateTuition(coveredInput,today);
+  const coveredReport=Finance.buildReadinessReportData(coveredInput,covered);
+  assert.equal(coveredReport.fundingGapBdt,0);
+  assert.equal(coveredReport.monthlyContributionTargetBdt,0);
+  assert.equal(coveredReport.contributionSchedule.state,'covered');
+  assert.match(coveredReport.nextSteps[0],/cover the estimated need/);
+
+  const noDatesInput=profile({deadline:isoAfter(29)});
+  const noDates=Finance.calculateTuition(noDatesInput,today);
+  const noDatesReport=Finance.buildReadinessReportData(noDatesInput,noDates);
+  assert.equal(noDatesReport.contributionCycles,0);
+  assert.equal(noDatesReport.monthlyContributionTargetBdt,null);
+  assert.equal(noDatesReport.contributionSchedule.state,'unavailable');
+  assert.equal(noDatesReport.projectedShortfallBdt,noDatesReport.fundingGapBdt);
+  assert.match(noDatesReport.nextSteps[0],/No complete 30-day contribution cycle/);
+
+  const noSurplusInput=profile({expenses:'60000'});
+  const noSurplus=Finance.calculateTuition(noSurplusInput,today);
+  const noSurplusReport=Finance.buildReadinessReportData(noSurplusInput,noSurplus);
+  assert.equal(noSurplusReport.monthlySurplusBdt,0);
+  assert.equal(noSurplusReport.projectedSavingsCapacityBdt,0);
+  assert.equal(noSurplusReport.projectedShortfallBdt,noSurplusReport.fundingGapBdt);
+  assert.ok(noSurplusReport.nextSteps.some(step=>step.includes('does not leave a positive monthly surplus')));
+});
+
+test('readiness report rejects missing or invalid calculation results instead of inventing data',()=>{
+  assert.equal(Finance.buildReadinessReportData(null,null).ok,false);
+  assert.equal(Finance.buildReadinessReportData(profile(),{ok:false}).ok,false);
 });
 
 test('covered tuition needs no target, and zero or past deadlines remain invalid',()=>{
@@ -273,7 +485,7 @@ test('assistant savings guidance says no more monthly savings are needed when th
   const guidance=Finance.describeMonthlySavingsTarget(covered);
   assert.equal(guidance.state,'covered');
   assert.equal(guidance.amount,0);
-  assert.equal(guidance.message,'Your current usable savings cover the estimated tuition need. No additional monthly savings are needed for this target.');
+  assert.equal(guidance.message,'Your current usable savings cover the estimated study costs. No additional monthly savings are needed for this target.');
   const app=fs.readFileSync(path.join(__dirname,'..','app.js'),'utf8');
   assert.ok(app.includes('target.state==="covered"?target.message'));
 });
@@ -384,7 +596,7 @@ test('comparison ranking and report export share the same eligible quote list',(
 
 test('active UI has blank financial inputs and working external quote paths; scripts parse',()=>{
   const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
-  for(const marker of ['id="exchangeRate"','id="rateSource"','id="rateTimestamp"','id="rateTimestampHint"','id="rateTimestampTrigger"','id="rateTimestampCalendar"','id="rateTimestampTime"','id="useCurrentRateTimestamp"','id="refreshExchangeRate"','id="useExchangeRate"','id="exchangeRateStatus"','id="providerQuoteForms"','id="deadlineHint"','id="deadlineTrigger"','id="deadlineCalendar"','role="grid"','aria-haspopup="dialog"','.formSection .fieldGrid>label{align-self:start;align-content:start}','.timestampControl{display:flex;width:100%;min-width:0}','#providerQuoteForms .quoteTimestampLabel{grid-column:1/-1}','.calendarDay.isToday:not(.isSelected){background:#eaf6f0','.customSelect{position:relative;width:100%;min-width:0}','.customSelectOption[aria-selected=true]::after{content:"✓"','https://www.bb.org.bd/en/index.php/econdata/exchangerate','convera.com/students/faq','pay.flywire.com','id="applyScenario"','id="resetScenario"','id="exportReport"','src="lib/exchange-rates.js"']) assert.ok(html.includes(marker),`missing ${marker}`);
+  for(const marker of ['id="exchangeRate"','id="rateSource"','id="rateTimestamp"','id="rateTimestampHint"','id="rateTimestampTrigger"','id="rateTimestampCalendar"','id="rateTimestampTime"','id="useCurrentRateTimestamp"','id="refreshExchangeRate"','id="useExchangeRate"','id="exchangeRateStatus"','id="providerQuoteForms"','id="deadlineHint"','id="deadlineTrigger"','id="deadlineCalendar"','role="grid"','aria-haspopup="dialog"','.formSection .fieldGrid>label{align-self:start;align-content:start}','.timestampControl{display:flex;width:100%;min-width:0}','#providerQuoteForms .quoteTimestampLabel{grid-column:1/-1}','.calendarDay.isToday:not(.isSelected){background:#eaf6f0','.customSelect{position:relative;width:100%;min-width:0}','.customSelectOption[aria-selected=true]::after{content:"✓"','https://www.bb.org.bd/en/index.php/econdata/exchangerate','convera.com/students/faq','pay.flywire.com','id="applyScenario"','id="resetScenario"','id="stressExpenseIncrease"','id="runStressTest"','id="clearStressTest"','id="stressResults"','id="readinessStudentName"','id="generateReadinessReport"','id="readinessReportPreview"','id="printReadinessReport"','id="closeReadinessReport"','aria-live="polite"','@page{size:A4 portrait','@media print','id="exportReport"','src="lib/exchange-rates.js"']) assert.ok(html.includes(marker),`missing ${marker}`);
   for(const marker of ['@keyframes globeTurn','animation:globeTurn 34s linear infinite','<div class="globeMap">','<g class="globeLand">','<g class="globeGrid">','.heroVisual .orb3d{width:min(430px,82vw)}','.heroVisual .tileB{right:-4%}']) assert.ok(html.includes(marker),`missing ${marker}`);
   assert.doesNotMatch(html,/class="(?:orbit|node)(?:\s|")/,'the hero illustration no longer uses atom-style orbiting particles');
   assert.ok(app.includes('data-field="timestamp" type="datetime-local"'),'quote timestamps remain date-time inputs for existing validation and comparison');
@@ -396,6 +608,15 @@ test('active UI has blank financial inputs and working external quote paths; scr
   assert.doesNotMatch(html,/value="(?:12000|450000|80000|52000|200000)"/);
   assert.doesNotMatch(app,/fictional|illustrative/);
   assert.ok(app.includes('Finance.compareEnteredQuotes'));
+  assert.match(app,/const stress=Finance\.calculateStressScenarios\(\{\.\.\.input\},options\);[\s\S]*renderStressTestResults\(stress,input\.tuitionCur\)/,'the stress-test controls call the deterministic finance engine with a copy of current inputs');
+  assert.match(app,/byId\("runStressTest"\)\.addEventListener\("click",runStressTest\)/,'students can run stress tests from the existing what-if section');
+  assert.match(app,/description\.textContent=value/,'stress-test results are rendered as text, not interpreted HTML');
+  assert.match(app,/Finance\.buildReadinessReportData\(/,'the report maps the validated finance result through the shared finance module');
+  assert.match(html,/<a href="#roadmap">Savings roadmap<\/a>[\s\S]*id="roadmap"[^>]*>/,'the savings-roadmap navigation target exists in the document');
+  assert.match(html,/#roadmap\{scroll-margin-top:100px\}/,'the roadmap anchor remains clear below the sticky header');
+  assert.match(app,/if\(!roadmap\?\.ok\)\{section\.hidden=false;summary\.textContent=/,'the roadmap navigation target remains visible before a valid plan is calculated');
+  assert.match(app,/byId\("printReadinessReport"\)\.addEventListener\("click",\(\)=>window\.print\(\)\)/,'the report uses the native browser print dialog');
+  assert.match(html,/id="readinessReportPreview"[^>]*hidden/,'the report preview is hidden until the student generates it');
   assert.ok(app.includes('data-field="currency"'));
   assert.match(app,/input\.min = localDate\(deadlineMinimum\(\)\)/,'past dates are excluded from the native constraint');
   assert.match(app,/calendarTomorrow/,'the calendar offers the earliest valid deadline as a shortcut');
@@ -420,4 +641,18 @@ test('student-facing privacy notices, progressive quote entry, and technical dis
   assert.match(app,/providerDefs\.slice\(0,\s*visibleProviderCount\)/,'quote forms are shown progressively');
   assert.match(app,/quoteDrafts\.clear\(\)/,'clearing planner inputs also clears saved-in-page quote drafts');
   assert.match(app,/What this estimate uses/);
+});
+
+test('study-cost inputs are optional, connected to the profile, and represented in the plan summary',()=>{
+  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  for(const id of ['visaCost','applicationCost','flightCost','insuranceCost','documentCost','accommodationDeposit','initialSetupCost','otherOneTimeCosts','initialLivingMonths','monthlyRent','monthlyFood','monthlyTransport','monthlyUtilities','monthlyOtherLiving']){
+    assert.ok(html.includes(`id="${id}"`),`missing optional study-cost input ${id}`);
+    assert.ok(app.includes(`"${id}"`),`profile does not read study-cost input ${id}`);
+  }
+  assert.match(app,/Total estimated study cost/);
+  assert.match(app,/Dated contribution roadmap/);
+  assert.match(app,/buildContributionRoadmap/);
+  assert.match(app,/destinationTotal/);
+  assert.match(app,/Total available savings/);
+  assert.match(app,/Rate verification/);
 });

@@ -32,6 +32,31 @@ function contributionScheduleText(result) {
   if (target.state === "covered" || target.state === "unavailable") return target.message;
   return result.contributionCycles === 1 ? money(target.finalAmount) : `${money(target.regularAmount)} for first ${result.contributionCycles - 1} cycle(s), then ${money(target.finalAmount)} in the final cycle`;
 }
+function renderContributionRoadmap(roadmap) {
+  const section=byId("roadmap"),summary=byId("roadmapSummary"),capacityNote=byId("roadmapCapacityNote"),timeline=byId("roadmapTimeline");
+  timeline.replaceChildren();
+  if(!roadmap?.ok){section.hidden=false;summary.textContent="Calculate a valid plan to see dated contribution estimates.";capacityNote.textContent="";return;}
+  summary.textContent=roadmap.summary;
+  const reach=document.createElement("span");reach.className=`roadmapReachability${roadmap.targetCanBeReachedByDeadline?"":" isShort"}`;
+  reach.textContent=roadmap.targetCanBeReachedByDeadline?"Projected target: reachable by deadline":"Projected target: not reachable with current savings capacity";
+  summary.append(document.createTextNode(" "),reach);
+  capacityNote.textContent=`Required contribution schedule: ${money(roadmap.requiredContributionTotalBdt)} across ${roadmap.contributionCycles} complete 30-day cycle(s). Projected savings capacity: ${money(roadmap.projectedSavingsCapacityBdt)}. Current monthly savings capacity: ${money(roadmap.monthlySavingsCapacityBdt)}. Planned contributions are targets, not guaranteed future payments.`;
+  for(const item of roadmap.contributions){
+    const row=document.createElement("li"),heading=document.createElement("div"),cycle=document.createElement("span"),due=document.createElement("time"),details=document.createElement("dl");
+    heading.className="roadmapCycleTitle";cycle.textContent=`Cycle ${item.cycle}`;due.dateTime=item.dueDate;due.textContent=`Due ${item.dueDate}`;heading.append(cycle,due);
+    details.className="roadmapCycleDetails";
+    const rows=[
+      ["Required planned contribution",money(item.requiredContributionBdt)],
+      ["Cumulative planned contributions",money(item.cumulativePlannedContributionsBdt)],
+      ["Projected savings balance after saving current surplus",money(item.projectedSavingsBalanceBdt)],
+      ["Remaining funding gap at projected capacity",money(item.remainingFundingGapBdt)],
+      ["Current monthly savings capacity",money(item.monthlySavingsCapacityBdt)],
+      ["Capacity check",item.exceedsMonthlyCapacityBdt>0?`Planned amount is ${money(item.exceedsMonthlyCapacityBdt)} above current monthly capacity`:"Within current monthly capacity"]
+    ];
+    for(const [label,value] of rows){const term=document.createElement("dt"),description=document.createElement("dd"),entry=document.createElement("div");term.textContent=label;description.textContent=value;entry.append(term,description);details.append(entry);}
+    row.append(heading,details);timeline.append(row);
+  }
+}
 let planRequested = false;
 let calendarCursor = new Date();
 let calendarFocusDate = null;
@@ -471,7 +496,7 @@ document.addEventListener("pointerdown", event => {
     }
   });
 });
-let latest = null; let activity = []; let bankAccounts = []; let nextBankAccountId = 1;
+let latest = null; let latestStressTest = null; let latestReadinessReportProfile = null; let activity = []; let bankAccounts = []; let nextBankAccountId = 1;
 let visibleProviderCount = 1;
 const quoteDrafts = new Map();
 const exchangeRateState = { lastResponse: null, nextRequestAt: 0, pending: false, mode: "manual", appliedCurrency: null, appliedUpdatedAtMs: null, appliedNextUpdateAtMs: null, selectedCurrency: "GBP", staleTimer: null };
@@ -487,6 +512,7 @@ function renderFetchedRateStatus(prefix = "") {
   const appliedIsStale = exchangeRateState.mode === "api" && exchangeRateState.appliedNextUpdateAtMs && Date.now() >= exchangeRateState.appliedNextUpdateAtMs;
   if (appliedIsStale) {
     latest = null;
+    renderContributionRoadmap(null);
     const message = "The Bangladesh Bank rate currently in use is stale. Refresh the official sheet or enter a current rate manually before calculating.";
     byId("formError").textContent = message;
     byId("plannerResults").innerHTML = `<p class="error">${message}</p>`;
@@ -577,7 +603,8 @@ function profile() {
   const c = corridorMap[byId("corridor").value];
   const manualSavings = byId("savings").value;
   const savings = manualSavings === "" && bankAccounts.length === 0 ? "" : String(BankAccounts.totalSavings(manualSavings, bankAccounts));
-  return { homeCountry: "Bangladesh", destinationCountry: c.country, homeCur: "BDT", tuitionCur: c.currency, tuition: byId("tuition").value, exchangeRate: byId("exchangeRate").value, rateSource: byId("rateSource").value, rateTimestamp: byId("rateTimestamp").value, rateProvenance: exchangeRateState.mode === "api" ? "Bangladesh Bank official reference rate; not a tuition-payment quote" : "User-provided manual rate; not independently verified", savings, emergency: byId("emergency").value, committed: byId("committed").value || 0, income: byId("income").value, expenses: byId("expenses").value, paymentFee: byId("paymentFee").value || 0, deadline: byId("deadline").value };
+  const costFields = ["visaCost", "applicationCost", "flightCost", "insuranceCost", "documentCost", "accommodationDeposit", "initialSetupCost", "otherOneTimeCosts", "initialLivingMonths", "monthlyRent", "monthlyFood", "monthlyTransport", "monthlyUtilities", "monthlyOtherLiving"];
+  return { homeCountry: "Bangladesh", destinationCountry: c.country, homeCur: "BDT", tuitionCur: c.currency, tuition: byId("tuition").value, exchangeRate: byId("exchangeRate").value, rateSource: byId("rateSource").value, rateTimestamp: byId("rateTimestamp").value, rateProvenance: exchangeRateState.mode === "api" ? "Bangladesh Bank official reference rate; not a tuition-payment quote" : "User-provided manual rate; not independently verified", savings, emergency: byId("emergency").value, committed: byId("committed").value || 0, income: byId("income").value, expenses: byId("expenses").value, paymentFee: byId("paymentFee").value || 0, ...Object.fromEntries(costFields.map(id => [id, byId(id).value])), deadline: byId("deadline").value };
 }
 function renderBankAccounts() {
   const list = byId("bankAccountList");
@@ -610,18 +637,27 @@ function compute() {
   const activeCurrency = corridorMap[byId("corridor").value].currency;
   if (exchangeRateState.mode === "api" && (exchangeRateState.appliedCurrency !== activeCurrency || !exchangeRateState.appliedNextUpdateAtMs || Date.now() >= exchangeRateState.appliedNextUpdateAtMs)) {
     latest = null;
+    renderContributionRoadmap(null);
+    clearStressTestResults(); byId("readinessReportPreview").hidden = true; latestReadinessReportProfile = null;
     const message = "The Bangladesh Bank rate currently in use is stale or for a different corridor. Refresh the official sheet or enter one manually before calculating.";
     byId("formError").textContent = message;
     byId("plannerResults").innerHTML = `<p class="error">${message}</p>`;
     renderFetchedRateStatus();
     return;
   }
-  const input = profile(); const result = Finance.calculateTuition(input);
-  if (!result.ok) { latest = null; byId("deadlineTrigger").setAttribute("aria-invalid", String(!input.deadline)); byId("formError").textContent = result.errors.join(" "); byId("plannerResults").innerHTML = '<p class="muted">Enter your figures and a current, source-identified exchange rate to calculate.</p>'; return; }
-  byId("formError").textContent = ""; latest = { input, result }; const statusText = { covered:"Tuition covered by usable savings", ontrack:"On track at current monthly surplus", short:"Current plan leaves a shortfall" }[result.status];
+  const input = profile();
+  if (latestStressTest && JSON.stringify(latestStressTest.profile) !== JSON.stringify(input)) clearStressTestResults();
+  if (latestReadinessReportProfile && JSON.stringify(latestReadinessReportProfile) !== JSON.stringify(input)) { byId("readinessReportPreview").hidden = true; latestReadinessReportProfile = null; }
+  const calculationDate = new Date();
+  const result = Finance.calculateTuition(input, calculationDate);
+  if (!result.ok) { latest = null; renderContributionRoadmap(null); clearStressTestResults(); byId("readinessReportPreview").hidden = true; latestReadinessReportProfile = null; byId("deadlineTrigger").setAttribute("aria-invalid", String(!input.deadline)); byId("formError").textContent = result.errors.join(" "); byId("plannerResults").innerHTML = '<p class="muted">Enter your figures and a current, source-identified exchange rate to calculate.</p>'; return; }
+  const roadmap = Finance.buildContributionRoadmap(input, result, calculationDate);
+  byId("formError").textContent = ""; latest = { input, result, roadmap }; renderContributionRoadmap(roadmap); const statusText = { covered:"Estimated costs covered by usable savings", ontrack:"On track at current monthly surplus", short:"Current plan leaves a shortfall" }[result.status];
   const priorities = result.gap === 0 ? ["Keep the emergency reserve protected.","Confirm the university payment deadline and instructions.","Refresh assumptions before paying."] : [result.shortfall > 0 ? "Close the projected shortfall: current savings capacity is not enough." : "Set aside the monthly target before the tuition deadline.", "Verify the payment route and any institution-specific fees.", "Keep emergency savings and committed funds separate from tuition."];
   const monthlyTargetText = result.gap === 0 ? Finance.describeMonthlySavingsTarget(result).message : contributionScheduleText(result);
-  byId("plannerResults").innerHTML = `<span class="statusPill">${statusText}</span><div class="metricGrid"><div class="metric"><span>Tuition + known payment fees</span><strong>${money(result.requiredFunds)}</strong></div><div class="metric"><span>Usable savings</span><strong>${money(result.usable)}</strong></div><div class="metric"><span>Funding gap</span><strong>${money(result.gap)}</strong></div><div class="metric"><span>Save each month</span><strong>${monthlyTargetText}</strong></div><div class="metric"><span>Monthly surplus</span><strong>${money(result.disposable)}</strong></div><div class="metric"><span>Deadline</span><strong>${result.daysRemaining} ${result.daysRemaining === 1 ? "day" : "days"}</strong></div></div><div class="progressTrack" aria-label="Current tuition funding progress"><i style="width:${Math.round(result.fundedRatio*100)}%"></i></div><p class="small muted">${Math.round(result.fundedRatio*100)}% of estimated need covered from usable savings. Protected emergency fund: ${money(result.emergency)}. Committed savings excluded: ${money(result.committed)}.</p><div class="resultAssumptions"><h3>What this estimate uses</h3><p>Tuition × your entered rate (${result.rate.toFixed(4)} BDT per ${result.tuitionCurrency}) + fees you entered. Usable funds = savings − emergency fund − committed savings. It assumes your full monthly surplus is available to save; actual costs and payment terms may differ.</p><dl><dt>Rate source</dt><dd>${escapeHtml(input.rateSource)}</dd><dt>Rate timestamp (local time)</dt><dd>${escapeHtml(input.rateTimestamp)}</dd><dt>Projected shortfall</dt><dd>${money(result.shortfall)} over ${result.contributionCycles} complete 30-day savings cycle(s)</dd></dl><p class="small muted">This is a planning estimate, not an invoice or guaranteed payment amount. CampusBridge does not independently verify your rate and excludes fees you did not enter.</p></div><h3>Suggested next steps</h3><ol class="small muted"><li>${priorities[0]}</li><li>${priorities[1]}</li><li>${priorities[2]}</li></ol>`;
+  const destinationCosts = Number.isFinite(result.estimatedOtherCosts / result.rate) && result.estimatedOtherCosts / result.rate <= Finance.MAX_CALCULATED_BDT ? money(result.estimatedOtherCosts / result.rate, result.tuitionCurrency) : "Not available";
+  const destinationTotal = Number.isFinite(result.requiredFunds / result.rate) && result.requiredFunds / result.rate <= Finance.MAX_CALCULATED_BDT ? money(result.requiredFunds / result.rate, result.tuitionCurrency) : "Not available";
+  byId("plannerResults").innerHTML = `<span class="statusPill">${statusText}</span><div class="metricGrid"><div class="metric"><span>Total estimated study cost</span><strong>${money(result.requiredFunds)}${destinationTotal === "Not available" ? "" : ` · ${destinationTotal}`}</strong></div><div class="metric"><span>Additional cost estimates</span><strong>${money(result.estimatedOtherCosts)}${destinationCosts === "Not available" ? "" : ` · ${destinationCosts}`}</strong></div><div class="metric"><span>Total available savings</span><strong>${money(result.savings)}</strong></div><div class="metric"><span>Usable savings</span><strong>${money(result.usable)}</strong></div><div class="metric"><span>Funding gap</span><strong>${money(result.gap)}</strong></div><div class="metric"><span>Save each month</span><strong>${monthlyTargetText}</strong></div><div class="metric"><span>Monthly surplus</span><strong>${money(result.disposable)}</strong></div><div class="metric"><span>Projected capacity</span><strong>${money(result.capacity)}</strong></div><div class="metric"><span>Projected shortfall</span><strong>${money(result.shortfall)}</strong></div><div class="metric"><span>Deadline</span><strong>${result.daysRemaining} ${result.daysRemaining === 1 ? "day" : "days"}</strong></div></div><div class="progressTrack" aria-label="Estimated study-cost funding progress"><i style="width:${Math.round(result.fundedRatio*100)}%"></i></div><p class="small muted">${Math.round(result.fundedRatio*100)}% of estimated need covered from usable savings. Protected emergency fund: ${money(result.emergency)}. Committed savings excluded: ${money(result.committed)}.</p><div class="resultAssumptions"><h3>What this estimate uses</h3><p>Tuition × your entered rate (${result.rate.toFixed(4)} BDT per ${result.tuitionCurrency}), payment/transfer fees, entered one-time costs, and entered initial living costs. All additional costs are student-entered BDT estimates; destination-currency equivalents use this rate and are not payment quotes. Do not count an expense in more than one field. Usable funds = savings − emergency fund − committed savings. It assumes your full current monthly surplus is available to save; actual costs and payment terms may differ.</p><dl><dt>Rate source</dt><dd>${escapeHtml(input.rateSource)}</dd><dt>Rate timestamp (local time)</dt><dd>${escapeHtml(input.rateTimestamp)}</dd><dt>Rate verification</dt><dd>${escapeHtml(input.rateProvenance)}</dd><dt>Projected shortfall</dt><dd>${money(result.shortfall)} over ${result.contributionCycles} complete 30-day savings cycle(s)</dd></dl><p class="small muted">This is a planning estimate, not an invoice or guaranteed payment amount. CampusBridge does not independently verify your rate and excludes costs you did not enter.</p></div><h3>Suggested next steps</h3><ol class="small muted"><li>${priorities[0]}</li><li>${priorities[1]}</li><li>${priorities[2]}</li></ol>`;
   logEvent("calculate_tuition_gap", "success", "Tuition affordability calculation completed; financial values omitted");
   renderTransfers();
 }
@@ -790,7 +826,7 @@ byId("addQuoteProvider").addEventListener("click", () => {
   renderTransfers();
   byId("providerQuoteForms").querySelector(`[data-provider="${providerDefs[visibleProviderCount - 1].id}"] .customSelectTrigger`).focus();
 });
-byId("resetProfile").addEventListener("click",()=>{byId("profileForm").reset();syncCustomSelect(byId("corridor"));planRequested=false;updateDeadlineHint();syncRateTimestampPicker();closeRateTimestampCalendar();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="UK";syncCustomSelect(byId("corridor"));exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="GBP";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
+byId("resetProfile").addEventListener("click",()=>{byId("profileForm").reset();syncCustomSelect(byId("corridor"));planRequested=false;updateDeadlineHint();syncRateTimestampPicker();closeRateTimestampCalendar();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="UK";syncCustomSelect(byId("corridor"));exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="GBP";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
 byId("refreshExchangeRate").addEventListener("click",refreshExchangeRate);
 byId("useExchangeRate").addEventListener("click",useFetchedExchangeRate);
 byId("rateTimestamp").addEventListener("input",syncRateTimestampPicker);
@@ -808,7 +844,7 @@ async function answerQuestion() {
  if(latest){const {result:r}=latest;
   if(/exchange rate|rate change|what happens to the rate/.test(q)){const response=`Your entered planning rate is 1 ${latest.input.tuitionCur} = ${r.rate.toFixed(5)} BDT, from ${latest.input.rateSource} at ${latest.input.rateTimestamp}. CampusBridge does not forecast rate changes. Update the source, timestamp, and rate to see how your plan changes.`;byId("answer").textContent=`Tool used: calculate_tuition_gap\n${response}`;logEvent("calculate_tuition_gap","success","Answered using existing local calculation; question omitted");return;}
   if(/budget|income|expense|surplus/.test(q)){const response=`Your entered monthly surplus is ${money(r.disposable)} (income minus living costs). The plan assumes the full surplus can be saved, which may not fit real life.`;byId("answer").textContent=`Tool used: create_monthly_budget\n${response}`;logEvent("create_monthly_budget","success","Answered using existing local calculation; question omitted");return;}
-  if(/save|month|deadline|afford|tuition|gap|fund/.test(q)){const target=Finance.describeMonthlySavingsTarget(r);const targetText=target.state==="covered"?target.message:target.state==="unavailable"?target.message:`Scheduled monthly target: ${money(target.amount)} over ${r.contributionCycles} contribution date(s).`;const response=`Estimated tuition need is ${money(r.tuitionHome)}. After protecting emergency savings and committed funds, your gap is ${money(r.gap)}. ${targetText} ${r.shortfall>0?`Current full-cycle savings capacity leaves ${money(r.shortfall)} uncovered.`:r.gap===0?"":"The entered monthly budget can cover the gap by the deadline."} Uses your rate/source entry (${latest.input.rateSource}, timestamp ${latest.input.rateTimestamp} local time); no rate forecast is made.`;byId("answer").textContent=`Tool used: calculate_tuition_gap\n${response}`;logEvent("calculate_tuition_gap","success","Answered using existing local calculation; question omitted");return;}
+  if(/save|month|deadline|afford|tuition|gap|fund/.test(q)){const target=Finance.describeMonthlySavingsTarget(r);const targetText=target.state==="covered"?target.message:target.state==="unavailable"?target.message:`Scheduled monthly target: ${money(target.amount)} over ${r.contributionCycles} contribution date(s).`;const response=`Estimated total study costs are ${money(r.requiredFunds)}. After protecting emergency savings and committed funds, your gap is ${money(r.gap)}. ${targetText} ${r.shortfall>0?`Current full-cycle savings capacity leaves ${money(r.shortfall)} uncovered.`:r.gap===0?"":"The entered monthly budget can cover the gap by the deadline."} Uses your rate/source entry (${latest.input.rateSource}, timestamp ${latest.input.rateTimestamp} local time); no rate forecast is made.`;byId("answer").textContent=`Tool used: calculate_tuition_gap\n${response}`;logEvent("calculate_tuition_gap","success","Answered using existing local calculation; question omitted");return;}
  }
  const button=byId("askButton"),answer=byId("answer");button.disabled=true;answer.setAttribute("aria-busy","true");answer.textContent="CampusBridge AI is preparing an explanation…";
  let safeFailure="Could not reach the assistant endpoint. Check that the deployed CampusBridge site is available.";
@@ -823,9 +859,168 @@ function previewScenario(){if(!latest)return;const savings=Number(byId("scenario
 byId("scenarioSavings").addEventListener("input",previewScenario);byId("scenarioMonthly").addEventListener("input",previewScenario);
 byId("resetScenario").addEventListener("click",resetScenario);
 byId("applyScenario").addEventListener("click",()=>{const savings=Number(byId("scenarioSavings").value),monthly=Number(byId("scenarioMonthly").value),income=Number(byId("income").value);if(!latest){byId("scenarioPreview").textContent="Calculate your current tuition plan before applying a scenario.";return;}if(byId("scenarioSavings").value===""||byId("scenarioMonthly").value===""||!Number.isFinite(savings)||savings<0||!Number.isFinite(monthly)||monthly<0||monthly>income){previewScenario();return;}byId("savings").value=String(savings);byId("expenses").value=String(income-monthly);compute();byId("planner").scrollIntoView({behavior:reducedMotion.matches?"auto":"smooth"});});
+function clearStressTestResults(){const output=byId("stressResults");output.replaceChildren();output.hidden=true;latestStressTest=null;}
+function stressContributionText(scenario){
+  if(scenario.fundingGap===0)return "No additional contribution needed";
+  if(scenario.monthlyTarget===null)return "Unavailable: no remaining 30-day contribution date";
+  if(!scenario.contributionSchedule)return `${money(scenario.monthlyTarget)} per contribution cycle`;
+  if(scenario.contributionCycles===1)return `${money(scenario.contributionSchedule.finalAmount)} in the final cycle`;
+  return `${money(scenario.contributionSchedule.regularAmount)} for ${scenario.contributionCycles-1} cycle(s), then ${money(scenario.contributionSchedule.finalAmount)} in the final cycle`;
+}
+function renderStressTestResults(stress,tuitionCurrency){
+  const output=byId("stressResults");output.replaceChildren();
+  if(!stress.ok){const error=document.createElement("p");error.className="error";error.setAttribute("role","alert");error.textContent=stress.errors.join(" ");output.append(error);output.hidden=false;return;}
+  const intro=document.createElement("p");intro.className="assumptionNote";intro.textContent="These hypothetical results use the current form values. One missed contribution is the scheduled whole-BDT amount, capped at the positive monthly surplus; with no cycles or surplus, it is zero. Your original plan is unchanged.";output.append(intro);
+  for(const scenario of stress.scenarios){
+    const card=document.createElement("section");card.className="resultAssumptions";card.setAttribute("aria-label",`${scenario.name} results`);
+    const title=document.createElement("h3");title.textContent=scenario.name;card.append(title);
+    const details=document.createElement("dl");
+    const rows=[
+      ["Exchange rate",`${scenario.exchangeRate.toFixed(4)} BDT per ${tuitionCurrency}`],
+      ["Required funds",money(scenario.requiredFunds)],
+      ["Usable savings",money(scenario.usableSavings)],
+      ["Funding gap",money(scenario.fundingGap)],
+      ["Monthly surplus",money(scenario.monthlySurplus)],
+      ["Contribution target",stressContributionText(scenario)],
+      ["Projected capacity",money(scenario.projectedCapacity)],
+      ["Projected shortfall",money(scenario.projectedShortfall)]
+    ];
+    if(scenario.expenseIncrease>0)rows.splice(1,0,["Monthly expense increase",money(scenario.expenseIncrease)]);
+    if(scenario.missedContributions>0)rows.splice(1,0,["Assumed missed contribution",money(scenario.missedContributionAmount)]);
+    for(const [label,value] of rows){const term=document.createElement("dt"),description=document.createElement("dd");term.textContent=label;description.textContent=value;details.append(term,description);}
+    card.append(details);output.append(card);
+  }
+  output.hidden=false;
+}
+function runStressTest(){
+  latestStressTest=null;
+  const expenseInput=byId("stressExpenseIncrease"),rawExpense=expenseInput.value;
+  expenseInput.removeAttribute("aria-invalid");
+  const options={missedContributions:1};
+  if(expenseInput.validity.badInput||(rawExpense!==""&&(!Number.isFinite(expenseInput.valueAsNumber)||expenseInput.valueAsNumber<0||expenseInput.valueAsNumber>Finance.MAX_CALCULATED_BDT))){
+    expenseInput.setAttribute("aria-invalid","true");renderStressTestResults({ok:false,errors:["Enter a finite monthly expense increase from 0 to 1,000,000,000,000 BDT."]});return;
+  }
+  if(rawExpense!=="")options.expenseIncrease=expenseInput.valueAsNumber;
+  const input=profile();
+  const stress=Finance.calculateStressScenarios({...input},options);
+  if(stress.ok)latestStressTest={profile:{...input},scenarios:stress.scenarios};
+  renderStressTestResults(stress,input.tuitionCur);
+}
+function reportAmount(value,currency="BDT"){if(value===null||value===undefined)return "Not provided";const formatted=money(value,currency||"");return currency?formatted:formatted.trim();}
+function appendReadinessBlock(parent,title,entries){
+  const block=document.createElement("section");block.className="readinessReportBlock";
+  const heading=document.createElement("h3");heading.textContent=title;block.append(heading);
+  const list=document.createElement("dl");
+  for(const [label,value] of entries){const term=document.createElement("dt"),description=document.createElement("dd");term.textContent=label;description.textContent=value;list.append(term,description);}
+  block.append(list);parent.append(block);
+}
+function renderReadinessReport(data){
+  const page=byId("readinessReportPage");page.replaceChildren();
+  const header=document.createElement("header");header.className="readinessReportHeader";
+  const brand=document.createElement("div"),brandLabel=document.createElement("p"),title=document.createElement("h2");
+  brandLabel.className="eyebrow";brandLabel.textContent=data.branding;title.id="readinessReportTitle";title.tabIndex=-1;title.textContent=data.title;brand.append(brandLabel,title);
+  const identity=document.createElement("p");identity.className="readinessReportIdentity";
+  const student=document.createElement("strong");student.textContent=data.studentName||"Not provided";
+  const reportDate=document.createElement("span");reportDate.textContent=`Report date: ${data.reportDate||"Not provided"}`;
+  identity.append(student,reportDate);header.append(brand,identity);page.append(header);
+  const summary=document.createElement("section");summary.className="readinessReportSection readinessReportGrid";
+  const enteredOneTime=(data.oneTimeCostItems||[]).filter(item=>item.amountBdt!==null).map(item=>`${item.label}: ${reportAmount(item.amountBdt)}`).join("; ");
+  const enteredMonthlyLiving=(data.monthlyLivingCostItems||[]).filter(item=>item.amountBdt!==null).map(item=>`${item.label}: ${reportAmount(item.amountBdt)} / month`).join("; ");
+  appendReadinessBlock(summary,"Study costs",[
+    ["Destination",data.destinationCountry||"Not provided"],
+    ["Tuition",reportAmount(data.tuitionAmount,data.tuitionCurrency||"")],
+    ["Estimated tuition in BDT",reportAmount(data.tuitionEstimateBdt)],
+    ["Payment / transfer fees",reportAmount(data.paymentFeesBdt)],
+    ["One-time cost details (student estimates)",enteredOneTime||"Not provided"],
+    ["Monthly living details (student estimates)",enteredMonthlyLiving||"Not provided"],
+    ["Initial living-cost period",data.initialLivingMonths===null?"Not provided":`${reportAmount(data.initialLivingMonths,"")} month(s)`],
+    ["Initial living-cost total",reportAmount(data.initialLivingCostsBdt)],
+    ["All additional costs",reportAmount(data.otherEnteredCostsBdt)],
+    ["Additional costs in destination currency",reportAmount(data.destinationCurrencyCostEquivalent,data.destinationCurrencyCostEquivalent===null?"":data.tuitionCurrency)],
+    ["Total required funding",reportAmount(data.totalRequiredFundsBdt)],
+    ["Total in destination currency",reportAmount(data.destinationCurrencyTotalEquivalent,data.destinationCurrencyTotalEquivalent===null?"":data.tuitionCurrency)],
+    ["Planned deadline / intake",data.deadline||"Not provided"]
+  ]);
+  appendReadinessBlock(summary,"Savings and monthly plan",[
+    ["Available savings",reportAmount(data.savingsBdt)],
+    ["Emergency reserve",reportAmount(data.emergencyReserveBdt)],
+    ["Committed funds",reportAmount(data.committedFundsBdt)],
+    ["Usable funds",reportAmount(data.usableFundsBdt)],
+    ["Funding gap",reportAmount(data.fundingGapBdt)],
+    ["Income / expenses",`${reportAmount(data.monthlyIncomeBdt)} / ${reportAmount(data.monthlyExpensesBdt)} per month`],
+    ["Disposable income",`${reportAmount(data.monthlySurplusBdt)} per month`],
+    ["Contribution target",data.fundingGapBdt===0?"No additional contribution needed":data.monthlyContributionTargetBdt===null?"No contribution dates available":data.contributionCycles===1?`${reportAmount(data.contributionSchedule.finalAmountBdt)} in the final cycle`:`${reportAmount(data.contributionSchedule.regularAmountBdt)} for ${data.contributionCycles-1} cycle(s), then ${reportAmount(data.contributionSchedule.finalAmountBdt)} in the final cycle`],
+    ["Available contribution cycles",reportAmount(data.contributionCycles)],
+    ["Projected savings capacity",reportAmount(data.projectedSavingsCapacityBdt)],
+    ["Projected shortfall",reportAmount(data.projectedShortfallBdt)]
+  ]);
+  if(data.contributionRoadmap){
+    const roadmap=data.contributionRoadmap;
+    const reachability=roadmap.targetCanBeReachedByDeadline?"Projected reachable by deadline":"Not projected to be reached by deadline";
+    appendReadinessBlock(summary,"Dated contribution roadmap",[
+      ["Projection",reachability],
+      ["Complete 30-day contribution dates",reportAmount(roadmap.contributionCycles)],
+      ["First / last due date",roadmap.firstDueDate?`${roadmap.firstDueDate} / ${roadmap.lastDueDate}`:"No contribution dates"],
+      ["Required contribution schedule total",reportAmount(roadmap.requiredContributionTotalBdt)],
+      ["Monthly / total projected capacity",`${reportAmount(roadmap.monthlySavingsCapacityBdt)} / ${reportAmount(roadmap.projectedSavingsCapacityBdt)}`],
+      ["Ending projected savings / remaining gap",`${reportAmount(roadmap.endingProjectedSavingsBalanceBdt)} / ${reportAmount(roadmap.endingRemainingFundingGapBdt)}`],
+      ["Assumption",roadmap.summary||"Not provided"]
+    ]);
+  }
+  page.append(summary);
+  const rateSection=document.createElement("section");rateSection.className="readinessReportSection";
+  appendReadinessBlock(rateSection,"Exchange-rate information",[
+    ["Rate",data.exchangeRate===null||!data.tuitionCurrency?"Not provided":`1 ${data.tuitionCurrency} = ${data.exchangeRate.toFixed(5)} BDT`],
+    ["Source",data.rateSource||"Not provided"],
+    ["Effective date / timestamp",data.rateTimestamp||"Not provided"],
+    ["Verification",data.rateVerification||"Not provided"]
+  ]);page.append(rateSection);
+  if(data.stressScenarios.length){
+    const stressSection=document.createElement("section");stressSection.className="readinessReportSection";
+    const stressTitle=document.createElement("h3");stressTitle.textContent="Financial stress tests (hypothetical)";stressSection.append(stressTitle);
+    const table=document.createElement("table");table.className="readinessStressTable";
+    const head=document.createElement("thead"),headingRow=document.createElement("tr");
+    for(const label of ["Scenario","Assumption","Funding gap","Capacity","Shortfall"]){const cell=document.createElement("th");cell.scope="col";cell.textContent=label;headingRow.append(cell);}head.append(headingRow);table.append(head);
+    const body=document.createElement("tbody");
+    for(const scenario of data.stressScenarios){
+      const row=document.createElement("tr"),name=document.createElement("th");name.scope="row";name.textContent=scenario.name;row.append(name);
+      const assumptions=[scenario.exchangeRate===null?"Rate not provided":`${scenario.exchangeRate.toFixed(4)} BDT/${data.tuitionCurrency||"currency"}`];
+      if(scenario.expenseIncrease>0)assumptions.push(`expenses +${money(scenario.expenseIncrease)}/mo`);
+      if(scenario.missedContributionAmount>0||/missed contribution/i.test(scenario.name))assumptions.push(`missed ${money(scenario.missedContributionAmount)}`);
+      if(scenario.contributionCycles!==null)assumptions.push(`${scenario.contributionCycles} cycle(s)`);
+      const values=[assumptions.join("; "),reportAmount(scenario.fundingGap),reportAmount(scenario.projectedCapacity),reportAmount(scenario.projectedShortfall)];
+      for(const value of values){const cell=document.createElement("td");cell.textContent=value;row.append(cell);}body.append(row);
+    }
+    table.append(body);stressSection.append(table);page.append(stressSection);
+  }
+  const nextSection=document.createElement("section");nextSection.className="readinessReportSection";
+  const nextTitle=document.createElement("h3");nextTitle.textContent="Suggested next steps";const steps=document.createElement("ol");steps.className="readinessNextSteps";
+  for(const text of data.nextSteps){const item=document.createElement("li");item.textContent=text;steps.append(item);}nextSection.append(nextTitle,steps);page.append(nextSection);
+  const disclaimer=document.createElement("p");disclaimer.className="readinessDisclaimer";disclaimer.textContent=data.disclaimer;page.append(disclaimer);
+}
+function generateReadinessReport(){
+  compute();
+  if(!latest){byId("planner").scrollIntoView({behavior:reducedMotion.matches?"auto":"smooth"});return;}
+  const {input,result}=latest;
+  const stressMatches=latestStressTest&&JSON.stringify(latestStressTest.profile)===JSON.stringify(input);
+  const data=Finance.buildReadinessReportData({...input},{...result},{studentName:byId("readinessStudentName").value,reportDate:new Date(),stressScenarios:stressMatches?latestStressTest.scenarios:[],roadmap:latest.roadmap});
+  if(!data.ok){byId("formError").textContent=data.errors.join(" ");byId("planner").scrollIntoView({behavior:reducedMotion.matches?"auto":"smooth"});return;}
+  renderReadinessReport(data);latestReadinessReportProfile={...input};const preview=byId("readinessReportPreview");preview.hidden=false;preview.scrollIntoView({behavior:reducedMotion.matches?"auto":"smooth"});byId("readinessReportTitle").focus({preventScroll:true});
+}
+byId("runStressTest").addEventListener("click",runStressTest);
+byId("clearStressTest").addEventListener("click",clearStressTestResults);
+function handleProfileEdit(){clearStressTestResults();byId("readinessReportPreview").hidden=true;latestReadinessReportProfile=null;if(planRequested)compute();}
+byId("profileForm").addEventListener("input",handleProfileEdit);
+byId("profileForm").addEventListener("change",handleProfileEdit);
+byId("stressExpenseIncrease").addEventListener("input",()=>{clearStressTestResults();byId("readinessReportPreview").hidden=true;latestReadinessReportProfile=null;});
+byId("readinessStudentName").addEventListener("input",()=>{byId("readinessReportPreview").hidden=true;latestReadinessReportProfile=null;});
+byId("resetProfile").addEventListener("click",()=>{byId("stressExpenseIncrease").value="";byId("readinessStudentName").value="";clearStressTestResults();});
+byId("generateReadinessReport").addEventListener("click",generateReadinessReport);
+byId("printReadinessReport").addEventListener("click",()=>window.print());
+byId("closeReadinessReport").addEventListener("click",()=>{byId("readinessReportPreview").hidden=true;byId("generateReadinessReport").focus();});
 byId("exportReport").addEventListener("click",()=>{compute();if(!latest){byId("planner").scrollIntoView({behavior:reducedMotion.matches?"auto":"smooth"});return;}const {input:p,result:r}=latest;const cmp=currentQuoteComparison();const comparison=cmp.ok?cmp.available:[];const excluded=cmp.ok?cmp.unavailable:[];const scenarioValue=byId("scenarioMonthly").value;const scenarioMonthly=Number(scenarioValue);const scenarioIncome=Number(p.income);const scenarioExpenses=scenarioIncome-scenarioMonthly;const expenseIncrease=scenarioValue!==""&&Number.isFinite(scenarioExpenses)&&scenarioMonthly>=0&&scenarioMonthly<=scenarioIncome?Math.max(0,scenarioExpenses-Number(p.expenses)):0;const stressOptions={missedContributions:1};if(expenseIncrease>0)stressOptions.expenseIncrease=expenseIncrease;const stress=Finance.calculateStressScenarios(p,stressOptions);const report=Finance.buildFinancialReport(p,r,{quotes:comparison,excludedQuotes:excluded,quoteErrors:cmp.ok?[]:cmp.errors,stressScenarios:stress.scenarios||[],stressErrors:stress.ok?[]:stress.errors||[]});const blob=new Blob([report],{type:"text/plain"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="campusbridge-financial-report.txt";a.click();URL.revokeObjectURL(a.href);logEvent("export_financial_report","success","Local report generated from entered data");});
 
 // Pointer-responsive 3D treatment is decorative and disabled for touch/reduced motion.
 const visual=document.querySelector(".heroVisual"),orb=document.querySelector(".orb3d");
 if(visual&&!reducedMotion.matches&&matchMedia("(pointer:fine)").matches){visual.addEventListener("pointermove",e=>{const b=visual.getBoundingClientRect(),x=(e.clientX-b.left)/b.width-.5,y=(e.clientY-b.top)/b.height-.5;orb.style.animationPlayState="paused";orb.style.transform=`translate3d(${x*9}px,${y*8}px,0) rotateX(${-y*9}deg) rotateY(${x*13-10}deg)`;});visual.addEventListener("pointerleave",()=>{orb.style.animationPlayState="running";orb.style.transform="";});}
-renderQuoteForms();refreshRate();renderTransfers();byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';resetScenario();previewScenario();refreshExchangeRate();
+renderQuoteForms();refreshRate();renderTransfers();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';resetScenario();previewScenario();refreshExchangeRate();
