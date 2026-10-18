@@ -385,6 +385,50 @@ test('optional study-abroad costs add once to tuition funding and preserve the e
   assert.equal(costs.capacity,original.capacity,'study cost estimates do not rewrite the current monthly budget surplus');
 });
 
+test('planning modes use isolated profiles and exclude other costs only in tuition mode',()=>{
+  const input=profile({paymentFee:'1200',visaCost:'5000',flightCost:'40000',initialLivingMonths:'2',monthlyRent:'30000'});
+  const before=structuredClone(input);
+  const allCosts=Finance.profileForPlanningMode(input,Finance.PLANNING_MODES.ALL_COSTS);
+  const tuitionOnly=Finance.profileForPlanningMode(input,Finance.PLANNING_MODES.TUITION_ONLY);
+  assert.notEqual(allCosts,input);
+  assert.notEqual(tuitionOnly,input);
+  assert.equal(allCosts.visaCost,'5000');
+  assert.equal(tuitionOnly.visaCost,'');
+  assert.equal(tuitionOnly.monthlyRent,'');
+  assert.equal(tuitionOnly.initialLivingMonths,'');
+  assert.equal(tuitionOnly.paymentFee,'1200');
+  assert.equal(tuitionOnly.savings,input.savings);
+  const allResult=Finance.calculateTuition(allCosts,today);
+  const tuitionResult=Finance.calculateTuition(tuitionOnly,today);
+  const directModeResult=Finance.calculateTuition({...input,planningMode:Finance.PLANNING_MODES.TUITION_ONLY},today);
+  assert.equal(allResult.estimatedOtherCosts,106200);
+  assert.equal(tuitionResult.estimatedOtherCosts,1200);
+  assert.equal(tuitionResult.requiredFunds,tuitionResult.tuitionHome+1200);
+  assert.equal(directModeResult.estimatedOtherCosts,1200,'the core engine enforces a supplied mode too');
+  assert.deepEqual(input,before,'calculating either mode must not mutate entered values');
+  assert.throws(()=>Finance.profileForPlanningMode(input,'unknown'),/supported planning mode/);
+});
+
+test('tuition-only report identifies excluded costs without disclosing their entered values',()=>{
+  const entered=profile({visaCost:'9876',monthlyRent:'5432',initialLivingMonths:'3'});
+  const before=structuredClone(entered);
+  const calculationProfile=Finance.profileForPlanningMode(entered,Finance.PLANNING_MODES.TUITION_ONLY);
+  const result=Finance.calculateTuition(calculationProfile,today);
+  const report=Finance.buildReadinessReportData(calculationProfile,result);
+  assert.equal(report.planningModeName,'Tuition Only');
+  assert.match(report.planningModeNote,/not a complete study-abroad budget/);
+  assert.equal(report.otherEnteredCostsBdt,0);
+  assert.ok(report.oneTimeCostItems.every(item=>item.amountBdt===null));
+  assert.ok(report.monthlyLivingCostItems.every(item=>item.amountBdt===null));
+  assert.equal(report.initialLivingMonths,null);
+  assert.deepEqual(entered,before,'report creation must not mutate the entered profile');
+  const text=Finance.buildFinancialReport(calculationProfile,result);
+  assert.match(text,/Planning mode: Tuition Only/);
+  assert.match(text,/Other one-time and initial living costs are excluded/);
+  assert.match(text,/not a complete study-abroad budget/);
+  assert.doesNotMatch(text,/Visa costs: 9876/);
+});
+
 test('optional cost validation rejects invalid, incomplete, and out-of-range scenarios',()=>{
   for(const value of ['-1','NaN','Infinity','1000000000001']){
     const result=Finance.calculateTuition(profile({flightCost:value}),today);
@@ -688,7 +732,7 @@ test('active UI has blank financial inputs and working external quote paths; scr
   assert.doesNotMatch(html,/value="(?:12000|450000|80000|52000|200000)"/);
   assert.doesNotMatch(app,/fictional|illustrative/);
   assert.ok(app.includes('Finance.compareEnteredQuotes'));
-  assert.match(app,/const stress=Finance\.calculateStressScenarios\(\{\.\.\.input\},options\);[\s\S]*renderStressTestResults\(stress,input\.tuitionCur\)/,'the stress-test controls call the deterministic finance engine with a copy of current inputs');
+  assert.match(app,/profileForPlanningMode\(enteredProfile,enteredProfile\.planningMode\);[\s\S]*const stress=Finance\.calculateStressScenarios\(\{\.\.\.input\},options\);[\s\S]*renderStressTestResults\(stress,input\.tuitionCur,input\.planningMode\)/,'stress tests call the deterministic engine with a mode-adjusted copy of current inputs');
   assert.match(app,/byId\("runStressTest"\)\.addEventListener\("click",runStressTest\)/,'students can run stress tests from the existing what-if section');
   assert.match(app,/description\.textContent=value/,'stress-test results are rendered as text, not interpreted HTML');
   assert.match(app,/Finance\.buildReadinessReportData\(/,'the report maps the validated finance result through the shared finance module');
@@ -729,10 +773,23 @@ test('study-cost inputs are optional, connected to the profile, and represented 
     assert.ok(html.includes(`id="${id}"`),`missing optional study-cost input ${id}`);
     assert.ok(app.includes(`"${id}"`),`profile does not read study-cost input ${id}`);
   }
-  assert.match(app,/Total estimated study cost/);
+  assert.match(app,/Estimated study-abroad costs entered/);
+  assert.match(app,/Tuition Only/);
   assert.match(app,/Dated contribution roadmap/);
   assert.match(app,/buildContributionRoadmap/);
   assert.match(app,/destinationTotal/);
   assert.match(app,/Total available savings/);
   assert.match(app,/Rate verification/);
+});
+
+test('planner exposes accessible default mode choices and updates reports and stress scenarios by mode',()=>{
+  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  assert.match(html,/name="planningMode" value="all-costs" checked/);
+  assert.match(html,/name="planningMode" value="tuition-only"/);
+  assert.match(html,/Estimate your complete study-abroad budget and find out how much funding you still need\./);
+  assert.match(html,/Calculate your tuition costs and the funding gap for tuition\./);
+  assert.match(app,/profileForPlanningMode\(enteredProfile,enteredProfile\.planningMode\)/);
+  assert.match(app,/byId\("planningModeNote"\)/);
+  assert.match(app,/Excluded in Tuition Only mode/);
+  assert.match(app,/profileForm"\)\.addEventListener\("reset"/);
 });
