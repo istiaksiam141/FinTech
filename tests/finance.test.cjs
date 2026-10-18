@@ -65,6 +65,17 @@ test('Bangladesh Bank fetch calls same-origin Vercel route and accepts mocked JS
   assert.equal(cachedStale.stale,true,'Vercel stale-while-revalidate responses are not presented as fresh');
 });
 
+test('Vercel cache hits preserve the original retrieval timestamp and expire at 24 hours',async()=>{
+  const fetched=bbResponse();
+  const cacheHit=await ExchangeRates.fetchLatestRates({nowMs:apiNow+23*60*60*1000,fetchImpl:async()=>({ok:true,status:200,headers:{get:name=>name==='x-vercel-cache'?'HIT':null},json:async()=>fetched})});
+  assert.equal(cacheHit.stale,false);
+  assert.equal(cacheHit.updatedAtMs,Date.parse(fetched.retrievedAt),'cache hits must preserve the successful upstream fetch timestamp');
+  assert.equal(cacheHit.publicationDate,fetched.publicationDate,'the official effective date is retained');
+  const expired=await ExchangeRates.fetchLatestRates({nowMs:apiNow+24*60*60*1000,fetchImpl:async()=>({ok:true,status:200,headers:{get:name=>name==='x-vercel-cache'?'STALE':null},json:async()=>fetched})});
+  assert.equal(expired.stale,true,'the 24-hour cache expiry is treated as stale');
+  assert.equal(expired.updatedAtMs,Date.parse(fetched.retrievedAt),'a stale cache hit does not pretend to be a new fetch');
+});
+
 test('a missing rate API route gives preview-specific guidance without applying a rate',async()=>{
   await assert.rejects(
     ExchangeRates.fetchLatestRates({fetchImpl:async()=>({ok:false,status:404,json:async()=>({})})}),
@@ -103,25 +114,50 @@ test('Vercel endpoint returns a clear uncached 502 on network failure',async()=>
   assert.doesNotMatch(JSON.stringify(logs),/secret-value|network unavailable/);
 });
 
-test('Vercel endpoint returns validated source metadata and cache headers on success',async()=>{
+test('Vercel endpoint returns validated source metadata and a 24-hour shared-cache policy on success',async()=>{
   const originalFetch=globalThis.fetch; let upstreamOptions;
   const response={headers:{},statusCode:null,body:null,setHeader(name,value){this.headers[name]=value;},status(code){this.statusCode=code;return this;},json(body){this.body=body;return this;}};
   globalThis.fetch=async(_url,options)=>{upstreamOptions=options;return {ok:true,status:200,headers:{get:()=> 'text/html; charset=utf-8'},text:async()=>fs.readFileSync(path.join(__dirname,'fixtures','bangladesh-bank-live-2026-10-13.html'),'utf8')};};
   try { await exchangeRateHandler({},response); } finally { globalThis.fetch=originalFetch; }
   assert.equal(response.statusCode,200);
-  assert.equal(response.headers['Cache-Control'],'public, s-maxage=1800, stale-while-revalidate=1800');
+  assert.equal(response.headers['Cache-Control'],'public, max-age=0, s-maxage=86400');
   assert.equal(response.headers['Content-Type'],'application/json; charset=utf-8');
   assert.equal(response.body.publicationDate,'2026-10-13');
+  assert.match(response.body.retrievedAt,/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,'the successful fetch timestamp is part of the cacheable response');
   assert.equal(response.body.rates.GBP.ask,163.0484);
   assert.equal(response.body.rates.USD.weightedAverage,123.36);
   assert.equal(upstreamOptions.headers.Authorization,undefined,'no upstream secret or API key is used');
+});
+
+test('expired Vercel cache requests can refresh the source timestamp, while invalid data is never cacheable',async()=>{
+  const originalFetch=globalThis.fetch;
+  const createResponse=()=>({headers:{},statusCode:null,body:null,setHeader(name,value){this.headers[name]=value;},status(code){this.statusCode=code;return this;},json(body){this.body=body;return this;}});
+  let currentTime=new Date('2026-10-13T12:00:00.000Z');
+  globalThis.fetch=async()=>({ok:true,status:200,headers:{get:()=> 'text/html'},text:async()=>officialHtml()});
+  try {
+    const first=createResponse(); await exchangeRateHandler({},first);
+    currentTime=new Date('2026-10-14T12:00:01.000Z');
+    const second=createResponse();
+    // Control the route's fetch timestamp without changing the parser or its result.
+    const realNow=globalThis.Date;
+    globalThis.Date=class extends realNow { constructor(...args){super(...(args.length?args:[currentTime]));} static now(){return currentTime.getTime();} };
+    try { await exchangeRateHandler({},second); } finally { globalThis.Date=realNow; }
+    assert.notEqual(first.body.retrievedAt,second.body.retrievedAt,'a cache miss after expiry fetches a new source timestamp');
+    assert.equal(second.headers['Cache-Control'],'public, max-age=0, s-maxage=86400');
+    globalThis.fetch=async()=>({ok:true,status:200,headers:{get:()=> 'text/html'},text:async()=>'<html>invalid source response'.padEnd(150,'x')});
+    const invalid=createResponse(); await exchangeRateHandler({},invalid);
+    assert.equal(invalid.statusCode,502);
+    assert.equal(invalid.headers['Cache-Control'],'no-store','invalid source data must never be cached');
+    assert.equal(invalid.body.rates,undefined);
+  } finally { globalThis.fetch=originalFetch; }
 });
 
 test('official response validation enforces direction, source, timestamps, stale state, and manual-safe errors',async()=>{
   const valid=ExchangeRates.parseOfficialResponse(bbResponse(),apiNow);
   assert.equal(valid.rates.GBP,163.0484);
   assert.equal(valid.stale,false);
-  assert.equal(ExchangeRates.parseOfficialResponse(bbResponse(),apiNow+3*60*60*1000).stale,true,'cached retrieval older than two hours is stale');
+  assert.equal(ExchangeRates.parseOfficialResponse(bbResponse(),apiNow+23*60*60*1000).stale,false,'cached retrieval remains current within the 24-hour cache window');
+  assert.equal(ExchangeRates.parseOfficialResponse(bbResponse(),apiNow+24*60*60*1000).stale,true,'cached retrieval expires at 24 hours');
   assert.throws(()=>ExchangeRates.parseOfficialResponse(bbResponse({publicationDate:''}),apiNow),/date/);
   assert.throws(()=>ExchangeRates.parseOfficialResponse(bbResponse({sourceUrl:'https://example.com/fake'}),apiNow),/source/);
   assert.throws(()=>ExchangeRates.parseOfficialResponse(bbResponse({retrievedAt:'2026-10-14T12:00:00Z'}),apiNow),/dates/);
@@ -603,7 +639,7 @@ test('active UI has blank financial inputs and working external quote paths; scr
   assert.equal(fs.existsSync(path.join(root,'api','exchange-rates.js')),true);
   assert.ok(fs.readFileSync(path.join(root,'docs','financial-algorithms.md'),'utf8').includes('Bangladesh Bank published rates'));
   const endpoint=fs.readFileSync(path.join(root,'api','exchange-rates.js'),'utf8');
-  assert.match(endpoint,/s-maxage=1800, stale-while-revalidate=1800/);
+  assert.match(endpoint,/s-maxage=\$\{CACHE_TTL_SECONDS\}/);
   assert.match(endpoint,/status\(502\)/);
   assert.doesNotMatch(html,/value="(?:12000|450000|80000|52000|200000)"/);
   assert.doesNotMatch(app,/fictional|illustrative/);
