@@ -24,14 +24,14 @@
   };
   const createBrand = () => {
     const brand = document.createElement("a"); brand.className = "brand"; brand.href = "/";
-    const logo = document.createElement("img"); logo.className = "brandLogo"; logo.src = "/assets/brand/logo.png";
+    const logo = document.createElement("img"); logo.className = "brandLogo"; logo.src = "/assets/brand/logo-transparent.png";
     logo.alt = "CampusBridge AI"; logo.width = 68; logo.height = 68; logo.decoding = "async";
     const name = document.createElement("span"); name.textContent = "CampusBridge AI"; name.setAttribute("aria-hidden", "true");
     brand.append(logo, name);
     return brand;
   };
   if (!document.querySelector('link[rel~="icon"]')) {
-    const favicon = document.createElement("link"); favicon.rel = "icon"; favicon.type = "image/png"; favicon.href = "/assets/brand/logo.png";
+    const favicon = document.createElement("link"); favicon.rel = "icon"; favicon.type = "image/png"; favicon.href = "/assets/brand/logo-transparent.png";
     document.head.append(favicon);
   }
   const page = document.body.dataset.page || "home";

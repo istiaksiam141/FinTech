@@ -400,7 +400,7 @@ body[data-page="planner"] .planningModeNote{padding:12px 14px;border-radius:11px
 }
 
 /* Official symbol mark in the shared header and footer */
-.brandLogo{display:block;width:68px;height:68px;flex:0 0 auto;object-fit:contain;object-position:center;background:#fbf9ef}
+.brandLogo{display:block;width:68px;height:68px;flex:0 0 auto;object-fit:contain;object-position:center}
 .brand>span[aria-hidden=true]{white-space:nowrap}
 .footer .brandLogo{width:52px;height:52px}
 @media(max-width:1200px){.topbar .brandLogo{width:54px;height:54px}.topbar .nav{gap:16px}}
