@@ -22,14 +22,24 @@
     svg.classList.add("navIcon"); svg.innerHTML = drawings[name];
     return svg;
   };
+  const createBrand = () => {
+    const brand = document.createElement("a"); brand.className = "brand"; brand.href = "/";
+    const logo = document.createElement("img"); logo.className = "brandLogo"; logo.src = "/assets/brand/logo.png";
+    logo.alt = "CampusBridge AI"; logo.width = 68; logo.height = 68; logo.decoding = "async";
+    const name = document.createElement("span"); name.textContent = "CampusBridge AI"; name.setAttribute("aria-hidden", "true");
+    brand.append(logo, name);
+    return brand;
+  };
+  if (!document.querySelector('link[rel~="icon"]')) {
+    const favicon = document.createElement("link"); favicon.rel = "icon"; favicon.type = "image/png"; favicon.href = "/assets/brand/logo.png";
+    document.head.append(favicon);
+  }
   const page = document.body.dataset.page || "home";
   const headerTarget = document.getElementById("site-header");
   if (headerTarget) {
     const header = document.createElement("header"); header.id = "topbar"; header.className = "topbar";
     const wrap = document.createElement("div"); wrap.className = "wrap nav";
-    const brand = document.createElement("a"); brand.className = "brand"; brand.href = "/";
-    const mark = document.createElement("span"); mark.className = "brandmark"; mark.setAttribute("aria-hidden", "true"); mark.textContent = "C";
-    brand.append(mark, document.createTextNode("CampusBridge AI"));
+    const brand = createBrand();
     const nav = document.createElement("nav"); nav.id = "navlinks"; nav.className = "navlinks"; nav.setAttribute("aria-label", "Main navigation");
     const home = document.createElement("a"); home.href = "/"; home.className = "navPill"; home.append(createIcon("home"), document.createElement("span")); home.lastChild.textContent = "Home";
     if (page === "home") home.setAttribute("aria-current", "page");
@@ -95,7 +105,8 @@
   const footerTarget = document.getElementById("site-footer");
   if (footerTarget) {
     const footer = document.createElement("footer"); footer.className = "footer";
-    footer.innerHTML = '<div class="wrap footerRow"><a class="brand" href="/"><span class="brandmark" aria-hidden="true">C</span>CampusBridge AI</a><span>Planning estimates use your entries and are not guarantees.</span><a href="/privacy.html">Privacy and limitations</a><span>© 2026 CampusBridge · Product prototype</span></div>';
+    footer.innerHTML = '<div class="wrap footerRow"><span class="footerBrandSlot"></span><span>Planning estimates use your entries and are not guarantees.</span><a href="/privacy.html">Privacy and limitations</a><span>© 2026 CampusBridge · Product prototype</span></div>';
+    footer.querySelector(".footerBrandSlot").replaceWith(createBrand());
     footerTarget.replaceWith(footer);
   }
   const main = document.getElementById("main-content") || document.querySelector("main");

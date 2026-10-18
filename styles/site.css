@@ -398,3 +398,11 @@ body[data-page="planner"] .planningModeNote{padding:12px 14px;border-radius:11px
   .topbar .navlinks .navDropdown a:hover{border-color:rgba(255,255,255,.16);background:rgba(255,255,255,.14);color:#fff}
   .topbar .navlinks .navDropdown a[aria-current=page]{border-color:rgba(216,233,223,.35);background:rgba(216,233,223,.17);color:#fff;box-shadow:inset 3px 0 #d8e9df}
 }
+
+/* Official symbol mark in the shared header and footer */
+.brandLogo{display:block;width:68px;height:68px;flex:0 0 auto;object-fit:contain;object-position:center;background:#fbf9ef}
+.brand>span[aria-hidden=true]{white-space:nowrap}
+.footer .brandLogo{width:52px;height:52px}
+@media(max-width:1200px){.topbar .brandLogo{width:54px;height:54px}.topbar .nav{gap:16px}}
+@media(max-width:640px){.topbar .nav{gap:12px}.topbar .brand{gap:8px;font-size:.94rem}.topbar .brandLogo{width:50px;height:50px}}
+@media(max-width:360px){.topbar .brand{gap:7px;font-size:.88rem}.topbar .brandLogo{width:46px;height:46px}}
