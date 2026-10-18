@@ -97,3 +97,13 @@ test('transfer quotes use editable provider names and refresh comparison labels 
   assert.match(page, /title\.textContent = quote\.quote\.name/, 'custom names are rendered as text in result cards');
 });
 
+test('homepage keeps its planning actions and tool cards without an Earth animation', () => {
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  for (const text of ['Plan your next step', 'Organize study-abroad costs', 'Start planning', 'How your data is handled', 'Savings roadmap', 'Stress tests', 'Transfer quotes', 'AI assistant', 'Financial report', 'Privacy and limits', 'Bring your own estimates']) assert.ok(html.includes(text), `homepage should retain ${text}`);
+  assert.doesNotMatch(html, /home-earth|earthFallback|<canvas|WebGL/i);
+  assert.doesNotMatch(html, /home-earth\.js/);
+  assert.match(css, /body\[data-page="home"\] \.hero/);
+  assert.match(css, /body\[data-page="home"\] \.hero \.homeCard/);
+});
+
