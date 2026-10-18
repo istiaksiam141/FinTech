@@ -24,7 +24,7 @@ const ExchangeRates = window.CampusBridgeExchangeRates;
 const AssistantRenderer = window.CampusBridgeAssistantRenderer;
 const byId = id => document.getElementById(id);
 const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const corridorMap = { UK: { country: "United Kingdom", currency: "GBP", label: "United Kingdom" }, US: { country: "United States", currency: "USD", label: "United States" }, CA: { country: "Canada", currency: "CAD", label: "Canada" } };
+const corridorMap = { "CN-CNY": { country: "China", currency: "CNY", label: "China · onshore yuan" }, "CN-CNH": { country: "China", currency: "CNH", label: "China · offshore yuan" }, UK: { country: "United Kingdom", currency: "GBP", label: "United Kingdom" }, US: { country: "United States", currency: "USD", label: "United States" }, CA: { country: "Canada", currency: "CAD", label: "Canada" }, JP: { country: "Japan", currency: "JPY", label: "Japan" }, KR: { country: "South Korea", currency: "KRW", label: "South Korea" }, MY: { country: "Malaysia", currency: "MYR", label: "Malaysia" }, SG: { country: "Singapore", currency: "SGD", label: "Singapore" } };
 const providerDefs=[{id:"convera",name:"Convera GlobalPay for Students",note:"Institution participation and Bangladesh-origin route must be confirmed."},{id:"flywire",name:"Flywire",note:"Use the payment link supplied by your university; origin options vary."},{id:"bank",name:"Authorized-dealer bank wire",note:"Get current written terms directly from your bank."}];
 const localDate = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
 function contributionScheduleText(result) {
@@ -499,7 +499,7 @@ document.addEventListener("pointerdown", event => {
 let latest = null; let latestStressTest = null; let latestReadinessReportProfile = null; let activity = []; let bankAccounts = []; let nextBankAccountId = 1;
 let visibleProviderCount = 1;
 const quoteDrafts = new Map();
-const exchangeRateState = { lastResponse: null, nextRequestAt: 0, pending: false, mode: "manual", appliedCurrency: null, appliedUpdatedAtMs: null, appliedNextUpdateAtMs: null, selectedCurrency: "GBP", staleTimer: null };
+const exchangeRateState = { lastResponse: null, nextRequestAt: 0, pending: false, mode: "manual", appliedCurrency: null, appliedUpdatedAtMs: null, appliedNextUpdateAtMs: null, selectedCurrency: "CNY", staleTimer: null };
 const FX_MIN_REQUEST_INTERVAL = 30 * 60 * 1000;
 const money = (n, cur = "BDT") => `${new Intl.NumberFormat("en", { maximumFractionDigits: cur === "BDT" ? 0 : 2 }).format(n)} ${cur}`;
 function localDateTimeForInput(timestamp) { const d = new Date(timestamp); return `${localDate(d)}T${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
@@ -525,11 +525,16 @@ function renderFetchedRateStatus(prefix = "") {
   useButton.textContent = applied ? "Official rate in use" : `Use Bangladesh Bank ${currency} ask`;
   if (stale) {
     setExchangeRateStatus(`${prefix ? `${prefix} ` : ""}The Bangladesh Bank data is stale${data.cacheStatus.toUpperCase()==="STALE"?" in Vercel's cache":""}. Sheet date: ${data.publicationDate}; retrieved: ${data.retrievedAt} (UTC). Data is also treated as stale after ${data.staleAfterDays} days without a newer sheet or ${data.retrievalStaleAfterHours} hours without a successful retrieval. It cannot be applied as current; use a manual rate or refresh.`, "stale");
+  } else if (!Number.isFinite(rate) || !data.rateDetails[currency]) {
+    const note = currency === "CNY"
+      ? "Bangladesh Bank publishes CNH (offshore yuan), not onshore CNY. These currencies are distinct; no CNH rate is used as CNY. Enter an onshore CNY rate manually with its source and timestamp."
+      : `Bangladesh Bank does not publish a ${Finance.CURRENCY_NAMES[currency] || currency} (${currency}) rate in this feed. Enter a rate manually with its source and timestamp. No rate was invented.`;
+    setExchangeRateStatus(`${prefix ? `${prefix} ` : ""}${note}`, "unavailable");
   } else {
     const selection = appliedIsStale ? "A newer response is available but has not been applied; current planner results are cleared." : applied ? "This Bangladesh Bank rate is selected." : "Review it, then choose the button to apply it.";
     const detail = data.rateDetails[currency];
     const war = currency === "USD" && detail.weightedAverage !== null ? ` USD weighted average: ${detail.weightedAverage.toFixed(4)} BDT.` : "";
-    setExchangeRateStatus(`${prefix ? `${prefix} ` : ""}${data.source} (${data.sourceUrl}). Publication date: ${data.publicationDate}. Retrieved: ${data.retrievedAt} (UTC). ${currency}/BDT bid ${detail.bid.toFixed(4)}, ask ${detail.ask.toFixed(4)}.${war} Planner uses the ask as an estimate: 1 ${currency} = ${rate.toFixed(5)} BDT. This is not a bank/provider payment quote. ${selection}`, "success");
+    setExchangeRateStatus(`${prefix ? `${prefix} ` : ""}${data.source} (${data.sourceUrl}). Publication date: ${data.publicationDate}. Retrieved: ${data.retrievedAt} (UTC). ${detail.currencyCode}/BDT ${detail.rateType}; bid ${detail.bid.toFixed(4)}, ask ${detail.ask.toFixed(4)}.${war} Planner uses the ask as an estimate: 1 ${detail.currencyCode} = ${rate.toFixed(5)} BDT. This is not a bank/provider payment quote. ${selection}`, "success");
   }
   if (exchangeRateState.staleTimer) clearTimeout(exchangeRateState.staleTimer);
   const appliedExpiry = exchangeRateState.mode === "api" ? exchangeRateState.appliedNextUpdateAtMs : null;
@@ -569,8 +574,9 @@ function useFetchedExchangeRate() {
   const currency = corridorMap[byId("corridor").value].currency;
   if (!data || Date.now() >= data.nextUpdateAtMs) { renderFetchedRateStatus(); return; }
   const rate = data.rates[currency];
+  if (!Number.isFinite(rate) || !data.rateDetails[currency]) { renderFetchedRateStatus(); return; }
   byId("exchangeRate").value = String(rate);
-  byId("rateSource").value = `${data.source}; publication ${data.publicationDate}; ASK`;
+  byId("rateSource").value = `${data.source}; ${data.rateDetails[currency].rateType}; publication ${data.publicationDate}; ASK`;
   byId("rateTimestamp").value = localDateTimeForInput(data.updatedAtMs);
   syncRateTimestampPicker();
   exchangeRateState.mode = "api";
@@ -627,7 +633,7 @@ byId("addBankAccount").addEventListener("click", () => {
   renderBankAccounts(); if (latest) compute();
 });
 renderBankAccounts();
-function refreshRate() { const c = corridorMap[byId("corridor").value]; byId("tuitionCurrencyLabel").textContent = `(${c.currency})`; byId("rateCurrencyLabel").textContent = `(BDT per ${c.currency})`; }
+function refreshRate() { const c = corridorMap[byId("corridor").value]; const name = Finance.CURRENCY_NAMES[c.currency] || c.currency; byId("tuitionCurrencyLabel").textContent = `(${name} · ${c.currency})`; byId("rateCurrencyLabel").textContent = `(BDT per ${c.currency})`; }
 function logEvent(tool, status, summary) {
   activity.unshift({ at: new Date().toLocaleString(), tool, status, summary }); activity = activity.slice(0, 20); renderLog();
 }
@@ -789,7 +795,7 @@ function renderQuoteForms() {
   }
   const currency = corridorMap[byId("corridor").value].currency;
   const visibleProviders = providerDefs.slice(0, visibleProviderCount);
-  root.innerHTML = visibleProviders.map(provider => `<article class="quote" data-provider="${provider.id}"><span class="tag">Student-entered quote · not verified</span><h3>${provider.name}</h3><p>${provider.note}</p><label>Quote recipient currency<select data-field="currency">${['GBP','USD','CAD'].map(code => `<option value="${code}">${code}</option>`).join('')}</select></label><label>Total sender cost (BDT) <span class="quoteRequired">Required</span><input data-field="total" type="number" min="0" step="any"></label><label>Recipient amount <span class="quoteCurrency">(quote currency)</span> <span class="quoteRequired">Required</span><input data-field="recipient" type="number" min="0" step="any"></label><label>Quote timestamp <span class="quoteRequired">Required · within 24 hours</span><input data-field="timestamp" type="datetime-local"></label><label>Quote source or reference <span class="quoteRequired">Required</span><input data-field="reference" type="text" maxlength="160"></label><details class="quoteOptional"><summary>Optional quote details</summary><label>Provider fees included in total (BDT)<input data-field="fee" type="number" min="0" step="any"></label><label>Quoted rate (BDT per quote currency)<input data-field="rate" type="number" min="0" step="any"></label><label>Estimated delivery (business days; needed to rank by speed)<input data-field="days" type="number" min="0" step="1"></label></details></article>`).join("");
+  root.innerHTML = visibleProviders.map(provider => `<article class="quote" data-provider="${provider.id}"><span class="tag">Student-entered quote · not verified</span><h3>${provider.name}</h3><p>${provider.note}</p><label>Quote recipient currency<select data-field="currency">${Finance.CURRENCIES.filter(code => code !== "BDT").map(code => `<option value="${code}">${Finance.CURRENCY_NAMES[code]} (${code})</option>`).join('')}</select></label><label>Total sender cost (BDT) <span class="quoteRequired">Required</span><input data-field="total" type="number" min="0" step="any"></label><label>Recipient amount <span class="quoteCurrency">(quote currency)</span> <span class="quoteRequired">Required</span><input data-field="recipient" type="number" min="0" step="any"></label><label>Quote timestamp <span class="quoteRequired">Required · within 24 hours</span><input data-field="timestamp" type="datetime-local"></label><label>Quote source or reference <span class="quoteRequired">Required</span><input data-field="reference" type="text" maxlength="160"></label><details class="quoteOptional"><summary>Optional quote details</summary><label>Provider fees included in total (BDT)<input data-field="fee" type="number" min="0" step="any"></label><label>Quoted rate (BDT per quote currency)<input data-field="rate" type="number" min="0" step="any"></label><label>Estimated delivery (business days; needed to rank by speed)<input data-field="days" type="number" min="0" step="1"></label></details></article>`).join("");
   for (const card of root.querySelectorAll("[data-provider]")) {
     const draft = quoteDrafts.get(card.dataset.provider);
     const hasQuoteDetails = draft && Object.entries(draft).some(([field, value]) => field !== "currency" && value !== "");
@@ -826,7 +832,7 @@ byId("addQuoteProvider").addEventListener("click", () => {
   renderTransfers();
   byId("providerQuoteForms").querySelector(`[data-provider="${providerDefs[visibleProviderCount - 1].id}"] .customSelectTrigger`).focus();
 });
-byId("resetProfile").addEventListener("click",()=>{byId("profileForm").reset();syncCustomSelect(byId("corridor"));planRequested=false;updateDeadlineHint();syncRateTimestampPicker();closeRateTimestampCalendar();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="UK";syncCustomSelect(byId("corridor"));exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="GBP";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
+byId("resetProfile").addEventListener("click",()=>{byId("profileForm").reset();syncCustomSelect(byId("corridor"));planRequested=false;updateDeadlineHint();syncRateTimestampPicker();closeRateTimestampCalendar();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="CN-CNY";syncCustomSelect(byId("corridor"));exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="CNY";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
 byId("refreshExchangeRate").addEventListener("click",refreshExchangeRate);
 byId("useExchangeRate").addEventListener("click",useFetchedExchangeRate);
 byId("rateTimestamp").addEventListener("input",syncRateTimestampPicker);
@@ -928,7 +934,7 @@ function renderReadinessReport(data){
   const enteredMonthlyLiving=(data.monthlyLivingCostItems||[]).filter(item=>item.amountBdt!==null).map(item=>`${item.label}: ${reportAmount(item.amountBdt)} / month`).join("; ");
   appendReadinessBlock(summary,"Study costs",[
     ["Destination",data.destinationCountry||"Not provided"],
-    ["Tuition",reportAmount(data.tuitionAmount,data.tuitionCurrency||"")],
+    ["Tuition",reportAmount(data.tuitionAmount,data.tuitionCurrency?`${data.tuitionCurrencyName} (${data.tuitionCurrency})`:"")],
     ["Estimated tuition in BDT",reportAmount(data.tuitionEstimateBdt)],
     ["Payment / transfer fees",reportAmount(data.paymentFeesBdt)],
     ["One-time cost details (student estimates)",enteredOneTime||"Not provided"],
@@ -970,7 +976,7 @@ function renderReadinessReport(data){
   page.append(summary);
   const rateSection=document.createElement("section");rateSection.className="readinessReportSection";
   appendReadinessBlock(rateSection,"Exchange-rate information",[
-    ["Rate",data.exchangeRate===null||!data.tuitionCurrency?"Not provided":`1 ${data.tuitionCurrency} = ${data.exchangeRate.toFixed(5)} BDT`],
+    ["Rate",data.exchangeRate===null||!data.tuitionCurrency?"Not provided":`1 ${data.tuitionCurrencyName} (${data.tuitionCurrency}) = ${data.exchangeRate.toFixed(5)} BDT`],
     ["Source",data.rateSource||"Not provided"],
     ["Effective date / timestamp",data.rateTimestamp||"Not provided"],
     ["Verification",data.rateVerification||"Not provided"]

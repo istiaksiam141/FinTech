@@ -56,7 +56,7 @@ In scope are local financial planning, student-entered exchange-rate provenance,
 | Deterministic financial assistant | Implemented as a local fallback using application calculations; no generative AI API connection is configured |
 | What-if scenario controls | Implemented with reset/apply actions and recalculation |
 | Explainable recommendations | Provides deterministic reasoning from available profile and quote inputs |
-| Multi-currency corridor selection | Supports BDT→GBP, BDT→USD, BDT→CAD as planning corridors; does not verify actual provider eligibility |
+| Multi-currency corridor selection | Supports BDT planning corridors for China (CNY onshore and CNH offshore), the UK (GBP), US (USD), Canada (CAD), Japan (JPY), South Korea (KRW), Malaysia (MYR), and Singapore (SGD); live Bangladesh Bank rates are available only for GBP, USD, CAD, JPY, SGD, and CNH, while the other corridors require sourced manual rates; no corridor verifies provider eligibility |
 | Report export | Generated locally in the browser |
 | Agent activity log | Local activity with tool/action status and redacted summaries |
 | Authentication and student-profile persistence | Not implemented; the server endpoint only handles public FX data |
@@ -72,7 +72,7 @@ The shared calculation engine is intended to keep the planner, assistant, and re
 
 ## Financial calculation and transparency
 
-The main planning logic uses student-supplied tuition, savings, income, expenses, commitments, emergency reserve, deadline, exchange rate, and any applicable fee assumptions. Bangladesh Bank's GBP, USD, and CAD rows quote BDT per one unit of foreign currency; the endpoint preserves bid and ask and the planner selects ask. It estimates the funding gap after accounting for available funds and protected reserves, and divides the remaining requirement across the time available to estimate a monthly savings target. Quote comparison uses the submitted sender cost and recipient amount, plus delivery estimates when provided. Ranking can consider lowest sender cost, highest recipient amount, and fastest delivery.
+The main planning logic uses student-supplied tuition, savings, income, expenses, commitments, emergency reserve, deadline, exchange rate, and any applicable fee assumptions. Bangladesh Bank's GBP, USD, CAD, JPY, SGD, and CNH rows quote BDT per one unit of the exact foreign currency code; the endpoint preserves source currency and rate type, and the planner selects ask. CNY (onshore) remains distinct from CNH (offshore), and the bank feed does not provide CNY, KRW, or MYR. It estimates the funding gap after accounting for available funds and protected reserves, and divides the remaining requirement across the time available to estimate a monthly savings target. Quote comparison uses the submitted sender cost and recipient amount, plus delivery estimates when provided. Ranking can consider lowest sender cost, highest recipient amount, and fastest delivery.
 
 Each result is only as reliable as its inputs. Exchange-rate benchmarks can differ from a provider's executable quote. The app labels the entered source and time so students can judge recency, but it does not certify quotes or guarantee that the provider will honor them.
 

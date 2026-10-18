@@ -18,16 +18,43 @@ function compare(input,quotes,now=quoteNow) { return Finance.compareEnteredQuote
 const apiNow = Date.UTC(2026,9,13,12,0,0);
 function officialHtml(overrides={}) {
   const { date='13/10/2026', gbp='162.8300', gbpAsk='163.0484', usd='123.3000', usdAsk='123.4000', war='123.3600', cad='86.3264', cadAsk='86.4025' }=overrides;
-  return `<html><p>FX Rate Sheet effective for ${date}</p><table><tr><th>Currency</th><th>Bid Rate</th><th>Ask Rate</th><th>WAR</th></tr><tr><td>USD</td><td>${usd}</td><td>${usdAsk}</td><td>${war}</td></tr></table><table><tr><th>Currency</th><th>Bid Rate</th><th>Ask Rate</th></tr><tr><td>GBP</td><td>${gbp}</td><td>${gbpAsk}</td></tr><tr><td>CAD</td><td>${cad}</td><td>${cadAsk}</td></tr></table></html>`;
+  return `<html><p>FX Rate Sheet effective for ${date}</p><table><tr><th>Currency</th><th>Bid Rate</th><th>Ask Rate</th><th>WAR</th></tr><tr><td>USD</td><td>${usd}</td><td>${usdAsk}</td><td>${war}</td></tr></table><table><tr><th>Currency</th><th>Bid Rate</th><th>Ask Rate</th></tr><tr><td>GBP</td><td>${gbp}</td><td>${gbpAsk}</td></tr><tr><td>CAD</td><td>${cad}</td><td>${cadAsk}</td></tr><tr><td>JPY</td><td>0.7771</td><td>0.7780</td></tr><tr><td>SGD</td><td>96.2604</td><td>96.3611</td></tr><tr><td>CNH</td><td>18.4173</td><td>18.4325</td></tr></table></html>`;
 }
-function bbResponse(overrides={}) { return {source:'Bangladesh Bank FX Rate Sheet',sourceUrl:BangladeshBankRates.SOURCE_URL,publicationDate:'2026-10-13',retrievedAt:'2026-10-13T12:00:00.000Z',rates:{GBP:{baseCurrency:'GBP',quoteCurrency:'BDT',bid:162.83,ask:163.0484,weightedAverage:null},USD:{baseCurrency:'USD',quoteCurrency:'BDT',bid:123.3,ask:123.4,weightedAverage:123.36},CAD:{baseCurrency:'CAD',quoteCurrency:'BDT',bid:86.3264,ask:86.4025,weightedAverage:null}},...overrides}; }
+function bbResponse(overrides={}) { const row=(baseCurrency,bid,ask,weightedAverage=null,rateType='Bangladesh Bank cross rate')=>({baseCurrency,quoteCurrency:'BDT',bid,ask,weightedAverage,rateType});return {source:'Bangladesh Bank FX Rate Sheet',sourceUrl:BangladeshBankRates.SOURCE_URL,publicationDate:'2026-10-13',retrievedAt:'2026-10-13T12:00:00.000Z',rates:{GBP:row('GBP',162.83,163.0484),USD:row('USD',123.3,123.4,123.36,'USD/BDT interbank rate'),CAD:row('CAD',86.3264,86.4025),JPY:row('JPY',0.7771,0.7780),SGD:row('SGD',96.2604,96.3611),CNH:row('CNH',18.4173,18.4325)},...overrides}; }
 
 test('all primary corridors have real-currency support without preset conversion rates',()=>{
-  for(const c of ['GBP','USD','CAD']) assert.ok(Finance.CURRENCIES.includes(c));
+  for(const c of ['GBP','USD','CAD','CNY','CNH','JPY','KRW','MYR','SGD']) assert.ok(Finance.CURRENCIES.includes(c));
+  assert.match(Finance.CURRENCY_NAMES.CNY,/onshore/);assert.match(Finance.CURRENCY_NAMES.CNH,/offshore/);
   const referenceRates={GBP:0.79,BDT:120};
   assert.ok(Math.abs(Finance.convert(100,'GBP','BDT',referenceRates)-100*120/.79)<1e-8);
   assert.throws(()=>Finance.convert(1,'GBP','BDT'),/source-identified rate/);
   assert.throws(()=>Finance.convert(1e12,'GBP','BDT',{GBP:1,BDT:2}),/supported maximum/);
+});
+
+test('currency conversion works in both directions with distinct CNY and CNH rate units',()=>{
+  const bdtPerUnit={BDT:1,CNY:1/17,CNH:1/18.5,JPY:1/0.778,KRW:1/0.092,MYR:1/26,SGD:1/96.36};
+  for(const [currency,rate] of [['CNY',17],['CNH',18.5],['JPY',0.778],['KRW',0.092],['MYR',26],['SGD',96.36]]){
+    assert.ok(Math.abs(Finance.convert(rate,'BDT',currency,bdtPerUnit)-1)<1e-9,`${currency} BDT-to-foreign conversion`);
+    assert.ok(Math.abs(Finance.convert(1,currency,'BDT',bdtPerUnit)-rate)<1e-9,`${currency} foreign-to-BDT conversion`);
+  }
+  assert.notEqual(Finance.convert(18.5,'BDT','CNY',bdtPerUnit),Finance.convert(18.5,'BDT','CNH',bdtPerUnit));
+});
+
+test('new destination corridors accept matching manual rates without merging CNY and CNH',()=>{
+  for(const [destinationCountry,tuitionCur] of [['China','CNY'],['China','CNH'],['Japan','JPY'],['South Korea','KRW'],['Malaysia','MYR'],['Singapore','SGD']]){
+    const result=Finance.calculateTuition(profile({destinationCountry,tuitionCur,exchangeRate:'1',rateSource:`Manual ${tuitionCur} source`}),today);
+    assert.equal(result.ok,true,`${destinationCountry} / ${tuitionCur} should be a supported manual-rate corridor`);
+  }
+  assert.equal(Finance.calculateTuition(profile({destinationCountry:'China',tuitionCur:'CNY'}),today).ok,true);
+  assert.equal(Finance.calculateTuition(profile({destinationCountry:'China',tuitionCur:'CNH'}),today).ok,true);
+  assert.ok(Finance.calculateTuition(profile({destinationCountry:'Japan',tuitionCur:'CNY'}),today).errors.length,'a mismatched code/country pair is rejected');
+  const chinaPlan=profile({destinationCountry:'China',tuitionCur:'CNY',exchangeRate:'17'});
+  const chinaResult=Finance.calculateTuition(chinaPlan,today);
+  assert.equal(chinaResult.tuitionHome,136000);
+  assert.equal(Finance.buildReadinessReportData(chinaPlan,chinaResult).tuitionCurrencyName,'Chinese yuan (onshore)');
+  const offshorePlan=profile({destinationCountry:'China',tuitionCur:'CNH',exchangeRate:'18.5'});
+  const offshoreResult=Finance.calculateTuition(offshorePlan,today);
+  assert.equal(Finance.buildReadinessReportData(offshorePlan,offshoreResult).tuitionCurrencyName,'Chinese yuan (offshore)');
 });
 
 test('Bangladesh Bank HTML sheet parses published BDT-per-currency ask, bid, and USD WAR',()=>{
@@ -37,6 +64,11 @@ test('Bangladesh Bank HTML sheet parses published BDT-per-currency ask, bid, and
   assert.equal(result.rates.GBP.bid,162.83);
   assert.equal(result.rates.USD.weightedAverage,123.36);
   assert.equal(result.rates.CAD.ask,86.4025);
+  assert.equal(result.rates.JPY.ask,0.7780,'JPY is quoted in BDT per 1 JPY');
+  assert.equal(result.rates.SGD.ask,96.3611);
+  assert.equal(result.rates.CNH.ask,18.4325);
+  assert.equal(result.rates.CNY,undefined,'offshore CNH is never relabeled as onshore CNY');
+  assert.equal(result.rates.KRW,undefined);assert.equal(result.rates.MYR,undefined);
   const validated=ExchangeRates.parseOfficialResponse(result,apiNow);
   assert.equal(validated.rates.GBP,163.0484);
   assert.equal(validated.rates.USD,123.4);
@@ -47,10 +79,11 @@ test('parser extracts current values from a saved fragment of the actual Banglad
   const html=fs.readFileSync(path.join(__dirname,'fixtures','bangladesh-bank-live-2026-10-13.html'),'utf8');
   const data=BangladeshBankRates.parseBangladeshBankPage(html,new Date('2026-10-13T12:00:00Z'));
   assert.equal(data.publicationDate,'2026-10-13');
-  assert.deepEqual(data.rates,{GBP:{bid:162.83,ask:163.0484,weightedAverage:null,baseCurrency:'GBP',quoteCurrency:'BDT'},USD:{bid:123.3,ask:123.4,weightedAverage:123.36,baseCurrency:'USD',quoteCurrency:'BDT'},CAD:{bid:86.3264,ask:86.4025,weightedAverage:null,baseCurrency:'CAD',quoteCurrency:'BDT'}});
+  assert.deepEqual(data.rates,{GBP:{bid:162.83,ask:163.0484,weightedAverage:null,baseCurrency:'GBP',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},USD:{bid:123.3,ask:123.4,weightedAverage:123.36,baseCurrency:'USD',quoteCurrency:'BDT',rateType:'USD/BDT interbank rate'},CAD:{bid:86.3264,ask:86.4025,weightedAverage:null,baseCurrency:'CAD',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},JPY:{bid:0.7771,ask:0.778,weightedAverage:null,baseCurrency:'JPY',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},SGD:{bid:96.2604,ask:96.3611,weightedAverage:null,baseCurrency:'SGD',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'},CNH:{bid:18.4173,ask:18.4325,weightedAverage:null,baseCurrency:'CNH',quoteCurrency:'BDT',rateType:'Bangladesh Bank cross rate'}});
   assert.equal((html.match(/<table>/g)||[]).length,2,'fixture retains the source’s two current rate tables');
   assert.match(html,/<td>EUR<\/td>/,'unrequested current cross-rate rows are present in the source fragment');
   assert.equal(data.rates.EUR,undefined,'other currencies are not mistaken for planner currencies');
+  assert.equal(data.rates.CNH.baseCurrency,'CNH');assert.equal(data.rates.CNH.quoteCurrency,'BDT');assert.equal(data.rates.CNY,undefined,'the actual source fragment has no onshore CNY row');
   assert.throws(()=>BangladeshBankRates.parseBangladeshBankPage(html.replace('<td>CAD</td>','<td>XXX</td>'),new Date('2026-10-13T12:00:00Z')),/did not publish a CAD rate/);
 });
 
@@ -155,6 +188,13 @@ test('expired Vercel cache requests can refresh the source timestamp, while inva
 test('official response validation enforces direction, source, timestamps, stale state, and manual-safe errors',async()=>{
   const valid=ExchangeRates.parseOfficialResponse(bbResponse(),apiNow);
   assert.equal(valid.rates.GBP,163.0484);
+  assert.equal(valid.rateDetails.CNH.currencyCode,'CNH');
+  assert.equal(valid.rateDetails.CNH.baseCurrency,'CNH');
+  assert.equal(valid.rateDetails.CNH.quoteCurrency,'BDT');
+  assert.equal(valid.rateDetails.CNH.rateType,'Bangladesh Bank cross rate');
+  assert.equal(valid.rates.CNY,undefined);
+  const legacy=bbResponse();for(const row of Object.values(legacy.rates))delete row.rateType;
+  assert.equal(ExchangeRates.parseOfficialResponse(legacy,apiNow).rateDetails.CNH.rateType,'Bangladesh Bank cross rate','existing 24-hour cache entries remain readable until expiry');
   assert.equal(valid.stale,false);
   assert.equal(ExchangeRates.parseOfficialResponse(bbResponse(),apiNow+23*60*60*1000).stale,false,'cached retrieval remains current within the 24-hour cache window');
   assert.equal(ExchangeRates.parseOfficialResponse(bbResponse(),apiNow+24*60*60*1000).stale,true,'cached retrieval expires at 24 hours');
@@ -164,6 +204,8 @@ test('official response validation enforces direction, source, timestamps, stale
   assert.throws(()=>ExchangeRates.parseOfficialResponse(bbResponse({rates:{...bbResponse().rates,GBP:{...bbResponse().rates.GBP,ask:Infinity}}}),apiNow),/GBP/);
   assert.throws(()=>ExchangeRates.parseOfficialResponse(bbResponse({rates:{...bbResponse().rates,GBP:{...bbResponse().rates.GBP,bid:0}}}),apiNow),/GBP/);
   assert.throws(()=>ExchangeRates.parseOfficialResponse(bbResponse({rates:{...bbResponse().rates,GBP:{...bbResponse().rates.GBP,ask:162}}}),apiNow),/GBP/);
+  assert.throws(()=>ExchangeRates.parseOfficialResponse(bbResponse({rates:{...bbResponse().rates,CNH:{...bbResponse().rates.CNH,baseCurrency:'CNY'}}}),apiNow),/CNH/);
+  assert.throws(()=>ExchangeRates.parseOfficialResponse(bbResponse({rates:{...bbResponse().rates,JPY:{...bbResponse().rates.JPY,rateType:''}}}),apiNow),/JPY/);
   const stale=ExchangeRates.parseOfficialResponse(bbResponse({publicationDate:'2026-10-01'}),Date.UTC(2026,9,13,12));
   assert.equal(stale.stale,true);
   await assert.rejects(ExchangeRates.fetchLatestRates({nowMs:apiNow,fetchImpl:async()=>({ok:false,status:502,json:async()=>({error:'upstream unavailable'})})}),/upstream unavailable/);
