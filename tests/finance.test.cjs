@@ -63,6 +63,13 @@ test('Bangladesh Bank fetch calls same-origin Vercel route and accepts mocked JS
   assert.equal(cachedStale.stale,true,'Vercel stale-while-revalidate responses are not presented as fresh');
 });
 
+test('a missing rate API route gives preview-specific guidance without applying a rate',async()=>{
+  await assert.rejects(
+    ExchangeRates.fetchLatestRates({fetchImpl:async()=>({ok:false,status:404,json:async()=>({})})}),
+    error=>/unavailable on this preview/.test(error.message)&&/No rate was applied/.test(error.message)
+  );
+});
+
 test('Bangladesh Bank parser rejects missing date, malformed layout, and invalid rates',()=>{
   assert.throws(()=>BangladeshBankRates.parseBangladeshBankPage(officialHtml({date:''}),new Date('2026-10-13T12:00:00Z')),/publication date/);
   assert.throws(()=>BangladeshBankRates.parseBangladeshBankPage(`<html><p>FX Rate Sheet effective for 13/10/2026</p>${'x'.repeat(120)}</html>`,new Date('2026-10-13T12:00:00Z')),/layout/);
@@ -269,7 +276,7 @@ test('comparison ranking and report export share the same eligible quote list',(
 
 test('active UI has blank financial inputs and working external quote paths; scripts parse',()=>{
   const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
-  for(const marker of ['id="exchangeRate"','id="rateSource"','id="rateTimestamp"','id="refreshExchangeRate"','id="useExchangeRate"','id="exchangeRateStatus"','id="providerQuoteForms"','https://www.bb.org.bd/en/index.php/econdata/exchangerate','convera.com/students/faq','pay.flywire.com','id="applyScenario"','id="resetScenario"','id="exportReport"','src="lib/exchange-rates.js"']) assert.ok(html.includes(marker),`missing ${marker}`);
+  for(const marker of ['id="exchangeRate"','id="rateSource"','id="rateTimestamp"','id="refreshExchangeRate"','id="useExchangeRate"','id="exchangeRateStatus"','id="providerQuoteForms"','id="deadlineHint"','id="deadlineTrigger"','id="deadlineCalendar"','role="grid"','aria-haspopup="dialog"','.formSection .fieldGrid>label{align-self:start;align-content:start}','.calendarDay.isToday:not(.isSelected){background:#eaf6f0','https://www.bb.org.bd/en/index.php/econdata/exchangerate','convera.com/students/faq','pay.flywire.com','id="applyScenario"','id="resetScenario"','id="exportReport"','src="lib/exchange-rates.js"']) assert.ok(html.includes(marker),`missing ${marker}`);
   assert.equal(fs.existsSync(path.join(root,'api','exchange-rates.js')),true);
   assert.ok(fs.readFileSync(path.join(root,'docs','financial-algorithms.md'),'utf8').includes('Bangladesh Bank published rates'));
   const endpoint=fs.readFileSync(path.join(root,'api','exchange-rates.js'),'utf8');
@@ -279,7 +286,20 @@ test('active UI has blank financial inputs and working external quote paths; scr
   assert.doesNotMatch(app,/fictional|illustrative/);
   assert.ok(app.includes('Finance.compareEnteredQuotes'));
   assert.ok(app.includes('data-field="currency"'));
+  assert.match(app,/input\.min = localDate\(deadlineMinimum\(\)\)/,'past dates are excluded from the native constraint');
+  assert.match(app,/calendarTomorrow/,'the calendar offers the earliest valid deadline as a shortcut');
+  assert.match(app,/ArrowRight/,'the custom calendar supports keyboard navigation');
+  assert.match(app,/result\.daysRemaining === 1 \? "day" : "days"/,'deadline results use correct singular and plural labels');
+  assert.match(app,/byId\("deadline"\)\.addEventListener\("change"/,'selecting a deadline updates the displayed plan');
   const fetchHandler=app.slice(app.indexOf('async function refreshExchangeRate()'),app.indexOf('function useFetchedExchangeRate()'));
   assert.equal(fetchHandler.includes('byId("exchangeRate").value ='),false,'fetching only previews the rate and does not replace the student\'s current value');
   new vm.Script(app,{filename:'app.js'});
+});
+
+test('student-facing privacy notices, progressive quote entry, and technical disclosures are present',()=>{
+  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  for(const marker of ['id="privacy"','Your question is sent to Groq','Your financial form and quote entries are not included','id="addQuoteProvider"','What will the downloaded report contain?','id="requirements"','Technical integration readiness','formal privacy/terms documents are not configured']) assert.ok(html.includes(marker),`missing ${marker}`);
+  assert.match(app,/providerDefs\.slice\(0,\s*visibleProviderCount\)/,'quote forms are shown progressively');
+  assert.match(app,/quoteDrafts\.clear\(\)/,'clearing planner inputs also clears saved-in-page quote drafts');
+  assert.match(app,/What this estimate uses/);
 });

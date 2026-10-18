@@ -26,7 +26,164 @@ const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&am
 const corridorMap = { UK: { country: "United Kingdom", currency: "GBP", label: "United Kingdom" }, US: { country: "United States", currency: "USD", label: "United States" }, CA: { country: "Canada", currency: "CAD", label: "Canada" } };
 const providerDefs=[{id:"convera",name:"Convera GlobalPay for Students",note:"Institution participation and Bangladesh-origin route must be confirmed."},{id:"flywire",name:"Flywire",note:"Use the payment link supplied by your university; origin options vary."},{id:"bank",name:"Authorized-dealer bank wire",note:"Get current written terms directly from your bank."}];
 const localDate = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+let planRequested = false;
+let calendarCursor = new Date();
+let calendarFocusDate = null;
+function deadlineMinimum() {
+  const tomorrow = new Date(); tomorrow.setHours(0, 0, 0, 0); tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow;
+}
+function closeDeadlineCalendar(restoreFocus = false) {
+  byId("deadlineCalendar").hidden = true;
+  byId("deadlineTrigger").setAttribute("aria-expanded", "false");
+  if (restoreFocus) byId("deadlineTrigger").focus();
+}
+function renderDeadlineCalendar(focusDate = null) {
+  const minimum = deadlineMinimum();
+  const month = calendarCursor.getMonth();
+  const year = calendarCursor.getFullYear();
+  const monthLabel = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(calendarCursor);
+  byId("calendarMonth").textContent = monthLabel;
+  const previousMonth = new Date(year, month - 1, 1);
+  byId("calendarPrevious").disabled = new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0) < minimum;
+  byId("calendarDays").setAttribute("aria-label", monthLabel);
+  const firstDay = new Date(year, month, 1).getDay();
+  const firstCell = new Date(year, month, 1 - firstDay);
+  const days = document.createDocumentFragment();
+  const selected = byId("deadline").value;
+  let week;
+  for (let index = 0; index < 42; index += 1) {
+    if (index % 7 === 0) {
+      week = document.createElement("div");
+      week.className = "calendarWeek";
+      week.setAttribute("role", "row");
+      days.append(week);
+    }
+    const date = new Date(firstCell); date.setDate(firstCell.getDate() + index);
+    const iso = localDate(date);
+    const outsideMonth = date.getMonth() !== month;
+    const button = document.createElement("button");
+    button.type = "button"; button.className = "calendarDay"; button.textContent = String(date.getDate());
+    button.dataset.iso = iso; button.setAttribute("role", "gridcell");
+    button.setAttribute("aria-label", new Intl.DateTimeFormat(undefined, { dateStyle: "full" }).format(date));
+    button.setAttribute("aria-selected", String(iso === selected));
+    button.disabled = outsideMonth || date < minimum;
+    if (outsideMonth) button.classList.add("isOutside");
+    if (iso === localDate(new Date())) button.classList.add("isToday");
+    if (iso === selected) button.classList.add("isSelected");
+    if (iso === focusDate) button.tabIndex = 0;
+    button.addEventListener("click", () => {
+      byId("deadline").value = iso;
+      byId("deadline").dispatchEvent(new Event("change", { bubbles: true }));
+      closeDeadlineCalendar(true);
+    });
+    week.append(button);
+  }
+  byId("calendarDays").replaceChildren(days);
+  byId("calendarNext").disabled = year >= new Date().getFullYear() + 100 && month === 11;
+  const selectedDate = selected ? new Date(`${selected}T00:00:00`) : null;
+  const daysRemaining = selectedDate ? Math.ceil((selectedDate - new Date(new Date().setHours(0, 0, 0, 0))) / 86400000) : 0;
+  const selection = byId("calendarSelection");
+  const selectedText = document.createElement("strong");
+  selection.replaceChildren(document.createTextNode(selectedDate ? `${daysRemaining} ${daysRemaining === 1 ? "day" : "days"} remaining` : "No deadline selected"));
+  selectedText.textContent = selectedDate ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(selectedDate) : "Choose a day";
+  selection.append(selectedText);
+}
+function showDeadlineCalendar() {
+  const selected = byId("deadline").value;
+  const start = selected ? new Date(`${selected}T00:00:00`) : deadlineMinimum();
+  calendarCursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  calendarFocusDate = selected || localDate(deadlineMinimum());
+  renderDeadlineCalendar(calendarFocusDate);
+  byId("deadlineCalendar").hidden = false;
+  byId("deadlineTrigger").setAttribute("aria-expanded", "true");
+  byId("calendarDays").querySelector(`[data-iso="${calendarFocusDate}"]`)?.focus();
+}
+function updateDeadlineHint() {
+  const input = byId("deadline");
+  input.min = localDate(deadlineMinimum());
+  const hint = byId("deadlineHint");
+  if (!input.value) {
+    byId("deadlineDisplay").textContent = "Choose your deadline";
+    byId("deadlineTrigger").setAttribute("aria-invalid", "false");
+    hint.textContent = "Choose a date at least 1 day from today. Your estimate updates automatically after you calculate.";
+    return;
+  }
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const deadline = new Date(`${input.value}T00:00:00`);
+  const days = Math.ceil((deadline - today) / 86400000);
+  if (Number.isNaN(deadline.getTime()) || days < 1) {
+    byId("deadlineTrigger").setAttribute("aria-invalid", "true");
+    hint.textContent = "Choose a deadline at least 1 day from today.";
+    return;
+  }
+  const formatted = new Intl.DateTimeFormat(undefined, { dateStyle: "long" }).format(deadline);
+  byId("deadlineDisplay").textContent = formatted;
+  byId("deadlineTrigger").setAttribute("aria-invalid", "false");
+  hint.textContent = `${formatted} · ${days} ${days === 1 ? "day" : "days"} from today. ${planRequested ? "Your plan updates automatically when you change this date." : "Calculate your plan to see the updated savings target."}`;
+  if (!byId("deadlineCalendar").hidden) renderDeadlineCalendar(input.value);
+}
+updateDeadlineHint();
+byId("deadlineTrigger").addEventListener("click", () => {
+  if (byId("deadlineCalendar").hidden) showDeadlineCalendar();
+  else closeDeadlineCalendar();
+});
+byId("calendarPrevious").addEventListener("click", () => { calendarCursor.setMonth(calendarCursor.getMonth() - 1); renderDeadlineCalendar(calendarFocusDate); });
+byId("calendarNext").addEventListener("click", () => { calendarCursor.setMonth(calendarCursor.getMonth() + 1); renderDeadlineCalendar(calendarFocusDate); });
+byId("calendarClear").addEventListener("click", () => {
+  byId("deadline").value = "";
+  byId("deadline").dispatchEvent(new Event("change", { bubbles: true }));
+  closeDeadlineCalendar(true);
+});
+byId("calendarTomorrow").addEventListener("click", () => {
+  byId("deadline").value = localDate(deadlineMinimum());
+  byId("deadline").dispatchEvent(new Event("change", { bubbles: true }));
+  closeDeadlineCalendar(true);
+});
+byId("calendarDays").addEventListener("keydown", event => {
+  const current = event.target.closest("[data-iso]");
+  if (!current) return;
+  const date = new Date(`${current.dataset.iso}T00:00:00`);
+  let offset = 0;
+  if (event.key === "ArrowRight") offset = 1;
+  else if (event.key === "ArrowLeft") offset = -1;
+  else if (event.key === "ArrowDown") offset = 7;
+  else if (event.key === "ArrowUp") offset = -7;
+  else if (event.key === "Home") offset = -date.getDay();
+  else if (event.key === "End") offset = 6 - date.getDay();
+  else if (event.key === "PageDown" || event.key === "PageUp") {
+    event.preventDefault();
+    date.setMonth(date.getMonth() + (event.key === "PageDown" ? 1 : -1));
+    calendarCursor = new Date(date.getFullYear(), date.getMonth(), 1);
+    calendarFocusDate = localDate(date < deadlineMinimum() ? deadlineMinimum() : date);
+    renderDeadlineCalendar(calendarFocusDate);
+    byId("calendarDays").querySelector(`[data-iso="${calendarFocusDate}"]`)?.focus();
+    return;
+  } else if (event.key === "Escape") {
+    event.preventDefault(); closeDeadlineCalendar(true); return;
+  } else return;
+  event.preventDefault();
+  date.setDate(date.getDate() + offset);
+  if (date < deadlineMinimum()) date.setTime(deadlineMinimum().getTime());
+  calendarFocusDate = localDate(date);
+  if (date.getMonth() !== calendarCursor.getMonth() || date.getFullYear() !== calendarCursor.getFullYear()) calendarCursor = new Date(date.getFullYear(), date.getMonth(), 1);
+  renderDeadlineCalendar(calendarFocusDate);
+  byId("calendarDays").querySelector(`[data-iso="${calendarFocusDate}"]`)?.focus();
+});
+byId("deadlineCalendar").addEventListener("keydown", event => {
+  if (event.key === "Escape") {
+    event.preventDefault(); closeDeadlineCalendar(true);
+  }
+});
+document.addEventListener("pointerdown", event => {
+  if (!event.target.closest(".deadlinePicker")) closeDeadlineCalendar();
+});
+document.addEventListener("focusin", event => {
+  if (!event.target.closest(".deadlinePicker")) closeDeadlineCalendar();
+});
 let latest = null; let activity = []; let bankAccounts = []; let nextBankAccountId = 1;
+let visibleProviderCount = 1;
+const quoteDrafts = new Map();
 const exchangeRateState = { lastResponse: null, nextRequestAt: 0, pending: false, mode: "manual", appliedCurrency: null, appliedUpdatedAtMs: null, appliedNextUpdateAtMs: null, selectedCurrency: "GBP", staleTimer: null };
 const FX_MIN_REQUEST_INTERVAL = 30 * 60 * 1000;
 const money = (n, cur = "BDT") => `${new Intl.NumberFormat("en", { maximumFractionDigits: cur === "BDT" ? 0 : 2 }).format(n)} ${cur}`;
@@ -168,24 +325,58 @@ function compute() {
     return;
   }
   const input = profile(); const result = Finance.calculateTuition(input);
-  if (!result.ok) { latest = null; byId("formError").textContent = result.errors.join(" "); byId("plannerResults").innerHTML = '<p class="muted">Enter your figures and a current, source-identified exchange rate to calculate.</p>'; return; }
+  if (!result.ok) { latest = null; byId("deadlineTrigger").setAttribute("aria-invalid", String(!input.deadline)); byId("formError").textContent = result.errors.join(" "); byId("plannerResults").innerHTML = '<p class="muted">Enter your figures and a current, source-identified exchange rate to calculate.</p>'; return; }
   byId("formError").textContent = ""; latest = { input, result }; const statusText = { covered:"Tuition covered by usable savings", ontrack:"On track at current monthly surplus", short:"Current plan leaves a shortfall" }[result.status];
   const priorities = result.gap === 0 ? ["Keep the emergency reserve protected.","Confirm the university payment deadline and instructions.","Refresh assumptions before paying."] : [result.shortfall > 0 ? "Close the projected shortfall: current savings capacity is not enough." : "Set aside the monthly target before the tuition deadline.", "Verify the payment route and any institution-specific fees.", "Keep emergency savings and committed funds separate from tuition."];
   const savingsTarget = Finance.describeMonthlySavingsTarget(result);
   const monthlyTargetText = savingsTarget.state === "unavailable" ? savingsTarget.message : money(savingsTarget.amount);
-  byId("plannerResults").innerHTML = `<span class="statusPill">${statusText}</span><div class="metricGrid"><div class="metric"><span>Tuition + known payment fees</span><strong>${money(result.requiredFunds)}</strong></div><div class="metric"><span>Usable savings</span><strong>${money(result.usable)}</strong></div><div class="metric"><span>Funding gap</span><strong>${money(result.gap)}</strong></div><div class="metric"><span>Save each month</span><strong>${monthlyTargetText}</strong></div><div class="metric"><span>Monthly surplus</span><strong>${money(result.disposable)}</strong></div><div class="metric"><span>Deadline</span><strong>${result.daysRemaining} days</strong></div></div><div class="progressTrack" aria-label="Current tuition funding progress"><i style="width:${Math.round(result.fundedRatio*100)}%"></i></div><p class="small muted">${Math.round(result.fundedRatio*100)}% of estimated need covered from usable savings. Protected emergency fund: ${money(result.emergency)}. Committed savings excluded: ${money(result.committed)}.</p><p class="assumptionNote">Formula: tuition × your entered rate (${result.rate.toFixed(4)} BDT per ${result.tuitionCurrency}) + known payment fees. Usable funds = savings − emergency fund − committed savings; gap = max(0, required funds − usable funds). At ${result.contributionCycles} complete 30-day savings cycle(s), projected shortfall is ${money(result.shortfall)}. Rate source: ${escapeHtml(input.rateSource)}; timestamp (local time): ${escapeHtml(input.rateTimestamp)}. CampusBridge does not independently verify the rate.</p><h3>Top priorities</h3><ol class="small muted"><li>${priorities[0]}</li><li>${priorities[1]}</li><li>${priorities[2]}</li></ol>`;
+  byId("plannerResults").innerHTML = `<span class="statusPill">${statusText}</span><div class="metricGrid"><div class="metric"><span>Tuition + known payment fees</span><strong>${money(result.requiredFunds)}</strong></div><div class="metric"><span>Usable savings</span><strong>${money(result.usable)}</strong></div><div class="metric"><span>Funding gap</span><strong>${money(result.gap)}</strong></div><div class="metric"><span>Save each month</span><strong>${monthlyTargetText}</strong></div><div class="metric"><span>Monthly surplus</span><strong>${money(result.disposable)}</strong></div><div class="metric"><span>Deadline</span><strong>${result.daysRemaining} ${result.daysRemaining === 1 ? "day" : "days"}</strong></div></div><div class="progressTrack" aria-label="Current tuition funding progress"><i style="width:${Math.round(result.fundedRatio*100)}%"></i></div><p class="small muted">${Math.round(result.fundedRatio*100)}% of estimated need covered from usable savings. Protected emergency fund: ${money(result.emergency)}. Committed savings excluded: ${money(result.committed)}.</p><div class="resultAssumptions"><h3>What this estimate uses</h3><p>Tuition × your entered rate (${result.rate.toFixed(4)} BDT per ${result.tuitionCurrency}) + fees you entered. Usable funds = savings − emergency fund − committed savings. It assumes your full monthly surplus is available to save; actual costs and payment terms may differ.</p><dl><dt>Rate source</dt><dd>${escapeHtml(input.rateSource)}</dd><dt>Rate timestamp (local time)</dt><dd>${escapeHtml(input.rateTimestamp)}</dd><dt>Projected shortfall</dt><dd>${money(result.shortfall)} over ${result.contributionCycles} complete 30-day savings cycle(s)</dd></dl><p class="small muted">This is a planning estimate, not an invoice or guaranteed payment amount. CampusBridge does not independently verify your rate and excludes fees you did not enter.</p></div><h3>Suggested next steps</h3><ol class="small muted"><li>${priorities[0]}</li><li>${priorities[1]}</li><li>${priorities[2]}</li></ol>`;
   logEvent("calculate_tuition_gap", "success", "Tuition affordability calculation completed; financial values omitted");
   renderTransfers();
 }
-function renderQuoteForms(){const cur=corridorMap[byId("corridor").value].currency;byId("providerQuoteForms").innerHTML=providerDefs.map(p=>`<article class="quote" data-provider="${p.id}"><span class="tag">Enter your current quote</span><h3>${p.name}</h3><p>${p.note}</p><label>Quote recipient currency<select data-field="currency">${['GBP','USD','CAD'].map(code=>`<option value="${code}"${code===cur?' selected':''}>${code}</option>`).join('')}</select></label><label>Total sender cost (BDT)<input data-field="total" type="number" min="0" step="any"></label><label>Provider fees included in total (BDT)<input data-field="fee" type="number" min="0" step="any"></label><label>Quoted rate (BDT per 1 quote currency)<input data-field="rate" type="number" min="0" step="any"></label><label>Recipient amount (quote currency)<input data-field="recipient" type="number" min="0" step="any"></label><label>Estimated delivery (business days)<input data-field="days" type="number" min="0" step="1"></label><label>Quote timestamp<input data-field="timestamp" type="datetime-local"></label><label>Quote reference or source<input data-field="reference" type="text" maxlength="160"></label></article>`).join("");}
-function enteredQuotes(){return providerDefs.map(p=>{const card=document.querySelector(`[data-provider="${p.id}"]`);const get=f=>card.querySelector(`[data-field="${f}"]`).value;return {id:p.id,name:p.name,currency:get("currency"),totalCost:get("total"),fee:get("fee"),quotedRate:get("rate"),recipientAmount:get("recipient"),days:get("days"),timestamp:get("timestamp"),reference:get("reference")};});}
+function renderQuoteForms() {
+  const root = byId("providerQuoteForms");
+  for (const card of root.querySelectorAll("[data-provider]")) {
+    const draft = {};
+    for (const field of card.querySelectorAll("[data-field]")) draft[field.dataset.field] = field.value;
+    quoteDrafts.set(card.dataset.provider, draft);
+  }
+  const currency = corridorMap[byId("corridor").value].currency;
+  const visibleProviders = providerDefs.slice(0, visibleProviderCount);
+  root.innerHTML = visibleProviders.map(provider => `<article class="quote" data-provider="${provider.id}"><span class="tag">Student-entered quote · not verified</span><h3>${provider.name}</h3><p>${provider.note}</p><label>Quote recipient currency<select data-field="currency">${['GBP','USD','CAD'].map(code => `<option value="${code}">${code}</option>`).join('')}</select></label><label>Total sender cost (BDT) <span class="quoteRequired">Required</span><input data-field="total" type="number" min="0" step="any"></label><label>Recipient amount <span class="quoteCurrency">(quote currency)</span> <span class="quoteRequired">Required</span><input data-field="recipient" type="number" min="0" step="any"></label><label>Quote timestamp <span class="quoteRequired">Required · within 24 hours</span><input data-field="timestamp" type="datetime-local"></label><label>Quote source or reference <span class="quoteRequired">Required</span><input data-field="reference" type="text" maxlength="160"></label><details class="quoteOptional"><summary>Optional quote details</summary><label>Provider fees included in total (BDT)<input data-field="fee" type="number" min="0" step="any"></label><label>Quoted rate (BDT per quote currency)<input data-field="rate" type="number" min="0" step="any"></label><label>Estimated delivery (business days; needed to rank by speed)<input data-field="days" type="number" min="0" step="1"></label></details></article>`).join("");
+  for (const card of root.querySelectorAll("[data-provider]")) {
+    const draft = quoteDrafts.get(card.dataset.provider);
+    const hasQuoteDetails = draft && Object.entries(draft).some(([field, value]) => field !== "currency" && value !== "");
+    for (const field of card.querySelectorAll("[data-field]")) {
+      if (draft?.[field.dataset.field] !== undefined && (field.dataset.field !== "currency" || hasQuoteDetails)) field.value = draft[field.dataset.field];
+      else if (field.dataset.field === "currency") field.value = currency;
+    }
+  }
+  byId("quoteProgress").textContent = `${visibleProviders.length} of ${providerDefs.length} provider quote${providerDefs.length === 1 ? "" : "s"} shown`;
+  byId("addQuoteProvider").hidden = visibleProviderCount >= providerDefs.length;
+}
+function enteredQuotes() {
+  return providerDefs.slice(0, visibleProviderCount).map(provider => {
+    const card = byId("providerQuoteForms").querySelector(`[data-provider="${provider.id}"]`);
+    const get = field => card.querySelector(`[data-field="${field}"]`).value;
+    return { id: provider.id, name: provider.name, currency: get("currency"), totalCost: get("total"), fee: get("fee"), quotedRate: get("rate"), recipientAmount: get("recipient"), days: get("days"), timestamp: get("timestamp"), reference: get("reference") };
+  });
+}
 function currentQuoteComparison(){const cur=corridorMap[byId("corridor").value].currency;return Finance.compareEnteredQuotes({amount:byId("transferAmount").value,to:cur,sort:byId("sortBy").value},enteredQuotes());}
 function renderTransfers(){const amount=byId("transferAmount").value,cur=corridorMap[byId("corridor").value].currency;const root=byId("transferResults");if(!amount||Number(amount)<=0){root.innerHTML='<p class="muted">Enter the same positive BDT principal used for all quotes.</p>';return;}const entered=enteredQuotes();if(entered.every(q=>q.totalCost===""&&q.recipientAmount===""&&q.reference==="")){root.innerHTML='<p class="muted">No provider quotes entered. Get current terms from your institution-approved provider or bank; nothing is estimated here.</p>';return;}const cmp=currentQuoteComparison();if(!cmp.ok){root.innerHTML=`<p class="error">${cmp.errors.join(" ")}</p>`;return;}const usable=cmp.available;if(!usable.length){root.innerHTML=`<p class="muted">No complete quotes can be ranked. ${cmp.unavailable.map(x=>`${escapeHtml(x.quote.name)}: ${escapeHtml(x.reason)}`).join(" ")}</p>`;return;}root.innerHTML=`<div class="quoteGrid">${usable.map((q,i)=>`<article class="quote"><span class="tag">${i===0?"Ranks first by selected objective · student-entered":"Student-entered quote"} · not provider-verified</span><h3>${escapeHtml(q.quote.name)}</h3><dl><dt>Total sender cost</dt><dd><strong>${money(q.totalCost)}</strong></dd><dt>Principal</dt><dd>${money(Number(amount))}</dd><dt>Stated provider fee</dt><dd>${q.fee?money(q.fee):"Not separately stated"}</dd><dt>Recipient amount</dt><dd><strong>${money(q.recipientAmount,cur)}</strong></dd><dt>Quoted rate</dt><dd>${q.quotedRate===null?"Not stated":`1 ${cur} = ${q.quotedRate.toFixed(5)} BDT`}</dd><dt>Delivery estimate</dt><dd>${q.days===null?"Not provided":`${q.days} business days`}</dd></dl><p>Source/reference: ${escapeHtml(q.reference)}. Quote timestamp: ${escapeHtml(q.timestamp)}. Validation does not authenticate this manually entered quote. Verify expiry and all terms on the provider’s official page before paying.</p></article>`).join("")}</div><p class="assumptionNote">${cmp.unavailable.map(x=>`${escapeHtml(x.quote.name)}: ${escapeHtml(x.reason)}`).join(" ")}</p>`;logEvent("compare_payment_options","success",`${usable.length} entered quotes ranked by ${byId("sortBy").selectedOptions[0].text.toLowerCase()}`);}
-byId("profileForm").addEventListener("submit", e=>{e.preventDefault();compute();});
+byId("profileForm").addEventListener("submit", e=>{e.preventDefault();planRequested=true;updateDeadlineHint();compute();});
+byId("deadline").addEventListener("change",()=>{updateDeadlineHint();if(planRequested)compute();});
 byId("corridor").addEventListener("change",()=>{const currency=corridorMap[byId("corridor").value].currency;const changed=currency!==exchangeRateState.selectedCurrency;exchangeRateState.selectedCurrency=currency;if(changed&&["exchangeRate","rateSource","rateTimestamp"].some(id=>byId(id).value!=="")){for(const id of ["exchangeRate","rateSource","rateTimestamp"])byId(id).value="";exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;latest=null;if(exchangeRateState.lastResponse)renderFetchedRateStatus("Destination currency changed; the previous rate and its source/time were cleared.");else setExchangeRateStatus("Destination currency changed. The previous rate, source, and timestamp were cleared to avoid using the wrong currency. Enter or fetch a rate for the new currency.");}else renderFetchedRateStatus();refreshRate();renderQuoteForms();renderTransfers();if(byId("tuition").value||byId("exchangeRate").value)compute();});
 byId("transferAmount").addEventListener("input",renderTransfers); byId("sortBy").addEventListener("change",renderTransfers);
 byId("providerQuoteForms").addEventListener("input",renderTransfers);
-byId("resetProfile").addEventListener("click",()=>{byId("profileForm").reset();bankAccounts=[];nextBankAccountId=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="UK";exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="GBP";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();byId("plannerResults").innerHTML='<p class="muted">Enter your figures and a current, source-identified exchange rate to calculate.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
+byId("addQuoteProvider").addEventListener("click", () => {
+  if (visibleProviderCount >= providerDefs.length) return;
+  visibleProviderCount += 1;
+  renderQuoteForms();
+  renderTransfers();
+  byId("providerQuoteForms").querySelector(`[data-provider="${providerDefs[visibleProviderCount - 1].id}"] select`).focus();
+});
+byId("resetProfile").addEventListener("click",()=>{byId("profileForm").reset();planRequested=false;updateDeadlineHint();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="UK";exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="GBP";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
 byId("refreshExchangeRate").addEventListener("click",refreshExchangeRate);
 byId("useExchangeRate").addEventListener("click",useFetchedExchangeRate);
 for(const id of ["exchangeRate","rateSource","rateTimestamp"])byId(id).addEventListener("input",handleManualRateEdit);
@@ -205,8 +396,8 @@ async function answerQuestion() {
   if(/save|month|deadline|afford|tuition|gap|fund/.test(q)){const target=Finance.describeMonthlySavingsTarget(r);const targetText=target.state==="covered"?target.message:target.state==="unavailable"?target.message:`Scheduled monthly target: ${money(target.amount)} over ${r.contributionCycles} contribution date(s).`;const response=`Estimated tuition need is ${money(r.tuitionHome)}. After protecting emergency savings and committed funds, your gap is ${money(r.gap)}. ${targetText} ${r.shortfall>0?`Current full-cycle savings capacity leaves ${money(r.shortfall)} uncovered.`:r.gap===0?"":"The entered monthly budget can cover the gap by the deadline."} Uses your rate/source entry (${latest.input.rateSource}, timestamp ${latest.input.rateTimestamp} local time); no rate forecast is made.`;byId("answer").textContent=`Tool used: calculate_tuition_gap\n${response}`;logEvent("calculate_tuition_gap","success","Answered using existing local calculation; question omitted");return;}
  }
  const button=byId("askButton"),answer=byId("answer");button.disabled=true;answer.setAttribute("aria-busy","true");answer.textContent="CampusBridge AI is preparing an explanation…";
- let safeFailure="Could not reach the assistant endpoint. Check that the Vercel development server is running and open its local URL.";
- try{const response=await fetch("/api/assistant",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({question:rawQuestion})});let payload={};try{payload=await response.json();}catch{}if(!response.ok){safeFailure=typeof payload.error==="string"?payload.error:`Assistant request failed (HTTP ${response.status}).`;if(payload.requestId)safeFailure+=` Reference: ${payload.requestId}.`;throw new Error("safe assistant error");}if(typeof payload.answer!=="string"||!payload.answer.trim()){safeFailure="The assistant endpoint returned an invalid answer.";throw new Error("invalid assistant response");}answer.textContent=`AI explanation (general guidance only):\n${payload.answer}`;logEvent("retrieve_ai_guidance","success","General explanation returned; prompt and response omitted");}
+ let safeFailure="Could not reach the assistant endpoint. Check that the deployed CampusBridge site is available.";
+ try{const response=await fetch("/api/assistant",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({question:rawQuestion})});let payload={};try{payload=await response.json();}catch{}if(!response.ok){safeFailure=response.status===404?"The assistant is unavailable on this preview. Open the deployed site to use it; only the question you submit is sent to Groq.":typeof payload.error==="string"?payload.error:`Assistant request failed (HTTP ${response.status}).`;if(payload.requestId)safeFailure+=` Reference: ${payload.requestId}.`;throw new Error("safe assistant error");}if(typeof payload.answer!=="string"||!payload.answer.trim()){safeFailure="The assistant endpoint returned an invalid answer.";throw new Error("invalid assistant response");}answer.textContent=`AI explanation (general guidance only):\n${payload.answer}`;logEvent("retrieve_ai_guidance","success","General explanation returned; prompt and response omitted");}
  catch{answer.textContent=`AI assistant unavailable. ${safeFailure}\nHere is local guidance instead:\n${getLocalAssistantGuidance(q)}`;logEvent("retrieve_ai_guidance","fallback","Used local guidance; prompt, response, and error details omitted");}
  finally{button.disabled=false;answer.setAttribute("aria-busy","false");}
 }
@@ -222,4 +413,4 @@ byId("exportReport").addEventListener("click",()=>{compute();if(!latest){byId("p
 // Pointer-responsive 3D treatment is decorative and disabled for touch/reduced motion.
 const visual=document.querySelector(".heroVisual"),orb=document.querySelector(".orb3d");
 if(visual&&!reducedMotion.matches&&matchMedia("(pointer:fine)").matches){visual.addEventListener("pointermove",e=>{const b=visual.getBoundingClientRect(),x=(e.clientX-b.left)/b.width-.5,y=(e.clientY-b.top)/b.height-.5;orb.style.animationPlayState="paused";orb.style.transform=`translate3d(${x*9}px,${y*8}px,0) rotateX(${-y*9}deg) rotateY(${x*13-10}deg)`;});visual.addEventListener("pointerleave",()=>{orb.style.animationPlayState="running";orb.style.transform="";});}
-renderQuoteForms();refreshRate();renderTransfers();byId("plannerResults").innerHTML='<p class="muted">Your plan will appear here after you enter your figures and calculate.</p>';resetScenario();previewScenario();refreshExchangeRate();
+renderQuoteForms();refreshRate();renderTransfers();byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';resetScenario();previewScenario();refreshExchangeRate();

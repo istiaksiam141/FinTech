@@ -6,7 +6,15 @@ CampusBridge helps Bangladesh-based students plan tuition costs and compare curr
 
 Deploy the project to Vercel to use the official Bangladesh Bank rates endpoint. The planner starts blank. Enter your tuition, other savings, protected emergency fund, income, living costs, and tuition deadline. You may add one or more bank account labels and current BDT balances; the planner adds those balances to other savings. You may enter a rate and its source/timestamp manually, or load the latest published Bangladesh Bank sheet. The fetched rate is only applied after you choose to use it. Calculations run locally in your browser.
 
-For payment comparison, enter the same payment principal and collect current quotes through the payment link listed by your university. CampusBridge compares student-entered total sender cost, recipient amount, fee detail, and delivery days. It requires a timestamp and quote source/reference; delivery time is required to rank by speed.
+For payment comparison, enter the same payment principal and collect current quotes through the payment link listed by your university. Start with one provider quote and add others only when needed. Total sender cost, recipient amount, quote timestamp, source/reference, and currency are required for ranking; fee and quoted rate are optional, and delivery time is required only when ranking by speed. Quotes are not authenticated by CampusBridge.
+
+## Student data and privacy
+
+Planner values, manual savings labels/balances, quote entries, calculations, and activity are kept in the current browser page and clear on reload or when the planner is cleared. They are not saved to an account. Loading or refreshing rates calls the site's `/api/exchange-rates` endpoint to retrieve Bangladesh Bank reference data. When you submit a general assistant question, the browser sends only that question to `/api/assistant`; the assistant service adds its instructions when calling Groq. Planner values and quote entries are not included. Do not include names, student IDs, account details, passwords, or one-time codes in questions.
+
+The optional downloaded text report includes entered financial and quote information. Review it before sharing. Provider websites and Google Fonts are third-party services with their own privacy practices. This prototype does not yet provide a formal privacy policy, terms, or student-support contact; these must be reviewed and configured before offering it to students.
+
+If the Bangladesh Bank rate request returns 404, the current preview does not serve the rate API. Use the deployed version with its `/api/exchange-rates` function, or enter a current bank/provider rate and its source and timestamp manually. No rate is applied when the request fails.
 
 ## What is connected
 
