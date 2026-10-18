@@ -3,12 +3,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { execFileSync } = require('node:child_process');
 const Finance = require('../lib/finance.js');
 const ExchangeRates = require('../lib/exchange-rates.js');
 const BangladeshBankRates = require('../lib/bangladesh-bank-rates.js');
 const exchangeRateHandler = require('../api/exchange-rates.js');
 
-const today = new Date(2026, 9, 13);
+const today = new Date(2026, 9, 13, 12, 0);
 const quoteNow = new Date(2026, 9, 13, 12, 0);
 function isoAfter(days) { const d=new Date(today);d.setDate(d.getDate()+days);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function profile(overrides={}) { return {homeCountry:'Bangladesh',destinationCountry:'United Kingdom',homeCur:'BDT',tuitionCur:'GBP',tuition:'8000',exchangeRate:'155',rateSource:'Student-entered bank quote ref 123',rateTimestamp:'2026-10-13T10:00',savings:'500000',income:'60000',expenses:'35000',committed:'10000',emergency:'50000',paymentFee:'0',deadline:isoAfter(60),...overrides}; }
@@ -26,6 +27,7 @@ test('all primary corridors have real-currency support without preset conversion
   const referenceRates={GBP:0.79,BDT:120};
   assert.ok(Math.abs(Finance.convert(100,'GBP','BDT',referenceRates)-100*120/.79)<1e-8);
   assert.throws(()=>Finance.convert(1,'GBP','BDT'),/source-identified rate/);
+  assert.throws(()=>Finance.convert(1e12,'GBP','BDT',{GBP:1,BDT:2}),/supported maximum/);
 });
 
 test('Bangladesh Bank HTML sheet parses published BDT-per-currency ask, bid, and USD WAR',()=>{
@@ -89,12 +91,16 @@ test('upstream fetch rejects HTTP errors, invalid content type, and timeout',asy
 
 test('Vercel endpoint returns a clear uncached 502 on network failure',async()=>{
   const originalFetch=globalThis.fetch; const response={headers:{},statusCode:null,body:null,setHeader(name,value){this.headers[name]=value;},status(code){this.statusCode=code;return this;},json(body){this.body=body;return this;}};
-  globalThis.fetch=async()=>{throw new Error('network unavailable');};
-  try { await exchangeRateHandler({},response); } finally { globalThis.fetch=originalFetch; }
+  const originalError=console.error,logs=[];console.error=(...args)=>logs.push(args);
+  globalThis.fetch=async()=>{throw new Error('network unavailable secret-value');};
+  try { await exchangeRateHandler({},response); } finally { globalThis.fetch=originalFetch;console.error=originalError; }
   assert.equal(response.statusCode,502);
   assert.equal(response.headers['Cache-Control'],'no-store');
   assert.match(response.body.error,/temporarily unavailable/);
   assert.equal(response.body.rates,undefined,'errors never include invented fallback rates');
+  assert.equal(response.body.detail,undefined,'client errors do not expose upstream details');
+  assert.doesNotMatch(JSON.stringify(response.body),/secret-value|network unavailable/);
+  assert.doesNotMatch(JSON.stringify(logs),/secret-value|network unavailable/);
 });
 
 test('Vercel endpoint returns validated source metadata and cache headers on success',async()=>{
@@ -154,6 +160,104 @@ test('monthly target and projected capacity use only complete 30-day contributio
   }
 });
 
+test('strict calendar dates reject normalization and count calendar days across DST',()=>{
+  for(const deadline of ['2026-02-30','2026-13-01','2026-10-3','not-a-date']) {
+    const result=Finance.calculateTuition(profile({deadline}),today);
+    assert.equal(result.ok,false,`${deadline} must be rejected as an invalid calendar date`);
+    assert.match(result.errors.join(' '),/valid calendar deadline/);
+  }
+  assert.equal(Finance.calculateTuition(profile({deadline:'2026-10-13'}),today).ok,false,'today is not a future deadline');
+  assert.equal(Finance.calculateTuition(profile({deadline:'2026-10-14'}),today).daysRemaining,1);
+  const script = `const F=require('./lib/finance.js');const p=${JSON.stringify(profile({deadline:'2026-03-15',rateTimestamp:'2026-03-07T10:00'}))};const t=new Date(2026,2,7,12);process.stdout.write(JSON.stringify(F.calculateTuition(p,t)));`;
+  const result=JSON.parse(execFileSync(process.execPath,['-e',script],{cwd:path.join(__dirname,'..'),env:{...process.env,TZ:'America/New_York'},encoding:'utf8'}));
+  assert.equal(result.ok,true);
+  assert.equal(result.daysRemaining,8,'calendar-day count must not lose a day across spring DST');
+  assert.equal(result.contributionCycles,0);
+  assert.equal(Finance.calendarDaysBetween('2026-10-31','2026-11-01'),1,'fall DST also counts calendar days, not elapsed 24-hour periods');
+  assert.equal(Finance.calendarDaysBetween('2026-02-30','2026-03-01'),null);
+});
+
+test('whole-BDT contribution schedule covers a non-divisible funding gap',()=>{
+  const result=Finance.calculateTuition(profile({deadline:isoAfter(90),savings:'299999'}),today);
+  assert.equal(result.ok,true);
+  assert.equal(result.gap,1000001);
+  const schedule=Finance.describeMonthlySavingsTarget(result);
+  assert.equal(schedule.regularAmount,333333);
+  assert.equal(schedule.finalAmount,333335);
+  assert.ok(schedule.regularAmount*2+schedule.finalAmount>=result.gap);
+  assert.equal(schedule.regularAmount*2+schedule.finalAmount,result.gap);
+  const fractional=Finance.calculateTuition(profile({tuition:'1',exchangeRate:'1.1',savings:'0',emergency:'0',committed:'0',deadline:isoAfter(30)}),today);
+  const fractionalSchedule=Finance.describeMonthlySavingsTarget(fractional);
+  assert.equal(fractional.gap,1.1,'the underlying gap is not rounded to hide display rounding');
+  assert.equal(fractionalSchedule.finalAmount,2,'whole BDT schedule must cover a fractional BDT gap');
+});
+
+test('tuition, fees, and projected contributions cannot exceed the supported BDT calculation range',()=>{
+  const tuitionOverflow=Finance.calculateTuition(profile({tuition:'1000000000000',exchangeRate:'1000000000000'}),today);
+  assert.equal(tuitionOverflow.ok,false);
+  assert.match(tuitionOverflow.errors.join(' '),/Calculated BDT amounts exceed the supported maximum/);
+  const feeOverflow=Finance.calculateTuition(profile({paymentFee:'1000000000000'}),today);
+  assert.equal(feeOverflow.ok,false);
+  const projectionOverflow=Finance.calculateTuition(profile({income:'1000000000000',expenses:'0',deadline:'9999-12-31'}),today);
+  assert.equal(projectionOverflow.ok,false);
+  assert.match(projectionOverflow.errors.join(' '),/Calculated BDT amounts exceed the supported maximum/);
+});
+
+test('stress scenarios recalculate rate, expense, and missed-contribution cases without mutating baseline inputs',()=>{
+  const input=profile();
+  const before=structuredClone(input);
+  const stress=Finance.calculateStressScenarios(input,{expenseIncrease:10000,missedContributions:1},today);
+  assert.equal(stress.ok,true);
+  assert.deepEqual(input,before,'stress tests must not mutate the baseline input');
+  const byName=Object.fromEntries(stress.scenarios.map(scenario=>[scenario.name,scenario]));
+  assert.equal(byName.Baseline.fundingGap,800000);
+  assert.equal(byName['Exchange rate +5%'].exchangeRate,162.75);
+  assert.equal(byName['Exchange rate +5%'].fundingGap,862000);
+  assert.equal(byName['Exchange rate +10%'].fundingGap,924000);
+  assert.equal(byName['Increased monthly expenses'].monthlySurplus,15000);
+  assert.equal(byName['Increased monthly expenses'].projectedCapacity,30000);
+  assert.equal(byName['One missed contribution'].contributionCycles,1);
+  assert.equal(byName['One missed contribution'].projectedCapacity,25000);
+  assert.equal(byName['Increased expenses + one missed contribution'].projectedCapacity,15000);
+  assert.equal(byName['Increased expenses + one missed contribution'].projectedShortfall,785000);
+  assert.ok(byName['Increased monthly expenses'].contributionSchedule.regularAmount * (byName['Increased monthly expenses'].contributionCycles - 1) + byName['Increased monthly expenses'].contributionSchedule.finalAmount >= byName['Increased monthly expenses'].fundingGap);
+  assert.equal(Finance.calculateStressScenarios(input,{expenseIncrease:-1},today).ok,false);
+  assert.equal(Finance.calculateStressScenarios(input,{missedContributions:2},today).ok,false);
+});
+
+test('stress scenarios preserve zero-gap, zero-cycle, and negative-surplus boundaries',()=>{
+  const covered=Finance.calculateStressScenarios(profile({savings:'1300000',emergency:'50000',committed:'10000'}),{missedContributions:1},today);
+  assert.equal(covered.ok,true);
+  assert.equal(covered.scenarios[0].fundingGap,0);
+  assert.equal(covered.scenarios[0].monthlyTarget,0);
+  const noCycles=Finance.calculateStressScenarios(profile({deadline:isoAfter(1)}),{missedContributions:1},today);
+  assert.equal(noCycles.ok,true);
+  assert.equal(noCycles.scenarios[0].contributionCycles,0);
+  assert.equal(noCycles.scenarios[0].monthlyTarget,null);
+  assert.equal(noCycles.scenarios[0].projectedShortfall,noCycles.scenarios[0].fundingGap);
+  const negative=Finance.calculateStressScenarios(profile({expenses:'70000'}),{expenseIncrease:5000,missedContributions:1},today);
+  assert.equal(negative.ok,true);
+  assert.equal(negative.scenarios[0].monthlySurplus,-10000);
+  assert.equal(negative.scenarios[0].projectedCapacity,0);
+});
+
+test('financial report includes inputs, formulas, provenance, adjusted schedule, and available stress results',()=>{
+  const input=profile({deadline:isoAfter(90),savings:'299999'});
+  const result=Finance.calculateTuition(input,today);
+  const stress=Finance.calculateStressScenarios(input,{expenseIncrease:5000,missedContributions:1},today);
+  const report=Finance.buildFinancialReport(input,result,{generatedAt:new Date('2026-10-13T12:00:00'),stressScenarios:stress.scenarios});
+  assert.match(report,/monthly income 60000 BDT/);
+  assert.match(report,/tuition in BDT = tuition × rate/);
+  assert.match(report,/Student-entered bank quote ref 123/);
+  assert.match(report,/timestamp \(local\): 2026-10-13T10:00/);
+  assert.match(report,/333333 BDT for 2 cycle\(s\), then 333335 BDT in the final cycle/);
+  assert.match(report,/Exchange rate \+5%/);
+  assert.match(report,/Exchange rate \+10%/);
+  assert.match(report,/Increased monthly expenses/);
+  assert.match(report,/One missed contribution/);
+  assert.match(report,/projected shortfall/);
+});
+
 test('covered tuition needs no target, and zero or past deadlines remain invalid',()=>{
   const covered=Finance.calculateTuition(profile({deadline:isoAfter(1),savings:'1300000',emergency:'50000',committed:'10000'}),today);
   assert.equal(covered.ok,true);assert.equal(covered.gap,0);assert.equal(covered.monthlyTarget,0);assert.equal(covered.shortfall,0);
@@ -180,6 +284,10 @@ test('missing, zero, negative, or unreferenced rates and invalid monetary inputs
   for(const value of ['0','NaN','Infinity','1e13']) assert.ok(Finance.validateProfile(profile({exchangeRate:value}),today).length>0,`invalid exchange rate ${value} should be rejected`);
   assert.match(Finance.validateProfile(profile({rateSource:''}),today).join(' '),/source/);
   assert.match(Finance.validateProfile(profile({rateTimestamp:''}),today).join(' '),/timestamp/);
+  for(const value of ['2026-02-30T10:00','2026-10-13T25:00','2026-10-13T10:60','2026-10-13']) {
+    assert.match(Finance.validateProfile(profile({rateTimestamp:value}),today).join(' '),/valid exchange-rate timestamp/);
+  }
+  assert.match(Finance.validateProfile(profile({rateTimestamp:'2026-10-13T12:01'}),today).join(' '),/cannot be in the future/);
   assert.match(Finance.validateProfile(profile({savings:'-1'}),today).join(' '),/cannot be negative/);
   assert.match(Finance.validateProfile(profile({deadline:isoAfter(0)}),today).join(' '),/at least 1 day/);
 });
@@ -299,6 +407,7 @@ test('active UI has blank financial inputs and working external quote paths; scr
   assert.match(app,/event\.key === "Enter" \|\| event\.key === " "/,'dropdowns support keyboard activation');
   assert.match(app,/ArrowRight/,'the custom calendar supports keyboard navigation');
   assert.match(app,/result\.daysRemaining === 1 \? "day" : "days"/,'deadline results use correct singular and plural labels');
+  assert.match(app,/Finance\.calendarDaysBetween\(localDate\(today\), input\.value\)/,'deadline hint uses the same calendar-day calculation as the finance engine');
   assert.match(app,/byId\("deadline"\)\.addEventListener\("change"/,'selecting a deadline updates the displayed plan');
   const fetchHandler=app.slice(app.indexOf('async function refreshExchangeRate()'),app.indexOf('function useFetchedExchangeRate()'));
   assert.equal(fetchHandler.includes('byId("exchangeRate").value ='),false,'fetching only previews the rate and does not replace the student\'s current value');

@@ -6,6 +6,8 @@ The planner expects `1 unit of destination currency = rate BDT` (for example, BD
 
 `tuition × BDT-per-destination-currency rate`
 
+Manually entered rate timestamps must be valid local `YYYY-MM-DDTHH:mm` values and cannot be in the future. Manual rates remain user-provided and unverified. There is no age-based rejection policy for manual rates; students should confirm that the entered quote is still current. Fetched-rate freshness rules are described separately below.
+
 ### Bangladesh Bank published rates
 
 The Vercel function `GET /api/exchange-rates` fetches the official [Bangladesh Bank exchange-rate sheet](https://www.bb.org.bd/en/index.php/econdata/exchangerate) server-side. The official page currently presents a dated HTML table and links to date-specific XLS and PDF files. On 13 October 2026, the linked files were `https://www.bb.org.bd/econdata/exchange_rate/exchange_rate_13_10_2026.xls` (XLS) and `https://www.bb.org.bd/econdata/exchange_rate/exchange_rate_13_10_2026.pdf` (PDF); the date in the file path changes with the sheet. No documented JSON API for this sheet was found. The HTML parser validates the publication date, expected bid/ask table headers, supported rows, numeric values, and response content type. It fails closed on missing or changed layout. This is still page scraping and an upstream markup change can require parser maintenance; it is not represented as a guaranteed stable feed.
@@ -29,7 +31,15 @@ The rate is used at full numeric precision and formatted for display only. These
 - `projectedSavingsCapacity = max(0, monthlySurplus) × contributionDates`
 - `projectedShortfall = max(0, fundingGap − projectedSavingsCapacity)`
 
-When there is at least one contribution date, the target is divided evenly over those scheduled dates, so saving the target on every date sums to the funding gap. Known one-time payment fees should be entered once in the planner. Quote comparison is separate; do not add those quote fees to the profile fee estimate again. The deadline projection assumes each full 30-day contribution is made on time and no income, expense, exchange-rate, or fee changes. It is not a guarantee.
+Deadlines must be real calendar dates in `YYYY-MM-DD` form; impossible dates such as February 30 are rejected. The planner compares local calendar dates, so daylight-saving transitions do not add or remove a deadline day. Today and past dates are rejected. Only complete 30-day intervals count, using `floor(calendarDaysToDeadline ÷ 30)`.
+
+The exact monthly target remains `fundingGap ÷ contributionDates`. For the whole-BDT schedule shown to students, the first `contributionDates − 1` contributions are `floor(fundingGap ÷ contributionDates)` BDT, and the final contribution is rounded up to the remaining gap. This final-cycle adjustment makes the displayed schedule cover the funding gap; it may exceed the exact gap by less than one BDT when the converted tuition produces a fractional BDT amount. The underlying gap is not rounded. Known one-time payment fees should be entered once in the planner. Quote comparison is separate; do not add those quote fees to the profile fee estimate again. The deadline projection assumes each full 30-day contribution is made on time and no income, expense, exchange-rate, or fee changes. It is not a guarantee.
+
+The deadline and calendar summaries use calendar-date differences rather than elapsed milliseconds, so daylight-saving transitions do not change the number of days. Stress tests are independent copies of the baseline input: rate stresses multiply the entered rate by 1.05 or 1.10; an expense stress adds the explicitly supplied monthly expense increase; a missed-contribution stress removes one full 30-day contribution cycle from available capacity. A combined expense-and-missed-contribution case applies both. Each scenario recomputes the gap, target, capacity, and shortfall, and does not mutate the baseline. No expense increase is assumed unless provided.
+
+The downloaded financial report is generated locally in the browser. It contains the entered financial inputs, calculation formulas, rate source and timestamp, baseline outputs, and available stress results. It is not sent to the assistant endpoint.
+
+Each financial input is limited to 1,000,000,000,000 in its entered currency. Calculated BDT values (including converted tuition, required funds, projected funds, and contribution capacity) are also limited to 1,000,000,000,000 BDT. A plan is rejected with a clear validation message if any such result is non-finite or exceeds that ceiling; the app does not display an out-of-range calculation. This ceiling preserves the existing input scale while preventing multiplication or long projection periods from producing unsupported results.
 
 ## Quote comparison
 

@@ -10,6 +10,7 @@ module.exports = async function handler(_request, response) {
     response.status(200).json(data);
   } catch (error) {
     response.setHeader("Cache-Control", "no-store");
-    response.status(502).json({ error: "Official exchange rates are temporarily unavailable or could not be validated.", detail: error.message });
+    console.error("Official exchange-rate request failed", { name: typeof error?.name === "string" ? error.name : "Error" });
+    response.status(502).json({ error: "Official exchange rates are temporarily unavailable or could not be validated." });
   }
 };
