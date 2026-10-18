@@ -276,7 +276,8 @@ test('comparison ranking and report export share the same eligible quote list',(
 
 test('active UI has blank financial inputs and working external quote paths; scripts parse',()=>{
   const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
-  for(const marker of ['id="exchangeRate"','id="rateSource"','id="rateTimestamp"','id="rateTimestampHint"','id="rateTimestampTrigger"','id="rateTimestampCalendar"','id="rateTimestampTime"','id="useCurrentRateTimestamp"','id="refreshExchangeRate"','id="useExchangeRate"','id="exchangeRateStatus"','id="providerQuoteForms"','id="deadlineHint"','id="deadlineTrigger"','id="deadlineCalendar"','role="grid"','aria-haspopup="dialog"','.formSection .fieldGrid>label{align-self:start;align-content:start}','.timestampControl{display:flex;width:100%;min-width:0}','.calendarDay.isToday:not(.isSelected){background:#eaf6f0','https://www.bb.org.bd/en/index.php/econdata/exchangerate','convera.com/students/faq','pay.flywire.com','id="applyScenario"','id="resetScenario"','id="exportReport"','src="lib/exchange-rates.js"']) assert.ok(html.includes(marker),`missing ${marker}`);
+  for(const marker of ['id="exchangeRate"','id="rateSource"','id="rateTimestamp"','id="rateTimestampHint"','id="rateTimestampTrigger"','id="rateTimestampCalendar"','id="rateTimestampTime"','id="useCurrentRateTimestamp"','id="refreshExchangeRate"','id="useExchangeRate"','id="exchangeRateStatus"','id="providerQuoteForms"','id="deadlineHint"','id="deadlineTrigger"','id="deadlineCalendar"','role="grid"','aria-haspopup="dialog"','.formSection .fieldGrid>label{align-self:start;align-content:start}','.timestampControl{display:flex;width:100%;min-width:0}','#providerQuoteForms .quoteTimestampLabel{grid-column:1/-1}','.calendarDay.isToday:not(.isSelected){background:#eaf6f0','https://www.bb.org.bd/en/index.php/econdata/exchangerate','convera.com/students/faq','pay.flywire.com','id="applyScenario"','id="resetScenario"','id="exportReport"','src="lib/exchange-rates.js"']) assert.ok(html.includes(marker),`missing ${marker}`);
+  assert.ok(app.includes('data-field="timestamp" type="datetime-local"'),'quote timestamps remain date-time inputs for existing validation and comparison');
   assert.equal(fs.existsSync(path.join(root,'api','exchange-rates.js')),true);
   assert.ok(fs.readFileSync(path.join(root,'docs','financial-algorithms.md'),'utf8').includes('Bangladesh Bank published rates'));
   const endpoint=fs.readFileSync(path.join(root,'api','exchange-rates.js'),'utf8');
@@ -290,6 +291,7 @@ test('active UI has blank financial inputs and working external quote paths; scr
   assert.match(app,/calendarTomorrow/,'the calendar offers the earliest valid deadline as a shortcut');
   assert.match(app,/byId\("useCurrentRateTimestamp"\)\.addEventListener/,'the rate timestamp has a current-local-time shortcut');
   assert.match(app,/function renderRateTimestampCalendar/,'the rate timestamp has an interactive calendar');
+  assert.match(app,/function initializeQuoteTimestampPicker/,'provider quote timestamps use the interactive date-time picker');
   assert.match(app,/ArrowRight/,'the custom calendar supports keyboard navigation');
   assert.match(app,/result\.daysRemaining === 1 \? "day" : "days"/,'deadline results use correct singular and plural labels');
   assert.match(app,/byId\("deadline"\)\.addEventListener\("change"/,'selecting a deadline updates the displayed plan');

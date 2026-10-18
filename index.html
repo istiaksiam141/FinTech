@@ -82,6 +82,13 @@
     .timestampNow{display:inline-flex;min-height:38px;align-items:center;justify-content:center;gap:6px;padding:0 11px;border:1px solid #d2e9de;border-radius:9px;background:#eaf6f0;color:#167656;font:600 .72rem 'Plus Jakarta Sans',sans-serif;cursor:pointer}
     .timestampNow:hover{border-color:#9bc9ad;background:#e1f3e8}
     .timestampNow:focus-visible{outline:3px solid rgba(29,158,117,.22);outline-offset:2px}
+    .quoteTimestampPicker{position:relative;width:100%;min-width:0;grid-column:1/-1}
+    #providerQuoteForms .quoteTimestampLabel{grid-column:1/-1}
+    .quoteTimestampPicker .timestampCalendar{top:calc(100% + 8px);width:min(340px,calc(100vw - 64px))}
+    .quoteTimestampInput{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip-path:inset(50%);white-space:nowrap;padding:0!important;border:0!important}
+    .quoteTimestampPicker .deadlineTrigger{width:100%;min-width:0}
+    .quoteTimestampPicker .timestampTime{grid-template-columns:1fr auto}
+    .timestampTimeLabel{display:block;color:#6b6b66;font-size:.67rem;font-weight:600}
     .fieldGrid input:hover,.fieldGrid select:hover{border-color:#a9cdbb}
     .fieldGrid input:focus,.fieldGrid select:focus,.transferControls input:focus,.transferControls select:focus,.askRow input:focus,.quote input:focus,.quote select:focus{border-color:#1d9e75;background:#fff;box-shadow:0 0 0 3px rgba(29,158,117,.12)}
     .assumptionNote,.muted{color:#6b6b66}
