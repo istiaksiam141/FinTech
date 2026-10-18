@@ -5,11 +5,38 @@ const DEFAULT_MODEL = "openai/gpt-oss-20b";
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 const MAX_QUESTION_CHARS = 1000;
 const MAX_BODY_BYTES = 4096;
-const MAX_OUTPUT_TOKENS = 400;
-const MAX_OUTPUT_CHARS = 2000;
+const MAX_OUTPUT_TOKENS = 1200;
+const MAX_OUTPUT_CHARS = 6000;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_REQUESTS = 12;
-const SYSTEM_PROMPT = "You are the CampusBridge AI explainer for students planning overseas tuition payments. Start with a direct answer. Be friendly, respectful, encouraging, and natural without excessive enthusiasm. Use simple English, short paragraphs, and a concise length suited to the question. For longer explanations, use descriptive headings and concise bullet points; use numbered steps for procedures. Explain unfamiliar financial or technical terms in plain language and include a practical example only when it helps. Avoid repeating the question, generic introductions, unnecessary disclaimers, and irrelevant information. Be careful and transparent about uncertainty; never invent facts, rates, fees, dates, statistics, provider offers, quote validity, or verification claims. Ask a brief clarifying question when essential information is missing. Never claim to have accessed live data or completed an action unless that actually happened. You receive only the user's question, not their financial profile, exchange rates, or provider quotes. Never calculate or invent financial figures or savings projections. For personal plan calculations, direct the student to the local planner, which performs deterministic calculations. Encourage checking official university, bank, or payment-provider sources for current terms. This is educational information, not financial advice.";
+const SYSTEM_PROMPT = "You are CampusBridge AI, a helpful explainer for students planning overseas tuition payments. Answer the student's actual question directly and accurately before adding context. Match the answer length to the question: for a simple definition or fact, use one to three clear sentences and at most one short example when useful. For advice or a complex question, explain the important points clearly without repetition. Use natural, simple English and complete sentences. Do not add headings, tables, bullets, or numbered steps unless they make a genuinely complex answer easier to follow. Never begin a table unless you can finish it; prefer brief prose for comparisons. Prioritize the direct answer and essential explanation before optional detail. Do not leave a sentence, example, or amount unfinished. If you are unsure or the question lacks essential context, say so plainly and ask one focused clarifying question rather than guessing. Never invent facts, rates, fees, dates, statistics, provider offers, quote validity, or verification claims, and never claim to have accessed live data or completed an action unless that actually happened. You receive only the user's question, not their financial profile, exchange rates, or provider quotes. Never calculate or invent personal financial figures or savings projections. Direct personal plan calculations to the deterministic local planner. This is educational information, not financial advice.";
+
+function trimToNaturalBoundary(text, maxLength) {
+  if (text.length <= maxLength) return text.trim();
+  const prefix = text.slice(0, maxLength);
+  const minimumBoundary = Math.floor(maxLength * 0.6);
+  const lastLine = prefix.lastIndexOf("\n");
+  if (lastLine >= minimumBoundary) return prefix.slice(0, lastLine).trimEnd();
+  const sentenceEndings = [...prefix.matchAll(/[.!?](?:[\"'’”)}\]]*)\s+/g)];
+  const lastSentence = sentenceEndings.at(-1);
+  if (lastSentence && lastSentence.index + lastSentence[0].length >= minimumBoundary) {
+    return prefix.slice(0, lastSentence.index + lastSentence[0].trimEnd().length).trimEnd();
+  }
+  const wordBoundary = prefix.lastIndexOf(" ");
+  return (wordBoundary >= minimumBoundary ? prefix.slice(0, wordBoundary) : prefix).trimEnd();
+}
+
+function trimIncompleteTail(text) {
+  const minimumBoundary = Math.floor(text.length * 0.5);
+  const lastLine = text.lastIndexOf("\n");
+  if (lastLine >= minimumBoundary) return text.slice(0, lastLine).trimEnd();
+  const sentenceEndings = [...text.matchAll(/[.!?](?:[\"'’”)}\]]*)\s+/g)];
+  const lastSentence = sentenceEndings.at(-1);
+  if (lastSentence && lastSentence.index + lastSentence[0].length >= minimumBoundary) {
+    return text.slice(0, lastSentence.index + lastSentence[0].trimEnd().length).trimEnd();
+  }
+  return text.trimEnd();
+}
 
 function createRateLimiter({ now = Date.now, windowMs = RATE_LIMIT_WINDOW_MS, limit = RATE_LIMIT_REQUESTS } = {}) {
   const buckets = new Map();
@@ -106,15 +133,19 @@ function createAssistantHandler({ env = process.env, createClient, rateLimiter =
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: question }
         ],
-        max_tokens: MAX_OUTPUT_TOKENS
+        max_completion_tokens: MAX_OUTPUT_TOKENS
       });
-      const output = result.choices?.[0]?.message?.content;
-      const answer = typeof output === "string" ? output.trim().slice(0, MAX_OUTPUT_CHARS) : "";
+      const choice = result.choices?.[0];
+      const output = choice?.message?.content;
+      const rawAnswer = typeof output === "string" ? output.trim() : "";
+      const incomplete = choice?.finish_reason === "length" || rawAnswer.length > MAX_OUTPUT_CHARS;
+      let answer = incomplete ? trimToNaturalBoundary(rawAnswer, MAX_OUTPUT_CHARS) : rawAnswer;
+      if (choice?.finish_reason === "length") answer = trimIncompleteTail(answer);
       if (!answer) {
         console.error("CampusBridge assistant returned no usable output", { requestId, code: "EMPTY_MODEL_OUTPUT" });
         return sendJson(response, 502, { error: "The AI assistant returned no usable answer. Local guidance is still available.", requestId });
       }
-      return sendJson(response, 200, { answer });
+      return sendJson(response, 200, { answer, incomplete });
     } catch (error) {
       console.error("CampusBridge Groq request failed", { requestId, ...safeDiagnostic(error) });
       return sendJson(response, 502, { error: "The AI assistant is temporarily unavailable. Local guidance is still available.", requestId });
@@ -125,5 +156,5 @@ function createAssistantHandler({ env = process.env, createClient, rateLimiter =
 const handler = createAssistantHandler();
 handler.createAssistantHandler = createAssistantHandler;
 handler.createRateLimiter = createRateLimiter;
-handler.constants = Object.freeze({ DEFAULT_MODEL, GROQ_BASE_URL, SYSTEM_PROMPT, MAX_QUESTION_CHARS, MAX_BODY_BYTES, MAX_OUTPUT_TOKENS, MAX_OUTPUT_CHARS, RATE_LIMIT_WINDOW_MS, RATE_LIMIT_REQUESTS, safeDiagnostic });
+handler.constants = Object.freeze({ DEFAULT_MODEL, GROQ_BASE_URL, SYSTEM_PROMPT, MAX_QUESTION_CHARS, MAX_BODY_BYTES, MAX_OUTPUT_TOKENS, MAX_OUTPUT_CHARS, RATE_LIMIT_WINDOW_MS, RATE_LIMIT_REQUESTS, safeDiagnostic, trimToNaturalBoundary, trimIncompleteTail });
 module.exports = handler;

@@ -55,27 +55,47 @@ test('assistant sends only the question to Groq and bounds the response', async 
   });
   const response = await invoke(handler, makeRequest({ body: { question: 'What is a protected emergency reserve?' } }));
   assert.equal(response.statusCode, 200);
-  assert.deepEqual(response.body, { answer: 'Short educational answer.' });
+  assert.deepEqual(response.body, { answer: 'Short educational answer.', incomplete: false });
   assert.equal(response.headers['Cache-Control'], 'no-store');
   assert.equal(sdkKey, 'test-secret');
   assert.deepEqual(clientOptions, { baseURL: 'https://api.groq.com/openai/v1' });
   assert.deepEqual(sdkRequest.messages[1], { role: 'user', content: 'What is a protected emergency reserve?' });
   assert.equal(Object.hasOwn(sdkRequest, 'context'), false);
   assert.equal(sdkRequest.model, 'openai/gpt-oss-20b');
-  assert.equal(sdkRequest.max_tokens, 400);
-  assert.match(sdkRequest.messages[0].content, /Never calculate or invent financial figures/);
-  assert.match(sdkRequest.messages[0].content, /Start with a direct answer/);
+  assert.equal(sdkRequest.max_completion_tokens, 1200);
+  assert.equal(Object.hasOwn(sdkRequest, 'max_tokens'), false);
+  assert.match(sdkRequest.messages[0].content, /Never calculate or invent personal financial figures/);
+  assert.match(sdkRequest.messages[0].content, /Answer the student's actual question directly and accurately/);
   assert.match(sdkRequest.messages[0].content, /simple English/);
   assert.match(sdkRequest.messages[0].content, /numbered steps/);
-  assert.match(sdkRequest.messages[0].content, /transparent about uncertainty/);
+  assert.match(sdkRequest.messages[0].content, /If you are unsure or the question lacks essential context/);
   assert.equal(JSON.stringify(response.body).includes('test-secret'), false);
 });
 
-test('assistant caps returned answer text at the configured character limit', async () => {
-  const handler = assistant.createAssistantHandler({ env: { GROQ_API_KEY: 'test-key' }, createClient: () => ({ chat: { completions: { create: async () => ({ choices: [{ message: { content: 'x'.repeat(5000) } }] }) } } }) });
+test('assistant flags overlong output and clips it at a safe word boundary', async () => {
+  const longOutput = `${'A useful explanation with spaces. '.repeat(250)}unfinished tail`;
+  const handler = assistant.createAssistantHandler({ env: { GROQ_API_KEY: 'test-key' }, createClient: () => ({ chat: { completions: { create: async () => ({ choices: [{ finish_reason: 'stop', message: { content: longOutput } }] }) } } }) });
   const response = await invoke(handler, makeRequest());
   assert.equal(response.statusCode, 200);
-  assert.equal(response.body.answer.length, assistant.constants.MAX_OUTPUT_CHARS);
+  assert.equal(response.body.incomplete, true);
+  assert.ok(response.body.answer.length <= assistant.constants.MAX_OUTPUT_CHARS);
+  assert.match(response.body.answer, /\.$/);
+});
+
+test('simple waiver questions receive a concise answer without forced formatting', async () => {
+  let request;
+  const handler = assistant.createAssistantHandler({ env: { GROQ_API_KEY: 'test-key' }, createClient: () => ({ chat: { completions: { create: async value => { request = value; return { choices: [{ finish_reason: 'stop', message: { content: 'A waiver is permission to give up or set aside a right or requirement. For example, a school might waive an application fee.' } }] }; } } } }) });
+  const response = await invoke(handler, makeRequest({ body: { question: "What's a waiver?" } }));
+  assert.deepEqual(response.body, { answer: 'A waiver is permission to give up or set aside a right or requirement. For example, a school might waive an application fee.', incomplete: false });
+  assert.deepEqual(request.messages[1], { role: 'user', content: "What's a waiver?" });
+  assert.match(request.messages[0].content, /one to three clear sentences/);
+  assert.match(request.messages[0].content, /Do not add headings, tables, bullets, or numbered steps unless/);
+});
+
+test('provider token-limit responses trim dangling examples and report incompleteness', async () => {
+  const handler = assistant.createAssistantHandler({ env: { GROQ_API_KEY: 'test-key' }, createClient: () => ({ chat: { completions: { create: async () => ({ choices: [{ finish_reason: 'length', message: { content: 'A waiver is permission to give up a right.\n\nFor example, a school may waive a fee of $' } }] }) } } }) });
+  const response = await invoke(handler, makeRequest({ body: { question: "What's a waiver?" } }));
+  assert.deepEqual(response.body, { answer: 'A waiver is permission to give up a right.', incomplete: true });
 });
 
 test('assistant model is configurable server-side and has a documented default', async () => {
@@ -142,6 +162,8 @@ test('assistant frontend sends only the prompt while local deterministic finance
   assert.match(app, /typeof payload\.error==="string"\?payload\.error/);
   assert.match(app, /prompt and response omitted/);
   assert.match(app, /AssistantRenderer\.render\(answer/);
+  assert.match(app, /payload\.incomplete===true/);
+  assert.match(app, /This answer may be incomplete because it reached the response limit/);
   const renderer = require('../lib/assistant-renderer.js');
   assert.equal(typeof renderer.render, 'function');
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'api', 'assistant.js'), 'utf8'), /Only a question is accepted/);
