@@ -1,7 +1,8 @@
 "use strict";
 
 const { randomUUID } = require("node:crypto");
-const DEFAULT_MODEL = "gpt-4.1-mini";
+const DEFAULT_MODEL = "openai/gpt-oss-20b";
+const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 const MAX_QUESTION_CHARS = 1000;
 const MAX_BODY_BYTES = 4096;
 const MAX_OUTPUT_TOKENS = 400;
@@ -82,11 +83,10 @@ function createAssistantHandler({ env = process.env, createClient, rateLimiter =
 
     const limit = rateLimiter(requestIdentity(request));
     if (!limit.allowed) return sendJson(response, 429, { error: "Too many assistant requests. Please wait before trying again." }, { "Retry-After": String(limit.retryAfterSeconds) });
-    console.log("CampusBridge key loaded:", Boolean(env.OPENAI_API_KEY?.trim()));
-    const apiKey = typeof env.OPENAI_API_KEY === "string" ? env.OPENAI_API_KEY.trim() : "";
+    const apiKey = typeof env.GROQ_API_KEY === "string" ? env.GROQ_API_KEY.trim() : "";
     if (!apiKey) {
       const requestId = randomUUID();
-      console.warn("CampusBridge assistant is missing server configuration", { requestId, code: "MISSING_OPENAI_API_KEY" });
+      console.warn("CampusBridge assistant is missing server configuration", { requestId, code: "MISSING_GROQ_API_KEY" });
       return sendJson(response, 503, { error: "The AI assistant is not configured. Local guidance is still available.", requestId });
     }
 
@@ -94,24 +94,28 @@ function createAssistantHandler({ env = process.env, createClient, rateLimiter =
     try {
       if (!client) {
         const OpenAI = createClient ? null : require("openai");
-        client = createClient ? createClient(apiKey) : new OpenAI({ apiKey, timeout: 15000, maxRetries: 0 });
+        client = createClient
+          ? createClient(apiKey, { baseURL: GROQ_BASE_URL })
+          : new OpenAI({ apiKey, baseURL: GROQ_BASE_URL, timeout: 15000, maxRetries: 0 });
       }
-      const model = typeof env.OPENAI_MODEL === "string" && /^[A-Za-z0-9._:-]{1,100}$/.test(env.OPENAI_MODEL) ? env.OPENAI_MODEL : DEFAULT_MODEL;
-      const result = await client.responses.create({
+      const model = typeof env.GROQ_MODEL === "string" && /^[A-Za-z0-9._:/-]{1,100}$/.test(env.GROQ_MODEL) ? env.GROQ_MODEL : DEFAULT_MODEL;
+      const result = await client.chat.completions.create({
         model,
-        instructions: "You are the CampusBridge AI explainer for students planning overseas tuition payments. Answer general questions clearly and briefly. You receive only the user's question, not their financial profile, exchange rates, or provider quotes. Never calculate or invent financial figures, savings projections, exchange rates, provider offers, quote validity, or verification claims. Do not claim to have accessed accounts, the internet, payment providers, or Bangladesh Bank. For personal plan calculations, tell the student to use the local planner, which performs deterministic calculations. Encourage checking official university, bank, or payment-provider sources for current terms. This is educational information, not financial advice.",
-        input: question,
-        max_output_tokens: MAX_OUTPUT_TOKENS,
-        store: false
+        messages: [
+          { role: "system", content: "You are the CampusBridge AI explainer for students planning overseas tuition payments. Answer general questions clearly and briefly. You receive only the user's question, not their financial profile, exchange rates, or provider quotes. Never calculate or invent financial figures, savings projections, exchange rates, provider offers, quote validity, or verification claims. Do not claim to have accessed accounts, the internet, payment providers, or Bangladesh Bank. For personal plan calculations, tell the student to use the local planner, which performs deterministic calculations. Encourage checking official university, bank, or payment-provider sources for current terms. This is educational information, not financial advice." },
+          { role: "user", content: question }
+        ],
+        max_tokens: MAX_OUTPUT_TOKENS
       });
-      const answer = typeof result.output_text === "string" ? result.output_text.trim().slice(0, MAX_OUTPUT_CHARS) : "";
+      const output = result.choices?.[0]?.message?.content;
+      const answer = typeof output === "string" ? output.trim().slice(0, MAX_OUTPUT_CHARS) : "";
       if (!answer) {
         console.error("CampusBridge assistant returned no usable output", { requestId, code: "EMPTY_MODEL_OUTPUT" });
         return sendJson(response, 502, { error: "The AI assistant returned no usable answer. Local guidance is still available.", requestId });
       }
       return sendJson(response, 200, { answer });
     } catch (error) {
-      console.error("CampusBridge OpenAI request failed", { requestId, ...safeDiagnostic(error) });
+      console.error("CampusBridge Groq request failed", { requestId, ...safeDiagnostic(error) });
       return sendJson(response, 502, { error: "The AI assistant is temporarily unavailable. Local guidance is still available.", requestId });
     }
   };
@@ -120,5 +124,5 @@ function createAssistantHandler({ env = process.env, createClient, rateLimiter =
 const handler = createAssistantHandler();
 handler.createAssistantHandler = createAssistantHandler;
 handler.createRateLimiter = createRateLimiter;
-handler.constants = Object.freeze({ DEFAULT_MODEL, MAX_QUESTION_CHARS, MAX_BODY_BYTES, MAX_OUTPUT_TOKENS, MAX_OUTPUT_CHARS, RATE_LIMIT_WINDOW_MS, RATE_LIMIT_REQUESTS, safeDiagnostic });
+handler.constants = Object.freeze({ DEFAULT_MODEL, GROQ_BASE_URL, MAX_QUESTION_CHARS, MAX_BODY_BYTES, MAX_OUTPUT_TOKENS, MAX_OUTPUT_CHARS, RATE_LIMIT_WINDOW_MS, RATE_LIMIT_REQUESTS, safeDiagnostic });
 module.exports = handler;

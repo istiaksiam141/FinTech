@@ -16,42 +16,21 @@ For payment comparison, enter the same payment principal and collect current quo
 - No preset user balances, tuition amounts, conversion rates, provider fees, or delivery estimates are included. Bangladesh Bank publishes dated rates; availability and freshness are shown in the interface.
 - Profile data and activity entries remain in the current page memory. Downloaded reports are generated locally.
 - Bank account entries are manual labels and BDT balances only. They remain in browser memory and are cleared on reload or when the planner is cleared. Do not enter account numbers or bank credentials. This feature does not connect to banks; bank-linking requires a separately approved provider integration.
-- General assistant questions can use the server-side OpenAI Responses API. The browser sends only the question; financial-plan and quote questions continue through the existing deterministic local code.
+- General assistant questions use the server-side Groq API. The browser sends only the question; financial-plan and quote questions continue through the existing deterministic local code.
 
-## Optional OpenAI assistant setup
+## Optional Groq assistant setup
 
-The OpenAI assistant runs through the Vercel Node.js function at `/api/assistant`; the browser never receives the API key. The server accepts only a question, up to 1,000 characters, and does not send financial profile or provider quote data to OpenAI. Financial calculations, savings projections, and quote validation remain deterministic in the browser. General answers are educational and can be unavailable when the API key is not configured.
+The Groq assistant runs through the Vercel function at `/api/assistant`; the browser never receives the API key. The function accepts only a question, up to 1,000 characters, and does not send financial profile or provider quote data to Groq. Financial calculations, savings projections, and quote validation remain deterministic in the browser. General answers are educational and can be unavailable when the API key is not configured.
 
-### Run locally
+### Configure the Vercel assistant
 
-1. Install the server dependency from this folder:
-
-   ```sh
-   npm install
-   ```
-
-2. Create a file named `.env.local` in the project root, next to `package.json`.
-3. Add your own key locally (never send it to chat, add it to source files, or paste it into `.env.example`):
-
-   ```text
-   OPENAI_API_KEY=your-real-key-goes-here
-   ```
-
-4. Optional: add `OPENAI_MODEL=gpt-4.1-mini` to choose a model. The default is `gpt-4.1-mini`.
-5. Link this folder to your Vercel project if it is not linked yet, then start the local Vercel server:
-
-   ```sh
-   npx vercel link
-   npx vercel dev
-   ```
-
-   Open the local URL printed by Vercel. A plain static file server will not run the `/api/assistant` function. `.env.local` is ignored by Git; do not force-add it.
+Configure `GROQ_API_KEY` and optionally `GROQ_MODEL` as private Vercel Environment Variables. Vercel serves the existing `api/` functions.
 
 ### Configure a Vercel preview
 
-In Vercel, open the CampusBridge project’s **Settings → Environment Variables**, add `OPENAI_API_KEY`, and select **Preview** for testing. Add `OPENAI_MODEL` only if you want to override the documented default. Redeploy the preview after adding or changing variables. Do not add the key to browser code, Git, build output, or logs. Leave Production unconfigured until you deliberately approve a production release.
+In Vercel, open the CampusBridge project’s **Settings → Environment Variables**, add `GROQ_API_KEY`, and select **Preview** for testing. Add `GROQ_MODEL` only if you want to override the documented default. Redeploy the preview after adding or changing variables. Do not add the key to browser code, Git, build output, or logs. Leave Production unconfigured until you deliberately approve a production release.
 
-The endpoint has request validation and a small in-memory per-IP limit. Serverless instances do not share that memory, so this is only a basic guard; configure a Vercel Firewall/rate-limit rule before exposing the endpoint broadly. OpenAI usage may incur charges when someone makes an accepted request.
+The endpoint has request validation and a small in-memory per-IP limit. Serverless instances do not share that memory, so this is only a basic guard; configure a Vercel Firewall/rate-limit rule before exposing the endpoint broadly. Groq usage is subject to your account's model availability and rate limits.
 
 ## Real provider onboarding
 
@@ -68,7 +47,7 @@ No API credentials or provider contract have been supplied, so direct real-time 
 - `lib/exchange-rates.js`: client validation for the Bangladesh Bank rate response.
 - `lib/bangladesh-bank-rates.js`: server-side source fetch, parsing, and validation for the official Bangladesh Bank page.
 - `api/exchange-rates.js`: Vercel endpoint that returns the validated official rates.
-- `api/assistant.js`: Vercel endpoint that calls the OpenAI Responses API using a server-side key.
+- `api/assistant.js`: endpoint handler that calls Groq's OpenAI-compatible Chat Completions API using a server-side key.
 - `package.json`: Node.js runtime requirement and server-side OpenAI SDK dependency.
 - `docs/`: calculation, assistant, security, and production onboarding notes.
 

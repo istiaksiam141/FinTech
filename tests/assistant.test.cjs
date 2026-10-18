@@ -18,7 +18,7 @@ async function invoke(handler, request) { const response = makeResponse(); await
 
 test('assistant route rejects unsupported methods without calling the SDK', async () => {
   let calls = 0;
-  const handler = assistant.createAssistantHandler({ env: { OPENAI_API_KEY: 'test-key' }, createClient: () => { calls += 1; } });
+  const handler = assistant.createAssistantHandler({ env: { GROQ_API_KEY: 'test-key' }, createClient: () => { calls += 1; } });
   const response = await invoke(handler, makeRequest({ method: 'GET' }));
   assert.equal(response.statusCode, 405);
   assert.equal(response.headers.Allow, 'POST');
@@ -45,29 +45,30 @@ test('assistant route validates JSON, body shape, question text, and length', as
   }
 });
 
-test('assistant sends only the question to the OpenAI SDK and bounds the response', async () => {
+test('assistant sends only the question to Groq and bounds the response', async () => {
   let sdkKey;
+  let clientOptions;
   let sdkRequest;
   const handler = assistant.createAssistantHandler({
-    env: { OPENAI_API_KEY: 'test-secret', OPENAI_MODEL: 'gpt-4.1-mini' },
-    createClient: key => { sdkKey = key; return { responses: { create: async input => { sdkRequest = input; return { output_text: 'Short educational answer.' }; } } }; }
+    env: { GROQ_API_KEY: 'test-secret', GROQ_MODEL: 'openai/gpt-oss-20b' },
+    createClient: (key, options) => { sdkKey = key; clientOptions = options; return { chat: { completions: { create: async input => { sdkRequest = input; return { choices: [{ message: { content: 'Short educational answer.' } }] }; } } } }; }
   });
   const response = await invoke(handler, makeRequest({ body: { question: 'What is a protected emergency reserve?' } }));
   assert.equal(response.statusCode, 200);
   assert.deepEqual(response.body, { answer: 'Short educational answer.' });
   assert.equal(response.headers['Cache-Control'], 'no-store');
   assert.equal(sdkKey, 'test-secret');
-  assert.equal(sdkRequest.input, 'What is a protected emergency reserve?');
+  assert.deepEqual(clientOptions, { baseURL: 'https://api.groq.com/openai/v1' });
+  assert.deepEqual(sdkRequest.messages[1], { role: 'user', content: 'What is a protected emergency reserve?' });
   assert.equal(Object.hasOwn(sdkRequest, 'context'), false);
-  assert.equal(sdkRequest.model, 'gpt-4.1-mini');
-  assert.equal(sdkRequest.max_output_tokens, 400);
-  assert.equal(sdkRequest.store, false);
-  assert.match(sdkRequest.instructions, /Never calculate or invent financial figures/);
+  assert.equal(sdkRequest.model, 'openai/gpt-oss-20b');
+  assert.equal(sdkRequest.max_tokens, 400);
+  assert.match(sdkRequest.messages[0].content, /Never calculate or invent financial figures/);
   assert.equal(JSON.stringify(response.body).includes('test-secret'), false);
 });
 
 test('assistant caps returned answer text at the configured character limit', async () => {
-  const handler = assistant.createAssistantHandler({ env: { OPENAI_API_KEY: 'test-key' }, createClient: () => ({ responses: { create: async () => ({ output_text: 'x'.repeat(5000) }) } }) });
+  const handler = assistant.createAssistantHandler({ env: { GROQ_API_KEY: 'test-key' }, createClient: () => ({ chat: { completions: { create: async () => ({ choices: [{ message: { content: 'x'.repeat(5000) } }] }) } } }) });
   const response = await invoke(handler, makeRequest());
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.answer.length, assistant.constants.MAX_OUTPUT_CHARS);
@@ -76,16 +77,16 @@ test('assistant caps returned answer text at the configured character limit', as
 test('assistant model is configurable server-side and has a documented default', async () => {
   let selectedModel;
   const requestOnce = async env => {
-    const handler = assistant.createAssistantHandler({ env: { OPENAI_API_KEY: 'test-key', ...env }, createClient: () => ({ responses: { create: async input => { selectedModel = input.model; return { output_text: 'Answer' }; } } }) });
+    const handler = assistant.createAssistantHandler({ env: { GROQ_API_KEY: 'test-key', ...env }, createClient: () => ({ chat: { completions: { create: async input => { selectedModel = input.model; return { choices: [{ message: { content: 'Answer' } }] }; } } } }) });
     await invoke(handler, makeRequest());
     return selectedModel;
   };
-  assert.equal(await requestOnce({ OPENAI_MODEL: 'gpt-4.1' }), 'gpt-4.1');
-  assert.equal(await requestOnce({}), 'gpt-4.1-mini');
-  assert.ok(fs.readFileSync(path.join(__dirname, '..', 'docs', 'ai-agent.md'), 'utf8').includes('gpt-4.1-mini'));
+  assert.equal(await requestOnce({ GROQ_MODEL: 'openai/gpt-oss-120b' }), 'openai/gpt-oss-120b');
+  assert.equal(await requestOnce({}), 'openai/gpt-oss-20b');
+  assert.ok(fs.readFileSync(path.join(__dirname, '..', 'docs', 'ai-agent.md'), 'utf8').includes('openai/gpt-oss-20b'));
 });
 
-test('missing key and OpenAI errors return safe errors without leaking provider error details', async () => {
+test('missing key and Groq errors return safe errors without leaking provider error details', async () => {
   const logs = [];
   const originalError = console.error, originalWarn = console.warn;
   console.error = (...args) => logs.push(args);
@@ -97,7 +98,7 @@ test('missing key and OpenAI errors return safe errors without leaking provider 
     assert.match(unavailable.body.error, /not configured/);
     assert.match(unavailable.body.requestId, /^[0-9a-f-]{36}$/i);
 
-    const failing = assistant.createAssistantHandler({ env: { OPENAI_API_KEY: 'secret-value' }, createClient: () => ({ responses: { create: async () => { const error = new Error('secret-value provider stack and prompt contents'); error.status = 401; error.code = 'invalid_api_key'; throw error; } } }) });
+    const failing = assistant.createAssistantHandler({ env: { GROQ_API_KEY: 'secret-value' }, createClient: () => ({ chat: { completions: { create: async () => { const error = new Error('secret-value provider stack and prompt contents'); error.status = 401; error.code = 'invalid_api_key'; throw error; } } } }) });
     const failed = await invoke(failing, makeRequest());
     assert.equal(failed.statusCode, 502);
     assert.match(failed.body.error, /temporarily unavailable/);
@@ -108,7 +109,7 @@ test('missing key and OpenAI errors return safe errors without leaking provider 
     console.warn = originalWarn;
   }
   const logText = JSON.stringify(logs);
-  assert.match(logText, /MISSING_OPENAI_API_KEY/);
+  assert.match(logText, /MISSING_GROQ_API_KEY/);
   assert.match(logText, /invalid_api_key/);
   assert.match(logText, /401/);
   assert.doesNotMatch(logText, /secret-value|prompt contents|provider stack/);
@@ -117,7 +118,7 @@ test('missing key and OpenAI errors return safe errors without leaking provider 
 test('assistant applies per-instance request limits and returns Retry-After', async () => {
   let now = 1000;
   const limiter = assistant.createRateLimiter({ now: () => now, windowMs: 60_000, limit: 2 });
-  const handler = assistant.createAssistantHandler({ env: { OPENAI_API_KEY: 'test-key' }, rateLimiter: limiter, createClient: () => ({ responses: { create: async () => ({ output_text: 'Answer' }) } }) });
+  const handler = assistant.createAssistantHandler({ env: { GROQ_API_KEY: 'test-key' }, rateLimiter: limiter, createClient: () => ({ chat: { completions: { create: async () => ({ choices: [{ message: { content: 'Answer' } }] }) } } }) });
   assert.equal((await invoke(handler, makeRequest())).statusCode, 200);
   assert.equal((await invoke(handler, makeRequest())).statusCode, 200);
   const limited = await invoke(handler, makeRequest());
@@ -141,7 +142,7 @@ test('assistant frontend sends only the prompt while local deterministic finance
   assert.doesNotMatch(questionSubmission, /latest\.input|enteredQuotes\(|transferResults|profile\(\)/);
   const packageInfo = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
   assert.equal(packageInfo.dependencies.openai, '7.28.0');
-  assert.doesNotMatch(`${app}\n${fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8')}`, /OPENAI_API_KEY/);
+  assert.doesNotMatch(`${app}\n${fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8')}`, /GROQ_API_KEY/);
   const ignore = fs.readFileSync(path.join(__dirname, '..', '.gitignore'), 'utf8');
   assert.match(ignore, /^\.env\.\*/m);
   assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '..', '.env.example'), 'utf8'), /sk-[A-Za-z0-9]{10,}/);
