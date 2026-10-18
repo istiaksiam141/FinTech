@@ -263,3 +263,10 @@ body[data-page="planner"] #home,body[data-page="planner"] #roadmap,body[data-pag
 #transfer-form input,#transfer-form select{border-color:#d9e5de;background:#fbfaf6;color:#193a32}
 #transfer-form input:hover,#transfer-form select:hover{border-color:#a9cdbb}
 #transfer-form input:focus,#transfer-form select:focus{border-color:#1d9e75;outline:0;background:#fff;box-shadow:0 0 0 3px rgba(29,158,117,.12)}
+
+:root,body{font-family:'DM Sans',sans-serif}
+h1,h2,h3,.hero h1,.hero h2,.hero h3{font-family:Manrope,sans-serif}
+.brand{font-family:Manrope,sans-serif}
+.hero h1{font-family:Fraunces,Georgia,serif;letter-spacing:-.035em}
+.hero{font-family:'DM Sans',sans-serif}
+.hero .button{font-family:'DM Sans',sans-serif}
