@@ -181,6 +181,167 @@ document.addEventListener("pointerdown", event => {
 document.addEventListener("focusin", event => {
   if (!event.target.closest(".deadlinePicker")) closeDeadlineCalendar();
 });
+let rateCalendarCursor = new Date();
+let rateCalendarFocusDate = null;
+function syncRateTimestampPicker() {
+  const value = byId("rateTimestamp").value;
+  const trigger = byId("rateTimestampTrigger");
+  const time = byId("rateTimestampTime");
+  if (!value) {
+    byId("rateTimestampDisplay").textContent = "Choose date and time";
+    trigger.setAttribute("aria-invalid", "false");
+    if (time) time.value = "";
+    return;
+  }
+  const [datePart, timePart] = value.split("T");
+  const date = new Date(`${datePart}T00:00:00`);
+  if (Number.isNaN(date.getTime()) || !timePart) {
+    trigger.setAttribute("aria-invalid", "true");
+    return;
+  }
+  time.value = timePart;
+  const dateTime = new Date(`${datePart}T${timePart}`);
+  const displayTime = Number.isNaN(dateTime.getTime()) ? timePart : new Intl.DateTimeFormat(undefined, { timeStyle: "short" }).format(dateTime);
+  byId("rateTimestampDisplay").textContent = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date) + ` · ${displayTime}`;
+  trigger.setAttribute("aria-invalid", "false");
+  if (!byId("rateTimestampCalendar").hidden) renderRateTimestampCalendar(datePart);
+}
+function closeRateTimestampCalendar(restoreFocus = false) {
+  byId("rateTimestampCalendar").hidden = true;
+  byId("rateTimestampTrigger").setAttribute("aria-expanded", "false");
+  if (restoreFocus) byId("rateTimestampTrigger").focus();
+}
+function renderRateTimestampCalendar(focusDate = null) {
+  const year = rateCalendarCursor.getFullYear();
+  const month = rateCalendarCursor.getMonth();
+  const monthLabel = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(rateCalendarCursor);
+  byId("rateCalendarMonth").textContent = monthLabel;
+  byId("rateCalendarDays").setAttribute("aria-label", monthLabel);
+  const value = byId("rateTimestamp").value;
+  const selected = value ? value.split("T")[0] : "";
+  const first = new Date(year, month, 1);
+  const start = new Date(year, month, 1 - first.getDay());
+  const fragment = document.createDocumentFragment();
+  let week;
+  for (let index = 0; index < 42; index += 1) {
+    if (index % 7 === 0) {
+      week = document.createElement("div");
+      week.className = "calendarWeek";
+      week.setAttribute("role", "row");
+      fragment.append(week);
+    }
+    const date = new Date(start); date.setDate(start.getDate() + index);
+    const iso = localDate(date);
+    const outsideMonth = date.getMonth() !== month;
+    const button = document.createElement("button");
+    button.type = "button"; button.className = "calendarDay"; button.textContent = String(date.getDate());
+    button.dataset.iso = iso; button.setAttribute("role", "gridcell");
+    button.setAttribute("aria-label", new Intl.DateTimeFormat(undefined, { dateStyle: "full" }).format(date));
+    button.setAttribute("aria-selected", String(iso === selected));
+    if (outsideMonth) button.classList.add("isOutside");
+    if (iso === localDate(new Date())) button.classList.add("isToday");
+    if (iso === selected) button.classList.add("isSelected");
+    if (iso === focusDate) button.tabIndex = 0;
+    button.addEventListener("click", () => {
+      const time = byId("rateTimestampTime").value || "12:00";
+      byId("rateTimestamp").value = `${iso}T${time}`;
+      syncRateTimestampPicker();
+      byId("rateCalendarSelection").textContent = `${new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date)} · ${time}`;
+      byId("rateCalendarDays").querySelector(`[data-iso="${iso}"]`)?.focus();
+      byId("rateTimestamp").dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    week.append(button);
+  }
+  byId("rateCalendarDays").replaceChildren(fragment);
+  const previous = new Date(year, month - 1, 1);
+  byId("rateCalendarPrevious").disabled = previous.getFullYear() < 1;
+  byId("rateCalendarNext").disabled = year >= 9999 && month === 11;
+  const selection = byId("rateCalendarSelection");
+  const strong = document.createElement("strong");
+  selection.replaceChildren(document.createTextNode(selected ? "Selected date and time" : "Select a rate date"));
+  const selectedTime = value.split("T")[1] || byId("rateTimestampTime").value;
+  const dateText = selected ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(`${selected}T00:00:00`)) : "Choose a day";
+  strong.textContent = selected ? `${dateText}${selectedTime ? ` · ${selectedTime}` : ""}` : "Choose date and time";
+  selection.append(strong);
+}
+function showRateTimestampCalendar() {
+  const value = byId("rateTimestamp").value;
+  const datePart = value ? value.split("T")[0] : localDate(new Date());
+  const timePart = value ? value.split("T")[1] : localDateTimeForInput(Date.now()).split("T")[1];
+  byId("rateTimestampTime").value = timePart;
+  const selectedDate = new Date(`${datePart}T00:00:00`);
+  rateCalendarCursor = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+  rateCalendarFocusDate = datePart;
+  renderRateTimestampCalendar(datePart);
+  byId("rateTimestampCalendar").hidden = false;
+  byId("rateTimestampTrigger").setAttribute("aria-expanded", "true");
+  byId("rateCalendarDays").querySelector(`[data-iso="${datePart}"]`)?.focus();
+}
+syncRateTimestampPicker();
+byId("rateTimestampTrigger").addEventListener("click", () => {
+  if (byId("rateTimestampCalendar").hidden) showRateTimestampCalendar();
+  else closeRateTimestampCalendar();
+});
+byId("rateCalendarPrevious").addEventListener("click", () => { rateCalendarCursor.setMonth(rateCalendarCursor.getMonth() - 1); renderRateTimestampCalendar(rateCalendarFocusDate); });
+byId("rateCalendarNext").addEventListener("click", () => { rateCalendarCursor.setMonth(rateCalendarCursor.getMonth() + 1); renderRateTimestampCalendar(rateCalendarFocusDate); });
+byId("rateTimestampTime").addEventListener("input", () => {
+  const datePart = byId("rateTimestamp").value ? byId("rateTimestamp").value.split("T")[0] : localDate(new Date());
+  byId("rateTimestamp").value = `${datePart}T${byId("rateTimestampTime").value}`;
+  syncRateTimestampPicker();
+  byId("rateTimestamp").dispatchEvent(new Event("input", { bubbles: true }));
+});
+byId("useCurrentRateTimestamp").addEventListener("click", () => {
+  byId("rateTimestamp").value = localDateTimeForInput(Date.now());
+  syncRateTimestampPicker();
+  byId("rateTimestamp").dispatchEvent(new Event("input", { bubbles: true }));
+  closeRateTimestampCalendar(true);
+});
+byId("todayRateTimestamp").addEventListener("click", () => {
+  const time = byId("rateTimestampTime").value || localDateTimeForInput(Date.now()).split("T")[1];
+  byId("rateTimestamp").value = `${localDate(new Date())}T${time}`;
+  syncRateTimestampPicker();
+  byId("rateTimestamp").dispatchEvent(new Event("input", { bubbles: true }));
+});
+byId("clearRateTimestamp").addEventListener("click", () => {
+  byId("rateTimestamp").value = "";
+  syncRateTimestampPicker();
+  byId("rateTimestamp").dispatchEvent(new Event("input", { bubbles: true }));
+  closeRateTimestampCalendar(true);
+});
+byId("rateCalendarDays").addEventListener("keydown", event => {
+  const current = event.target.closest("[data-iso]");
+  if (!current) return;
+  const date = new Date(`${current.dataset.iso}T00:00:00`);
+  let offset;
+  if (event.key === "ArrowRight") offset = 1;
+  else if (event.key === "ArrowLeft") offset = -1;
+  else if (event.key === "ArrowDown") offset = 7;
+  else if (event.key === "ArrowUp") offset = -7;
+  else if (event.key === "Home") offset = -date.getDay();
+  else if (event.key === "End") offset = 6 - date.getDay();
+  else if (event.key === "Escape") { event.preventDefault(); closeRateTimestampCalendar(true); return; }
+  else return;
+  event.preventDefault();
+  date.setDate(date.getDate() + offset);
+  rateCalendarFocusDate = localDate(date);
+  if (date.getMonth() !== rateCalendarCursor.getMonth() || date.getFullYear() !== rateCalendarCursor.getFullYear()) rateCalendarCursor = new Date(date.getFullYear(), date.getMonth(), 1);
+  renderRateTimestampCalendar(rateCalendarFocusDate);
+  byId("rateCalendarDays").querySelector(`[data-iso="${rateCalendarFocusDate}"]`)?.focus();
+});
+byId("rateTimestampCalendar").addEventListener("keydown", event => {
+  if (event.key === "Escape") { event.preventDefault(); closeRateTimestampCalendar(true); }
+});
+byId("rateTimestampCalendar").addEventListener("keydown", event => {
+  if (event.key === "Escape") { event.preventDefault(); closeRateTimestampCalendar(true); }
+});
+document.addEventListener("pointerdown", event => {
+  if (!event.target.closest(".deadlinePicker")) closeDeadlineCalendar();
+  if (!event.target.closest(".timestampPicker")) closeRateTimestampCalendar();
+});
+document.addEventListener("focusin", event => {
+  if (!event.target.closest(".deadlinePicker")) closeDeadlineCalendar();
+  if (!event.target.closest(".timestampPicker")) closeRateTimestampCalendar();
+});
 let latest = null; let activity = []; let bankAccounts = []; let nextBankAccountId = 1;
 let visibleProviderCount = 1;
 const quoteDrafts = new Map();
@@ -256,6 +417,7 @@ function useFetchedExchangeRate() {
   byId("exchangeRate").value = String(rate);
   byId("rateSource").value = `${data.source}; publication ${data.publicationDate}; ASK`;
   byId("rateTimestamp").value = localDateTimeForInput(data.updatedAtMs);
+  syncRateTimestampPicker();
   exchangeRateState.mode = "api";
   exchangeRateState.appliedCurrency = currency;
   exchangeRateState.appliedUpdatedAtMs = data.updatedAtMs;
@@ -376,9 +538,10 @@ byId("addQuoteProvider").addEventListener("click", () => {
   renderTransfers();
   byId("providerQuoteForms").querySelector(`[data-provider="${providerDefs[visibleProviderCount - 1].id}"] select`).focus();
 });
-byId("resetProfile").addEventListener("click",()=>{byId("profileForm").reset();planRequested=false;updateDeadlineHint();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="UK";exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="GBP";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
+byId("resetProfile").addEventListener("click",()=>{byId("profileForm").reset();planRequested=false;updateDeadlineHint();syncRateTimestampPicker();closeRateTimestampCalendar();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="UK";exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="GBP";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
 byId("refreshExchangeRate").addEventListener("click",refreshExchangeRate);
 byId("useExchangeRate").addEventListener("click",useFetchedExchangeRate);
+byId("rateTimestamp").addEventListener("input",syncRateTimestampPicker);
 for(const id of ["exchangeRate","rateSource","rateTimestamp"])byId(id).addEventListener("input",handleManualRateEdit);
 function getLocalAssistantGuidance(q) {
   const item=guidance.find(x=>/fraud|password|code/.test(q)?x.topic.includes("fraud"):/fee|spread/.test(q)?x.topic.includes("fee"):/rate|exchange/.test(q)?x.topic.includes("rate"):/emergency/.test(q)?x.topic.includes("emergency"):x.topic.includes("tuition"))||guidance[0];
