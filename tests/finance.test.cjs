@@ -655,6 +655,27 @@ test('quote comparison requires provider name, amounts, currency, timestamp, and
   }
 });
 
+test('quote comparison accepts custom provider names and limits their length without changing quote values',()=>{
+  const input={amount:'200000',to:'GBP',sort:'cost'};
+  const original=quote({name:'Community Bank'});
+  const customNames=['A trusted bank','Remittance Service Ltd.','Mobile Financial Service'];
+  for(const name of customNames){
+    const result=compare(input,[quote({name})]);
+    assert.equal(result.available[0].quote.name,name);
+  }
+  const renamed=compare(input,[{...original,name:'Custom MFS'}]).available[0];
+  assert.equal(renamed.quote.name,'Custom MFS');
+  for(const key of ['currency','totalCost','fee','quotedRate','recipientAmount','days','timestamp','reference']) {
+    assert.equal(renamed.quote[key],original[key],`${key} must remain unchanged when a provider is renamed`);
+  }
+  assert.equal(renamed.totalCost,Number(original.totalCost));
+  assert.equal(renamed.recipientAmount,Number(original.recipientAmount));
+  assert.equal(compare(input,[quote({name:'   '})]).available.length,0,'blank names remain invalid');
+  const tooLong=compare(input,[quote({name:'x'.repeat(81)})]);
+  assert.equal(tooLong.available.length,0);
+  assert.match(tooLong.unavailable[0].reason,/80 characters or fewer/);
+});
+
 test('quote amounts and optional numeric details must be finite and within sensible bounds',()=>{
   for(const value of ['Infinity','NaN','not a number','1e13','-1','0']){
     const total=compare({amount:'200000',to:'GBP',sort:'cost'},[quote({totalCost:value})]);

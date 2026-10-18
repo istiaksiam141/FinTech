@@ -132,14 +132,14 @@
   document.getElementById("quote-currency-note").textContent = plan.ok ? `Quotes must match the saved plan currency (${currency}).` : "";
   form.querySelectorAll('[data-field="timestamp"]').forEach(initializeTimestampPicker);
   if (!plan.ok) { notice.textContent = plan.message; form.hidden = true; return; }
-  const names = ["Provider A", "Provider B", "Authorized-dealer bank"];
-  form.addEventListener("submit", event => {
-    event.preventDefault(); output.replaceChildren();
+  let comparisonStarted = false;
+  function compareQuotes() {
+    output.replaceChildren();
     const amount = document.getElementById("transfer-principal").value;
     const sort = document.getElementById("quote-sort").value;
-    const quotes = [...form.querySelectorAll("[data-quote]")].map((card, index) => {
+    const quotes = [...form.querySelectorAll("[data-quote]")].map(card => {
       const value = field => card.querySelector(`[data-field="${field}"]`).value;
-      return { name: names[index], currency, totalCost: value("total"), recipientAmount: value("recipient"), timestamp: value("timestamp"), reference: value("reference"), fee: value("fee"), quotedRate: value("rate"), days: value("days") };
+      return { name: value("name"), currency, totalCost: value("total"), recipientAmount: value("recipient"), timestamp: value("timestamp"), reference: value("reference"), fee: value("fee"), quotedRate: value("rate"), days: value("days") };
     });
     const result = Finance.compareEnteredQuotes({ amount, to: currency, sort }, quotes);
     if (!result.ok) { notice.textContent = result.errors.join(" "); return; }
@@ -150,5 +150,13 @@
       const details = document.createElement("p"); details.textContent = `Sender cost ${money(quote.totalCost)} · recipient amount ${quote.recipientAmount} ${quote.currency} · source ${quote.reference} · timestamp ${quote.timestamp}.`; card.append(details); output.append(card);
     }
     for (const quote of result.unavailable) { const item = document.createElement("p"); item.className = "error"; item.textContent = `${quote.quote.name}: ${quote.reason}`; output.append(item); }
+  }
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+    comparisonStarted = true;
+    compareQuotes();
   });
+  form.querySelectorAll('[data-field="name"]').forEach(input => input.addEventListener("input", () => {
+    if (comparisonStarted) compareQuotes();
+  }));
 })();

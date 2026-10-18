@@ -86,3 +86,14 @@ test('feature pages reuse the finance engine and assistant remote request contai
   assert.match(fs.readFileSync(path.join(root, 'lib/exchange-rates.js'), 'utf8'), /\/api\/exchange-rates/);
 });
 
+test('transfer quotes use editable provider names and refresh comparison labels after renaming', () => {
+  const html = fs.readFileSync(path.join(root, 'transfers.html'), 'utf8');
+  const page = fs.readFileSync(path.join(root, 'js/transfers-page.js'), 'utf8');
+  const nameFields = [...html.matchAll(/data-field="name"/g)];
+  assert.equal(nameFields.length, 3, 'each existing quote card has an editable provider name');
+  assert.equal((html.match(/data-field="name"[^>]*maxlength="80"[^>]*required/g) || []).length, 3, 'provider names are required and capped at 80 characters');
+  assert.match(page, /return \{ name: value\("name"\), currency, totalCost: value\("total"\)/, 'names come from the form while existing quote fields remain independently mapped');
+  assert.match(page, /if\s*\(comparisonStarted\)\s*compareQuotes\(\)/, 'editing a name refreshes existing comparison results');
+  assert.match(page, /title\.textContent = quote\.quote\.name/, 'custom names are rendered as text in result cards');
+});
+
