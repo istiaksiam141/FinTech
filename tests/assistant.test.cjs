@@ -64,6 +64,10 @@ test('assistant sends only the question to Groq and bounds the response', async 
   assert.equal(sdkRequest.model, 'openai/gpt-oss-20b');
   assert.equal(sdkRequest.max_tokens, 400);
   assert.match(sdkRequest.messages[0].content, /Never calculate or invent financial figures/);
+  assert.match(sdkRequest.messages[0].content, /Start with a direct answer/);
+  assert.match(sdkRequest.messages[0].content, /simple English/);
+  assert.match(sdkRequest.messages[0].content, /numbered steps/);
+  assert.match(sdkRequest.messages[0].content, /transparent about uncertainty/);
   assert.equal(JSON.stringify(response.body).includes('test-secret'), false);
 });
 
@@ -137,6 +141,9 @@ test('assistant frontend sends only the prompt while local deterministic finance
   assert.match(app, /AI assistant unavailable\. \$\{safeFailure\}\\nHere is local guidance instead/);
   assert.match(app, /typeof payload\.error==="string"\?payload\.error/);
   assert.match(app, /prompt and response omitted/);
+  assert.match(app, /AssistantRenderer\.render\(answer/);
+  const renderer = require('../lib/assistant-renderer.js');
+  assert.equal(typeof renderer.render, 'function');
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'api', 'assistant.js'), 'utf8'), /Only a question is accepted/);
   const questionSubmission = app.slice(app.indexOf('fetch("/api/assistant"'), app.indexOf('finally{button.disabled=false', app.indexOf('fetch("/api/assistant"')));
   assert.doesNotMatch(questionSubmission, /latest\.input|enteredQuotes\(|transferResults|profile\(\)/);

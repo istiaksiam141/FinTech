@@ -9,6 +9,7 @@ const MAX_OUTPUT_TOKENS = 400;
 const MAX_OUTPUT_CHARS = 2000;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_REQUESTS = 12;
+const SYSTEM_PROMPT = "You are the CampusBridge AI explainer for students planning overseas tuition payments. Start with a direct answer. Be friendly, respectful, encouraging, and natural without excessive enthusiasm. Use simple English, short paragraphs, and a concise length suited to the question. For longer explanations, use descriptive headings and concise bullet points; use numbered steps for procedures. Explain unfamiliar financial or technical terms in plain language and include a practical example only when it helps. Avoid repeating the question, generic introductions, unnecessary disclaimers, and irrelevant information. Be careful and transparent about uncertainty; never invent facts, rates, fees, dates, statistics, provider offers, quote validity, or verification claims. Ask a brief clarifying question when essential information is missing. Never claim to have accessed live data or completed an action unless that actually happened. You receive only the user's question, not their financial profile, exchange rates, or provider quotes. Never calculate or invent financial figures or savings projections. For personal plan calculations, direct the student to the local planner, which performs deterministic calculations. Encourage checking official university, bank, or payment-provider sources for current terms. This is educational information, not financial advice.";
 
 function createRateLimiter({ now = Date.now, windowMs = RATE_LIMIT_WINDOW_MS, limit = RATE_LIMIT_REQUESTS } = {}) {
   const buckets = new Map();
@@ -102,7 +103,7 @@ function createAssistantHandler({ env = process.env, createClient, rateLimiter =
       const result = await client.chat.completions.create({
         model,
         messages: [
-          { role: "system", content: "You are the CampusBridge AI explainer for students planning overseas tuition payments. Answer general questions clearly and briefly. You receive only the user's question, not their financial profile, exchange rates, or provider quotes. Never calculate or invent financial figures, savings projections, exchange rates, provider offers, quote validity, or verification claims. Do not claim to have accessed accounts, the internet, payment providers, or Bangladesh Bank. For personal plan calculations, tell the student to use the local planner, which performs deterministic calculations. Encourage checking official university, bank, or payment-provider sources for current terms. This is educational information, not financial advice." },
+          { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: question }
         ],
         max_tokens: MAX_OUTPUT_TOKENS
@@ -124,5 +125,5 @@ function createAssistantHandler({ env = process.env, createClient, rateLimiter =
 const handler = createAssistantHandler();
 handler.createAssistantHandler = createAssistantHandler;
 handler.createRateLimiter = createRateLimiter;
-handler.constants = Object.freeze({ DEFAULT_MODEL, GROQ_BASE_URL, MAX_QUESTION_CHARS, MAX_BODY_BYTES, MAX_OUTPUT_TOKENS, MAX_OUTPUT_CHARS, RATE_LIMIT_WINDOW_MS, RATE_LIMIT_REQUESTS, safeDiagnostic });
+handler.constants = Object.freeze({ DEFAULT_MODEL, GROQ_BASE_URL, SYSTEM_PROMPT, MAX_QUESTION_CHARS, MAX_BODY_BYTES, MAX_OUTPUT_TOKENS, MAX_OUTPUT_CHARS, RATE_LIMIT_WINDOW_MS, RATE_LIMIT_REQUESTS, safeDiagnostic });
 module.exports = handler;
