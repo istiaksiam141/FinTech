@@ -1,17 +1,21 @@
-# CampusBridge v1 status
+# CampusBridge AI implementation status
 
-## Real-input workflow delivered
+## Current architecture
 
-- Removed preset financial figures, sample scenario records, bundled exchange rates, and provider quote fixtures.
-- Planner requires a current student-entered exchange rate, source/reference, and timestamp; all financial inputs start empty.
-- Quote comparison requires actual student-entered provider total, recipient amount, source/reference, and timestamp. Speed sorting requires stated delivery days.
-- Added official Convera and Flywire student portal handoffs, blank and clear actions, what-if reset/apply, deterministic calculations, and local report export.
-- Supported corridors are Bangladesh → UK (primary), US, and Canada. Provider support remains unverified per institution and origin.
+CampusBridge is a static multi-page site. `/` is the home page; `/planner.html` owns the baseline plan; roadmap, stress tests, transfers, assistant, report, and privacy have dedicated routes. Shared navigation, active-page indication, mobile menu, footer, and the session-storage disclosure are handled by `js/site.js`. Shared styles are in `styles/site.css`.
 
-## Live API access remains unavailable
+## Shared data and calculations
 
-This workspace contains no provider API agreement, credentials, backend, live FX feed, connected account, or payment operation. Direct live quote retrieval requires an approved provider integration and server-side secret handling. Until that access exists, students can use official external payment portals and enter their actual quotes for comparison. The app clearly identifies entered data as unverified.
+- `lib/finance.js` remains the authoritative calculation and quote-validation module.
+- `lib/plan-state.js` writes only validated plan fields and optional stress-test input assumptions to versioned tab-scoped `sessionStorage`; dependent pages recalculate scenario outputs.
+- The planner recalculates and replaces the current saved plan. Dependent pages validate restored data and show an empty state when it is missing or invalid.
+- The optional report name and manual account labels are not persisted. Clear Plan requires confirmation.
+- The existing `/api/exchange-rates` and `/api/assistant` Vercel routes remain at their original paths.
 
-## Production prerequisites
+## Product boundaries
 
-Confirm institution participation, Bangladesh-origin funding, currencies, payment purpose, limits, delivery, and fees in writing. Obtain partner API access and production approval. Build a secure backend, quote freshness/expiry handling, server validation, consent and privacy notices, monitoring, and operational controls before any live integration.
+Bangladesh Bank rates are references, and student-entered transfer quotes are not authenticated. The AI service receives only a question; local financial profiles and quotes are not sent to it. The browser does not connect to bank accounts, initiate transfers, or guarantee financial outcomes.
+
+## Verification
+
+Run `node --test tests/*.test.cjs` and `git diff --check` after changes. Browser, Vercel deployment, and live provider behavior require separate checks and must not be inferred from unit tests.

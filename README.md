@@ -1,62 +1,42 @@
 # CampusBridge AI
 
-CampusBridge helps Bangladesh-based students plan tuition costs and compare current payment quotes for UK (BDT → GBP), US (BDT → USD), and Canada (BDT → CAD) corridors.
+CampusBridge AI is a static multi-page financial-planning prototype for students preparing for study abroad. It reuses one local calculation engine to estimate tuition and other entered costs, savings needs, dated contribution cycles, stress scenarios, and report data. These estimates are not guarantees and do not execute payments.
 
-## Use
+## Pages
 
-Deploy the project to Vercel to use the official Bangladesh Bank rates endpoint. The planner starts blank. Enter your tuition, other savings, protected emergency fund, income, living costs, and tuition deadline. You may add one or more bank account labels and current BDT balances; the planner adds those balances to other savings. You may enter a rate and its source/timestamp manually, or load the latest published Bangladesh Bank sheet. The fetched rate is only applied after you choose to use it. Calculations run locally in your browser.
+- `/` — Home and links to the tools.
+- `/planner.html` — Authoritative plan inputs, both planning modes, results, rates, roadmap, transfer quote entry, assistant, stress tests, and report actions.
+- `/roadmap.html` — Dated contribution schedule from the saved plan.
+- `/stress-tests.html` — Rate, expense, and missed-contribution scenarios on copies of the plan.
+- `/transfers.html` — Compare manually entered, unverified provider quotes.
+- `/assistant.html` — General AI explanations and deterministic local answers for selected plan questions.
+- `/report.html` — Local readiness report with browser printing / Save as PDF.
+- `/privacy.html` — Session storage details and product limitations.
 
-For payment comparison, enter the same payment principal and collect current quotes through the payment link listed by your university. Start with one provider quote and add others only when needed. Total sender cost, recipient amount, quote timestamp, source/reference, and currency are required for ranking; fee and quoted rate are optional, and delivery time is required only when ranking by speed. Quotes are not authenticated by CampusBridge.
+The shared shell is in `js/site.js` and `styles/site.css`. `lib/plan-state.js` stores a versioned, validated minimum plan snapshot in tab-scoped `sessionStorage`; it does not store report names, account labels, credentials, API keys, or tokens. Clearing the plan is available in the navigation. The planner is the only place where the baseline plan is created or updated.
 
-## Student data and privacy
+`lib/finance.js` remains the authoritative deterministic calculation engine. The Bangladesh Bank reference-rate endpoint stays at `/api/exchange-rates`; general AI questions use `/api/assistant`. The browser sends only `{ question }` to the assistant endpoint. No student financial profile or transfer quote is sent to the AI service.
 
-Planner values, manual savings labels/balances, quote entries, calculations, and activity are kept in the current browser page and clear on reload or when the planner is cleared. They are not saved to an account. Loading or refreshing rates calls the site's `/api/exchange-rates` endpoint to retrieve Bangladesh Bank reference data. When you submit a general assistant question, the browser sends only that question to `/api/assistant`; the assistant service adds its instructions when calling Groq. Planner values and quote entries are not included. Do not include names, student IDs, account details, passwords, or one-time codes in questions.
+## Run locally
 
-The optional downloaded text report includes entered financial and quote information. Review it before sharing. Provider websites and Google Fonts are third-party services with their own privacy practices. This prototype does not yet provide a formal privacy policy, terms, or student-support contact; these must be reviewed and configured before offering it to students.
+Requirements: Node.js 22 or newer. For the full API-backed experience, install the existing server dependency and use the Vercel development server:
 
-If the Bangladesh Bank rate request returns 404, the current preview does not serve the rate API. Use the deployed version with its `/api/exchange-rates` function, or enter a current bank/provider rate and its source and timestamp manually. No rate is applied when the request fails.
+```powershell
+npm install
+npx vercel dev
+```
 
-## What is connected
+Open the local URL shown by Vercel. To test the AI endpoint locally, create an ignored `.env.local` file with `GROQ_API_KEY=...`; keep the key out of source files and Git. Exchange-rate refresh uses the Bangladesh Bank endpoint through the local serverless route.
 
-- A Vercel serverless function reads Bangladesh Bank's official dated rate sheet. The rate sheet is an official reference, not a guaranteed student payment price. There is **no payment-provider quote API, bank account connector, authentication, or payment execution**.
-- Provider availability is institution- and origin-dependent. The Convera button opens its student-payment information; Flywire opens its institution finder. Use your university's payment link where possible. The app does not claim a particular route is supported.
-- A comparison is only as accurate as the quote the student enters. CampusBridge cannot verify quote authenticity, currency conversion, expiry, eligibility, institution, or additional fees.
-- No preset user balances, tuition amounts, conversion rates, provider fees, or delivery estimates are included. Bangladesh Bank publishes dated rates; availability and freshness are shown in the interface.
-- Profile data and activity entries remain in the current page memory. Downloaded reports are generated locally.
-- Bank account entries are manual labels and BDT balances only. They remain in browser memory and are cleared on reload or when the planner is cleared. Do not enter account numbers or bank credentials. This feature does not connect to banks; bank-linking requires a separately approved provider integration.
-- General assistant questions use the server-side Groq API. The browser sends only the question; financial-plan and quote questions continue through the existing deterministic local code.
+To serve only static pages without serverless APIs, run `py -m http.server 8000` and open `http://localhost:8000/`. Manual calculations and saved-plan pages work; exchange refresh and remote AI requests will be unavailable on that static-only server.
 
-## Optional Groq assistant setup
+Run all tests with Node's built-in test runner:
 
-The Groq assistant runs through the Vercel function at `/api/assistant`; the browser never receives the API key. The function accepts only a question, up to 1,000 characters, and does not send financial profile or provider quote data to Groq. Financial calculations, savings projections, and quote validation remain deterministic in the browser. General answers are educational and can be unavailable when the API key is not configured.
+```powershell
+node --test tests/*.test.cjs
+git diff --check
+```
 
-### Configure the Vercel assistant
+## Boundaries
 
-Configure `GROQ_API_KEY` and optionally `GROQ_MODEL` as private Vercel Environment Variables. Vercel serves the existing `api/` functions.
-
-### Configure a Vercel preview
-
-In Vercel, open the CampusBridge project’s **Settings → Environment Variables**, add `GROQ_API_KEY`, and select **Preview** for testing. Add `GROQ_MODEL` only if you want to override the documented default. Redeploy the preview after adding or changing variables. Do not add the key to browser code, Git, build output, or logs. Leave Production unconfigured until you deliberately approve a production release.
-
-The endpoint has request validation and a small in-memory per-IP limit. Serverless instances do not share that memory, so this is only a basic guard; configure a Vercel Firewall/rate-limit rule before exposing the endpoint broadly. Groq usage is subject to your account's model availability and rate limits.
-
-## Real provider onboarding
-
-Convera GlobalPay for Students is the first provider to evaluate for a university-connected tuition journey. Before any production integration, obtain written confirmation that the student's institution participates and that Bangladesh-origin BDT is supported for the payment purpose and funding method. If unavailable, the student must follow the university's official instructions and contact an authorized-dealer bank. Flywire is an alternative when the university itself provides its payment link.
-
-Bangladesh Bank publishes a dated FX reference rate; it is a benchmark and may differ from a student's provider quote. Flywire says available options depend on the institution and country of payment origin, so use the university's own payment link and check its origin-country choices. ([Bangladesh Bank exchange rates](https://www.bb.org.bd/en/index.php/econdata/exchangerate), [Flywire payment instructions](https://help.flywire.com/hc/en-us/articles/360012463654-How-do-I-make-a-payment-through-Flywire), [Convera institution FAQ](https://convera.com/students/faq/how-to-make-a-payment/q-what-do-i-do-if-i-cant-find-the-convera-globalpay-for-students-platform-on-my-institutions-website/))
-
-No API credentials or provider contract have been supplied, so direct real-time quotes cannot be connected in this workspace. Do not put credentials in browser code.
-
-## Files
-
-- `index.html`, `app.js`: responsive student workflow, external provider handoffs, local report export.
-- `lib/finance.js`: validation, tuition calculations, and comparison of student-entered quotes.
-- `lib/exchange-rates.js`: client validation for the Bangladesh Bank rate response.
-- `lib/bangladesh-bank-rates.js`: server-side source fetch, parsing, and validation for the official Bangladesh Bank page.
-- `api/exchange-rates.js`: Vercel endpoint that returns the validated official rates.
-- `api/assistant.js`: endpoint handler that calls Groq's OpenAI-compatible Chat Completions API using a server-side key.
-- `package.json`: Node.js runtime requirement and server-side OpenAI SDK dependency.
-- `docs/`: calculation, assistant, security, and production onboarding notes.
-
-This application is informational and does not execute transfers or provide individualized financial advice.
+The browser stores the minimum current plan in tab session storage to share it across pages. This storage is not encrypted. Rates are references, manual quote entries are not authenticated, there is no connected bank account, and the site does not initiate transfers. See `docs/` for calculation, security, and production boundaries.

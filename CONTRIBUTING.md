@@ -1,28 +1,20 @@
 # Contributing to CampusBridge AI
 
-This repository is a dependency-light static demo. Coordinate changes around the shared contracts below; do not add a framework or persistent store without agreement from the team.
+CampusBridge is a dependency-light static multi-page application with two existing Vercel function routes. Keep the current architecture unless a change is justified; do not add a framework, database, or external service without agreement.
 
-## Workstreams
+## Where changes belong
 
-- **Frontend and UX:** navigation, profile inputs, dashboard, planner, transfer comparison, assistant presentation, mobile and accessibility behavior.
-- **Financial logic and AI:** `lib/finance.js`, simulated data fixtures, allowed assistant intents, explanations, and calculation tests.
-- **Backend, QA, and submission:** API integration proposals, data-contract review, security review, test reports, deployment and submission documents.
+- Shared navigation, mobile menu, and Clear Plan action: `js/site.js`.
+- Shared visual and print styles: `styles/site.css`.
+- Authoritative planner and calculations: `app.js` and `lib/finance.js`.
+- Cross-page plan state: `lib/plan-state.js` with tests in `tests/plan-state.test.cjs`.
+- Page-specific behavior: the matching `js/*-page.js` module.
+- Existing APIs: `api/assistant.js` and `api/exchange-rates.js`.
 
-All three workstreams should use the same profile, provider, quote, and log contracts documented in `docs/architecture.md`.
+All financial calculations and quote validation must stay in `lib/finance.js`; page modules call that engine rather than duplicating formulas. Assistant requests may contain only the user's question. Never place API keys or real student information in tracked files, fixtures, logs, screenshots, or commits.
 
-## Development
+## Development and verification
 
-- Edit `data/payment-options.js` and `data/finance-guidance.js` alongside their JSON mirrors. Unit tests enforce exact parity.
-- Keep all monetary calculations in `lib/finance.js`; presentation code should call that engine.
-- Add tests for every calculation change using Node's built-in test runner: `node --test tests/*.test.cjs`.
-- Never enter live credentials or real student financial data in fixtures, logs, screenshots, or commits.
-- Do not claim rates, provider terms, endorsements, or competition rules that have not been verified.
-- Keep Three.js optional and preserve the CSS fallback and reduced-motion behavior.
-- Do not commit, push, deploy, or modify production services without explicit authorization.
+Use Node.js 22 or newer. Run `node --test tests/*.test.cjs` and `git diff --check`. Test planner calculations and dependent-page empty states when changing shared contracts. Do not claim browser, provider, or deployment verification unless it was actually performed.
 
-## Integration contracts
-
-- Profile inputs are raw form strings; validation and returned calculation values are owned by `CampusBridgeFinance`.
-- Provider IDs and source IDs are stable strings. Provider rates and fees are explicitly synthetic.
-- Assistant intent must resolve to one of the approved five tool names listed in `docs/ai-agent.md`.
-- Sandbox events omit user question text, profile balances, names, credentials, and other personal information.
+The baseline profile is stored only after a successful calculation. Any schema changes to `lib/plan-state.js` must validate restored values, update its tests, and document the change. Keep the session-storage disclosure and Clear Plan behavior accurate.

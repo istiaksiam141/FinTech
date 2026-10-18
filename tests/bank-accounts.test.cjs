@@ -28,7 +28,7 @@ test('manual account entry rejects missing labels and unsafe balances', () => {
 });
 
 test('planner combines manual account balances without sending or saving them remotely', () => {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'planner.html'), 'utf8');
   const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
   assert.match(html, /lib\/bank-accounts\.js/);
   assert.match(html, /Do not enter an account number, password, card number, or one-time code/);

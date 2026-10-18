@@ -8,12 +8,8 @@ function updateHeader() {
   topbar.classList.toggle("scrolled", window.scrollY > 12);
   const sections = [...document.querySelectorAll("main section[id]")];
   const current = sections.filter(section => section.getBoundingClientRect().top < innerHeight * .38).at(-1);
-  navlinks.querySelectorAll("a").forEach(link => link.toggleAttribute("aria-current", link.hash === `#${current?.id}`));
+  if (current) navlinks.querySelectorAll('a[href^="#"]').forEach(link => link.toggleAttribute("aria-current", link.hash === `#${current.id}`));
 }
-menu.addEventListener("click", () => {
-  const isOpen = navlinks.classList.toggle("open");
-  menu.setAttribute("aria-expanded", String(isOpen)); menu.setAttribute("aria-label", isOpen ? "Close navigation" : "Open navigation"); menu.textContent = isOpen ? "×" : "☰";
-});
 navlinks.querySelectorAll("a").forEach(link => link.addEventListener("click", () => { navlinks.classList.remove("open"); menu.setAttribute("aria-expanded", "false"); menu.textContent = "☰"; }));
 window.addEventListener("scroll", updateHeader, { passive: true }); window.addEventListener("resize", updateHeader, { passive: true }); updateHeader();
 
@@ -22,6 +18,7 @@ const BankAccounts = window.CampusBridgeBankAccounts;
 const guidance = window.CampusBridgeGuidance || [];
 const ExchangeRates = window.CampusBridgeExchangeRates;
 const AssistantRenderer = window.CampusBridgeAssistantRenderer;
+const PlanState = window.CampusBridgePlanState;
 const byId = id => document.getElementById(id);
 const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const corridorMap = { US: { country: "United States", currency: "USD", label: "United States" }, EU: { country: "Euro area", currency: "EUR", label: "Euro area" }, UK: { country: "United Kingdom", currency: "GBP", label: "United Kingdom" }, AU: { country: "Australia", currency: "AUD", label: "Australia" }, JP: { country: "Japan", currency: "JPY", label: "Japan" }, CA: { country: "Canada", currency: "CAD", label: "Canada" }, SE: { country: "Sweden", currency: "SEK", label: "Sweden" }, SG: { country: "Singapore", currency: "SGD", label: "Singapore" }, CN: { country: "China", currency: "CNH", label: "China · offshore yuan" }, IN: { country: "India", currency: "INR", label: "India" }, LK: { country: "Sri Lanka", currency: "LKR", label: "Sri Lanka" } };
@@ -58,6 +55,7 @@ function renderContributionRoadmap(roadmap,planningMode) {
   }
 }
 let planRequested = false;
+let restoredRateProvenance = "";
 let calendarCursor = new Date();
 let calendarFocusDate = null;
 function deadlineMinimum() {
@@ -588,6 +586,7 @@ function useFetchedExchangeRate() {
   renderFetchedRateStatus();
 }
 function handleManualRateEdit(event) {
+  restoredRateProvenance = "";
   const field = event.currentTarget.id;
   if (exchangeRateState.mode === "api") {
     if (field === "exchangeRate") { byId("rateSource").value = ""; byId("rateTimestamp").value = ""; }
@@ -608,7 +607,7 @@ function profile() {
   const manualSavings = byId("savings").value;
   const savings = manualSavings === "" && bankAccounts.length === 0 ? "" : String(BankAccounts.totalSavings(manualSavings, bankAccounts));
   const costFields = ["visaCost", "applicationCost", "flightCost", "insuranceCost", "documentCost", "accommodationDeposit", "initialSetupCost", "otherOneTimeCosts", "initialLivingMonths", "monthlyRent", "monthlyFood", "monthlyTransport", "monthlyUtilities", "monthlyOtherLiving"];
-  return { homeCountry: "Bangladesh", destinationCountry: c.country, homeCur: "BDT", tuitionCur: c.currency, tuition: byId("tuition").value, exchangeRate: byId("exchangeRate").value, rateSource: byId("rateSource").value, rateTimestamp: byId("rateTimestamp").value, rateProvenance: exchangeRateState.mode === "api" ? "Bangladesh Bank official reference rate; not a tuition-payment quote" : "User-provided manual rate; not independently verified", planningMode: document.querySelector('input[name="planningMode"]:checked')?.value || Finance.PLANNING_MODES.ALL_COSTS, savings, emergency: byId("emergency").value, committed: byId("committed").value || 0, income: byId("income").value, expenses: byId("expenses").value, paymentFee: byId("paymentFee").value || 0, ...Object.fromEntries(costFields.map(id => [id, byId(id).value])), deadline: byId("deadline").value };
+  return { homeCountry: "Bangladesh", destinationCountry: c.country, homeCur: "BDT", tuitionCur: c.currency, tuition: byId("tuition").value, exchangeRate: byId("exchangeRate").value, rateSource: byId("rateSource").value, rateTimestamp: byId("rateTimestamp").value, rateProvenance: exchangeRateState.mode === "api" ? "Bangladesh Bank official reference rate; not a tuition-payment quote" : restoredRateProvenance || "User-provided manual rate; not independently verified", planningMode: document.querySelector('input[name="planningMode"]:checked')?.value || Finance.PLANNING_MODES.ALL_COSTS, savings, otherSavings: manualSavings, accountBalances: bankAccounts.map(account => account.balance), emergency: byId("emergency").value, committed: byId("committed").value || 0, income: byId("income").value, expenses: byId("expenses").value, paymentFee: byId("paymentFee").value || 0, ...Object.fromEntries(costFields.map(id => [id, byId(id).value])), deadline: byId("deadline").value };
 }
 function updatePlanningModeUI() {
   const mode = document.querySelector('input[name="planningMode"]:checked')?.value || Finance.PLANNING_MODES.ALL_COSTS;
@@ -632,6 +631,7 @@ function renderBankAccounts() {
   byId("bankAccountTotal").textContent = `Added account balances: ${money(BankAccounts.totalBalance(bankAccounts))}. The planner adds listed balances to other savings.`;
 }
 byId("addBankAccount").addEventListener("click", () => {
+  if (bankAccounts.length >= 50) { byId("bankAccountError").textContent = "You can add up to 50 manual savings balances."; return; }
   const validated = BankAccounts.validateAccount({ label: byId("bankAccountLabel").value, balance: byId("bankAccountBalance").value });
   byId("bankAccountError").textContent = validated.ok ? "" : validated.error;
   if (!validated.ok) return;
@@ -649,6 +649,7 @@ function compute() {
   refreshRate();
   const activeCurrency = corridorMap[byId("corridor").value].currency;
   if (exchangeRateState.mode === "api" && (exchangeRateState.appliedCurrency !== activeCurrency || !exchangeRateState.appliedNextUpdateAtMs || Date.now() >= exchangeRateState.appliedNextUpdateAtMs)) {
+    PlanState?.clearPlan();
     latest = null;
     renderContributionRoadmap(null);
     clearStressTestResults(); byId("readinessReportPreview").hidden = true; latestReadinessReportProfile = null;
@@ -664,9 +665,10 @@ function compute() {
   if (latestReadinessReportProfile && JSON.stringify(latestReadinessReportProfile) !== JSON.stringify(input)) { byId("readinessReportPreview").hidden = true; latestReadinessReportProfile = null; }
   const calculationDate = new Date();
   const result = Finance.calculateTuition(input, calculationDate);
-  if (!result.ok) { latest = null; renderContributionRoadmap(null); clearStressTestResults(); byId("readinessReportPreview").hidden = true; latestReadinessReportProfile = null; byId("deadlineTrigger").setAttribute("aria-invalid", String(!input.deadline)); byId("formError").textContent = result.errors.join(" "); byId("plannerResults").innerHTML = '<p class="muted">Enter your figures and a current, source-identified exchange rate to calculate.</p>'; return; }
+  if (!result.ok) { PlanState?.clearPlan(); latest = null; renderContributionRoadmap(null); clearStressTestResults(); byId("readinessReportPreview").hidden = true; latestReadinessReportProfile = null; byId("deadlineTrigger").setAttribute("aria-invalid", String(!input.deadline)); byId("formError").textContent = result.errors.join(" "); byId("plannerResults").innerHTML = '<p class="muted">Enter your figures and a current, source-identified exchange rate to calculate.</p>'; return; }
   const roadmap = Finance.buildContributionRoadmap(input, result, calculationDate);
-  byId("formError").textContent = ""; latest = { input, result, roadmap }; renderContributionRoadmap(roadmap,input.planningMode); const tuitionOnly = input.planningMode === Finance.PLANNING_MODES.TUITION_ONLY; const statusText = { covered: tuitionOnly ? "Estimated tuition costs covered by usable savings" : "Entered study costs covered by usable savings", ontrack:"On track at current monthly surplus", short:"Current plan leaves a shortfall" }[result.status];
+  const savedPlan = PlanState?.savePlan(enteredProfile);
+  byId("formError").textContent = savedPlan?.ok === false ? "The calculation is ready, but this browser could not save the plan for the other pages. Check browser session-storage settings and try again." : ""; latest = { input, result, roadmap }; renderContributionRoadmap(roadmap,input.planningMode); const tuitionOnly = input.planningMode === Finance.PLANNING_MODES.TUITION_ONLY; const statusText = { covered: tuitionOnly ? "Estimated tuition costs covered by usable savings" : "Entered study costs covered by usable savings", ontrack:"On track at current monthly surplus", short:"Current plan leaves a shortfall" }[result.status];
   const priorities = result.gap === 0 ? ["Keep the emergency reserve protected.","Confirm the university payment deadline and instructions.","Refresh assumptions before paying."] : [result.shortfall > 0 ? "Close the projected shortfall: current savings capacity is not enough." : "Set aside the monthly target before the tuition deadline.", "Verify the payment route and any institution-specific fees.", "Keep emergency savings and committed funds separate from tuition."];
   const monthlyTargetText = result.gap === 0 ? Finance.describeMonthlySavingsTarget(result).message : contributionScheduleText(result);
   const destinationCosts = Number.isFinite(result.estimatedOtherCosts / result.rate) && result.estimatedOtherCosts / result.rate <= Finance.MAX_CALCULATED_BDT ? money(result.estimatedOtherCosts / result.rate, result.tuitionCurrency) : "Not available";
@@ -840,7 +842,7 @@ byId("addQuoteProvider").addEventListener("click", () => {
   renderTransfers();
   byId("providerQuoteForms").querySelector(`[data-provider="${providerDefs[visibleProviderCount - 1].id}"] .customSelectTrigger`).focus();
 });
-byId("resetProfile").addEventListener("click",()=>{byId("profileForm").reset();syncCustomSelect(byId("corridor"));planRequested=false;updateDeadlineHint();syncRateTimestampPicker();closeRateTimestampCalendar();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="CN";syncCustomSelect(byId("corridor"));exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="CNH";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
+byId("resetProfile").addEventListener("click",()=>{PlanState?.clearPlan();restoredRateProvenance="";byId("profileForm").reset();syncCustomSelect(byId("corridor"));planRequested=false;updateDeadlineHint();syncRateTimestampPicker();closeRateTimestampCalendar();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="CN";syncCustomSelect(byId("corridor"));exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="CNH";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
 byId("refreshExchangeRate").addEventListener("click",refreshExchangeRate);
 byId("useExchangeRate").addEventListener("click",useFetchedExchangeRate);
 byId("rateTimestamp").addEventListener("input",syncRateTimestampPicker);
@@ -918,7 +920,7 @@ function runStressTest(){
   const enteredProfile=profile();
   const input=Finance.profileForPlanningMode(enteredProfile,enteredProfile.planningMode);
   const stress=Finance.calculateStressScenarios({...input},options);
-  if(stress.ok)latestStressTest={profile:{...input},scenarios:stress.scenarios};
+  if(stress.ok){latestStressTest={profile:{...input},scenarios:stress.scenarios};PlanState?.saveStressOptions(options);}
   renderStressTestResults(stress,input.tuitionCur,input.planningMode);
 }
 function reportAmount(value,currency="BDT"){if(value===null||value===undefined)return "Not provided";const formatted=money(value,currency||"");return currency?formatted:formatted.trim();}
@@ -1042,4 +1044,23 @@ byId("exportReport").addEventListener("click",()=>{compute();if(!latest){byId("p
 // Pointer-responsive 3D treatment is decorative and disabled for touch/reduced motion.
 const visual=document.querySelector(".heroVisual"),orb=document.querySelector(".orb3d");
 if(visual&&!reducedMotion.matches&&matchMedia("(pointer:fine)").matches){visual.addEventListener("pointermove",e=>{const b=visual.getBoundingClientRect(),x=(e.clientX-b.left)/b.width-.5,y=(e.clientY-b.top)/b.height-.5;orb.style.animationPlayState="paused";orb.style.transform=`translate3d(${x*9}px,${y*8}px,0) rotateX(${-y*9}deg) rotateY(${x*13-10}deg)`;});visual.addEventListener("pointerleave",()=>{orb.style.animationPlayState="running";orb.style.transform="";});}
-renderQuoteForms();refreshRate();renderTransfers();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';resetScenario();previewScenario();refreshExchangeRate();
+function restoreSavedPlan() {
+  const saved = PlanState?.loadPlan();
+  if (!saved?.ok) return false;
+  const p = saved.profile;
+  const corridor = Object.entries(corridorMap).find(([, value]) => value.currency === p.tuitionCur)?.[0];
+  if (!corridor) { PlanState.clearPlan(); return false; }
+  byId("corridor").value = corridor; syncCustomSelect(byId("corridor"));
+  const fields = ["tuition", "exchangeRate", "rateSource", "rateTimestamp", "savings", "emergency", "committed", "income", "expenses", "paymentFee", "visaCost", "applicationCost", "flightCost", "insuranceCost", "documentCost", "accommodationDeposit", "initialSetupCost", "otherOneTimeCosts", "initialLivingMonths", "monthlyRent", "monthlyFood", "monthlyTransport", "monthlyUtilities", "monthlyOtherLiving", "deadline"];
+  for (const id of fields) byId(id).value = p[id] ?? "";
+  byId("savings").value = p.otherSavings;
+  bankAccounts = p.accountBalances.map((balance, index) => ({ id: nextBankAccountId++, label: `Saved balance ${index + 1}`, balance }));
+  renderBankAccounts();
+  document.querySelectorAll('input[name="planningMode"]').forEach(input => { input.checked = input.value === p.planningMode; });
+  restoredRateProvenance = p.rateProvenance.includes("Bangladesh Bank") ? "Previously selected Bangladesh Bank reference; saved timestamp shown, not refreshed on this page" : "Saved user-provided rate; not independently verified";
+  exchangeRateState.mode = "manual"; exchangeRateState.selectedCurrency = p.tuitionCur;
+  updatePlanningModeUI(); syncRateTimestampPicker(); updateDeadlineHint(); planRequested = true;
+  return true;
+}
+const restoredPlan = restoreSavedPlan();
+renderQuoteForms();refreshRate();renderTransfers();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';resetScenario();previewScenario();if(restoredPlan)compute();else refreshExchangeRate();

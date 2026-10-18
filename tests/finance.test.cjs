@@ -717,11 +717,11 @@ test('comparison ranking and report export share the same eligible quote list',(
 });
 
 test('active UI has blank financial inputs and working external quote paths; scripts parse',()=>{
-  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'planner.html'),'utf8'),css=fs.readFileSync(path.join(root,'styles','site.css'),'utf8'),ui=html+css,app=fs.readFileSync(path.join(root,'app.js'),'utf8');
   for(const code of ['USD','EUR','GBP','AUD','JPY','CAD','SEK','SGD','CNH','INR','LKR']) assert.ok(html.includes(`BDT → ${code}`),`${code} is selectable as a destination`);
   assert.doesNotMatch(html,/BDT → (?:CNY|KRW|MYR)/,'the corridor selector contains only the requested currency set');
-  for(const marker of ['id="exchangeRate"','id="rateSource"','id="rateTimestamp"','id="rateTimestampHint"','id="rateTimestampTrigger"','id="rateTimestampCalendar"','id="rateTimestampTime"','id="useCurrentRateTimestamp"','id="refreshExchangeRate"','id="useExchangeRate"','id="exchangeRateStatus"','id="providerQuoteForms"','id="deadlineHint"','id="deadlineTrigger"','id="deadlineCalendar"','role="grid"','aria-haspopup="dialog"','.formSection .fieldGrid>label{align-self:start;align-content:start}','.timestampControl{display:flex;width:100%;min-width:0}','#providerQuoteForms .quoteTimestampLabel{grid-column:1/-1}','.calendarDay.isToday:not(.isSelected){background:#eaf6f0','.customSelect{position:relative;width:100%;min-width:0}','.customSelectOption[aria-selected=true]::after{content:"✓"','https://www.bb.org.bd/en/index.php/econdata/exchangerate','convera.com/students/faq','pay.flywire.com','id="applyScenario"','id="resetScenario"','id="stressExpenseIncrease"','id="runStressTest"','id="clearStressTest"','id="stressResults"','id="readinessStudentName"','id="generateReadinessReport"','id="readinessReportPreview"','id="printReadinessReport"','id="closeReadinessReport"','aria-live="polite"','@page{size:A4 portrait','@media print','id="exportReport"','src="lib/exchange-rates.js"']) assert.ok(html.includes(marker),`missing ${marker}`);
-  for(const marker of ['@keyframes globeTurn','animation:globeTurn 34s linear infinite','<div class="globeMap">','<g class="globeLand">','<g class="globeGrid">','.heroVisual .orb3d{width:min(430px,82vw)}','.heroVisual .tileB{right:-4%}']) assert.ok(html.includes(marker),`missing ${marker}`);
+  for(const marker of ['id="exchangeRate"','id="rateSource"','id="rateTimestamp"','id="rateTimestampHint"','id="rateTimestampTrigger"','id="rateTimestampCalendar"','id="rateTimestampTime"','id="useCurrentRateTimestamp"','id="refreshExchangeRate"','id="useExchangeRate"','id="exchangeRateStatus"','id="providerQuoteForms"','id="deadlineHint"','id="deadlineTrigger"','id="deadlineCalendar"','role="grid"','aria-haspopup="dialog"','.formSection .fieldGrid>label{align-self:start;align-content:start}','.timestampControl{display:flex;width:100%;min-width:0}','#providerQuoteForms .quoteTimestampLabel{grid-column:1/-1}','.calendarDay.isToday:not(.isSelected){background:#eaf6f0','.customSelect{position:relative;width:100%;min-width:0}','.customSelectOption[aria-selected=true]::after{content:"✓"','https://www.bb.org.bd/en/index.php/econdata/exchangerate','convera.com/students/faq','pay.flywire.com','id="applyScenario"','id="resetScenario"','id="stressExpenseIncrease"','id="runStressTest"','id="clearStressTest"','id="stressResults"','id="readinessStudentName"','id="generateReadinessReport"','id="readinessReportPreview"','id="printReadinessReport"','id="closeReadinessReport"','aria-live="polite"','@page{size:A4 portrait','@media print','id="exportReport"','src="lib/exchange-rates.js"']) assert.ok(ui.includes(marker),`missing ${marker}`);
+  for(const marker of ['@keyframes globeTurn','animation:globeTurn 34s linear infinite','<div class="globeMap">','<g class="globeLand">','<g class="globeGrid">','.heroVisual .orb3d{width:min(430px,82vw)}','.heroVisual .tileB{right:-4%}']) assert.ok(ui.includes(marker),`missing ${marker}`);
   assert.doesNotMatch(html,/class="(?:orbit|node)(?:\s|")/,'the hero illustration no longer uses atom-style orbiting particles');
   assert.ok(app.includes('data-field="timestamp" type="datetime-local"'),'quote timestamps remain date-time inputs for existing validation and comparison');
   assert.equal(fs.existsSync(path.join(root,'api','exchange-rates.js')),true);
@@ -736,8 +736,8 @@ test('active UI has blank financial inputs and working external quote paths; scr
   assert.match(app,/byId\("runStressTest"\)\.addEventListener\("click",runStressTest\)/,'students can run stress tests from the existing what-if section');
   assert.match(app,/description\.textContent=value/,'stress-test results are rendered as text, not interpreted HTML');
   assert.match(app,/Finance\.buildReadinessReportData\(/,'the report maps the validated finance result through the shared finance module');
-  assert.match(html,/<a href="#roadmap">Savings roadmap<\/a>[\s\S]*id="roadmap"[^>]*>/,'the savings-roadmap navigation target exists in the document');
-  assert.match(html,/#roadmap\{scroll-margin-top:100px\}/,'the roadmap anchor remains clear below the sticky header');
+  assert.match(fs.readFileSync(path.join(root,'js','site.js'),'utf8'),/\["roadmap", "Savings roadmap", "\/roadmap\.html"\]/,'the savings-roadmap navigation points to its dedicated page');
+  assert.match(html,/id="roadmap"/,'the existing integrated roadmap remains available in the planner');
   assert.match(app,/if\(!roadmap\?\.ok\)\{section\.hidden=false;summary\.textContent=/,'the roadmap navigation target remains visible before a valid plan is calculated');
   assert.match(app,/byId\("printReadinessReport"\)\.addEventListener\("click",\(\)=>window\.print\(\)\)/,'the report uses the native browser print dialog');
   assert.match(html,/id="readinessReportPreview"[^>]*hidden/,'the report preview is hidden until the student generates it');
@@ -760,7 +760,7 @@ test('active UI has blank financial inputs and working external quote paths; scr
 });
 
 test('student-facing privacy notices, progressive quote entry, and technical disclosures are present',()=>{
-  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'planner.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
   for(const marker of ['id="privacy"','Your question is sent to the AI assistant','Your financial form and quote entries are not included','id="addQuoteProvider"','What will the downloaded report contain?','id="requirements"','Technical integration readiness','formal privacy/terms documents are not configured']) assert.ok(html.includes(marker),`missing ${marker}`);
   assert.match(app,/providerDefs\.slice\(0,\s*visibleProviderCount\)/,'quote forms are shown progressively');
   assert.match(app,/quoteDrafts\.clear\(\)/,'clearing planner inputs also clears saved-in-page quote drafts');
@@ -768,7 +768,7 @@ test('student-facing privacy notices, progressive quote entry, and technical dis
 });
 
 test('study-cost inputs are optional, connected to the profile, and represented in the plan summary',()=>{
-  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'planner.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
   for(const id of ['visaCost','applicationCost','flightCost','insuranceCost','documentCost','accommodationDeposit','initialSetupCost','otherOneTimeCosts','initialLivingMonths','monthlyRent','monthlyFood','monthlyTransport','monthlyUtilities','monthlyOtherLiving']){
     assert.ok(html.includes(`id="${id}"`),`missing optional study-cost input ${id}`);
     assert.ok(app.includes(`"${id}"`),`profile does not read study-cost input ${id}`);
@@ -783,7 +783,7 @@ test('study-cost inputs are optional, connected to the profile, and represented 
 });
 
 test('planner exposes accessible default mode choices and updates reports and stress scenarios by mode',()=>{
-  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'planner.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
   assert.match(html,/name="planningMode" value="all-costs" checked/);
   assert.match(html,/name="planningMode" value="tuition-only"/);
   assert.match(html,/Estimate your complete study-abroad budget and find out how much funding you still need\./);
