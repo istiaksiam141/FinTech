@@ -286,3 +286,6 @@ body[data-page="planner"] #planner{padding-top:52px}
   .pageHero{padding:34px 0 52px}
   .hero{padding-top:37px}
 }
+@media(min-width:641px){
+  #profileForm .formSection .fieldGrid>label{grid-template-rows:minmax(3.2em,auto) auto auto}
+}
