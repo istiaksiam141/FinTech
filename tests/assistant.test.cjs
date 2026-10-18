@@ -62,23 +62,27 @@ test('assistant sends only the question to Groq and bounds the response', async 
   assert.deepEqual(sdkRequest.messages[1], { role: 'user', content: 'What is a protected emergency reserve?' });
   assert.equal(Object.hasOwn(sdkRequest, 'context'), false);
   assert.equal(sdkRequest.model, 'openai/gpt-oss-20b');
-  assert.equal(sdkRequest.max_completion_tokens, 1200);
+  assert.equal(sdkRequest.max_completion_tokens, 4096);
+  assert.equal(assistant.constants.MAX_OUTPUT_CHARS, 16000);
+  assert.equal(assistant.constants.GROQ_REQUEST_TIMEOUT_MS, 30000);
   assert.equal(Object.hasOwn(sdkRequest, 'max_tokens'), false);
   assert.match(sdkRequest.messages[0].content, /Never calculate or invent personal financial figures/);
-  assert.match(sdkRequest.messages[0].content, /Answer the student's actual question directly and accurately/);
-  assert.match(sdkRequest.messages[0].content, /simple English/);
-  assert.match(sdkRequest.messages[0].content, /numbered steps/);
+  assert.match(sdkRequest.messages[0].content, /Give a direct, accurate answer first/);
+  assert.match(sdkRequest.messages[0].content, /two to four sentences/);
+  assert.match(sdkRequest.messages[0].content, /three to six useful bullet points/);
+  assert.match(sdkRequest.messages[0].content, /do not pad answers/);
   assert.match(sdkRequest.messages[0].content, /If you are unsure or the question lacks essential context/);
   assert.equal(JSON.stringify(response.body).includes('test-secret'), false);
 });
 
-test('assistant flags overlong output and clips it at a safe word boundary', async () => {
-  const longOutput = `${'A useful explanation with spaces. '.repeat(250)}unfinished tail`;
+test('assistant flags output beyond the server character cap and clips at a natural boundary', async () => {
+  const longOutput = `${'A useful explanation with spaces. '.repeat(Math.ceil(assistant.constants.MAX_OUTPUT_CHARS / 34))}unfinished tail`;
   const handler = assistant.createAssistantHandler({ env: { GROQ_API_KEY: 'test-key' }, createClient: () => ({ chat: { completions: { create: async () => ({ choices: [{ finish_reason: 'stop', message: { content: longOutput } }] }) } } }) });
   const response = await invoke(handler, makeRequest());
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.incomplete, true);
   assert.ok(response.body.answer.length <= assistant.constants.MAX_OUTPUT_CHARS);
+  assert.ok(response.body.answer.length < assistant.constants.MAX_OUTPUT_CHARS);
   assert.match(response.body.answer, /\.$/);
 });
 
@@ -88,8 +92,9 @@ test('simple waiver questions receive a concise answer without forced formatting
   const response = await invoke(handler, makeRequest({ body: { question: "What's a waiver?" } }));
   assert.deepEqual(response.body, { answer: 'A waiver is permission to give up or set aside a right or requirement. For example, a school might waive an application fee.', incomplete: false });
   assert.deepEqual(request.messages[1], { role: 'user', content: "What's a waiver?" });
-  assert.match(request.messages[0].content, /one to three clear sentences/);
-  assert.match(request.messages[0].content, /Do not add headings, tables, bullets, or numbered steps unless/);
+  assert.match(request.messages[0].content, /usually answer in about two to four sentences/);
+  assert.match(request.messages[0].content, /include one relevant example when useful/);
+  assert.match(request.messages[0].content, /Avoid filler, repetition, unnecessary introductions/);
 });
 
 test('provider token-limit responses trim dangling examples and report incompleteness', async () => {
