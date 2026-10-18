@@ -42,3 +42,41 @@ test('assistant renderer creates only safe links for HTTP(S) markdown destinatio
   assert.equal(link.attributes.href, 'https://example.com/rates');
   assert.equal(link.attributes.rel, 'noopener noreferrer');
 });
+
+test('assistant renderer turns Markdown tables into semantic tables without exposing separators', () => {
+  const root = fakeDocument.createElement('div');
+  const markdown = '| Term | Meaning |\n| --- | :---: |\n| Waiver | Permission to give up a right |\n| Fee | A payment charge |';
+  render(root, markdown, fakeDocument);
+  const table = root.children[0];
+  assert.equal(table.tagName, 'table');
+  assert.deepEqual(table.children.map(node => node.tagName), ['thead', 'tbody']);
+  assert.equal(table.children[0].children[0].children[0].tagName, 'th');
+  assert.deepEqual(table.children[1].children.map(row => row.children.map(cell => cell.textContent)), [['Waiver', 'Permission to give up a right'], ['Fee', 'A payment charge']]);
+  assert.doesNotMatch(root.textContent, /\|\s*:?-{3,}/);
+});
+
+test('assistant renderer keeps list punctuation and formats simple Markdown lists', () => {
+  const root = fakeDocument.createElement('div');
+  render(root, '**A waiver** may cover: The fee is $25.\n\n- A late fee\n- An application fee', fakeDocument);
+  assert.equal(root.children[0].children[0].tagName, 'strong');
+  assert.match(root.textContent, /\$25\./);
+  assert.deepEqual(root.children[1].children.map(item => item.textContent), ['A late fee', 'An application fee']);
+});
+
+test('assistant renderer preserves underscores and multiplication while formatting valid emphasis', () => {
+  const root = fakeDocument.createElement('div');
+  render(root, 'my_variable_name and 5 * 2 * 3; **bold text** and *italic text*.', fakeDocument);
+  const paragraph = root.children[0];
+  assert.equal(paragraph.textContent, 'my_variable_name and 5 * 2 * 3; bold text and italic text.');
+  assert.deepEqual(paragraph.children.filter(node => node.tagName !== '#text').map(node => node.tagName), ['strong', 'em']);
+});
+
+test('assistant renderer formats inline code and keeps fenced code literal', () => {
+  const root = fakeDocument.createElement('div');
+  render(root, 'Use `my_variable_name` here.\n\n```html\n<img src=x onerror=alert(1)>\n```', fakeDocument);
+  assert.equal(root.children[0].children[1].tagName, 'code');
+  assert.equal(root.children[0].children[1].textContent, 'my_variable_name');
+  assert.equal(root.children[1].tagName, 'pre');
+  assert.equal(root.children[1].children[0].tagName, 'code');
+  assert.equal(root.children[1].textContent, '<img src=x onerror=alert(1)>');
+});
