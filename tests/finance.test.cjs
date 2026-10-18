@@ -757,7 +757,7 @@ test('active UI has blank financial inputs and working external quote paths; scr
   assert.match(app,/byId\("runStressTest"\)\.addEventListener\("click",runStressTest\)/,'students can run stress tests from the existing what-if section');
   assert.match(app,/description\.textContent=value/,'stress-test results are rendered as text, not interpreted HTML');
   assert.match(app,/Finance\.buildReadinessReportData\(/,'the report maps the validated finance result through the shared finance module');
-  assert.match(fs.readFileSync(path.join(root,'js','site.js'),'utf8'),/\["roadmap", "Savings roadmap", "\/roadmap\.html"\]/,'the savings-roadmap navigation points to its dedicated page');
+  assert.match(fs.readFileSync(path.join(root,'js','site.js'),'utf8'),/\["roadmap", "Savings roadmap", "\/roadmap\.html", "route"\]/,'the savings-roadmap navigation points to its dedicated page and uses its route icon');
   assert.match(html,/id="roadmap"/,'the existing integrated roadmap remains available in the planner');
   assert.match(app,/if\(!roadmap\?\.ok\)\{section\.hidden=false;summary\.textContent=/,'the roadmap navigation target remains visible before a valid plan is calculated');
   assert.match(app,/byId\("printReadinessReport"\)\.addEventListener\("click",\(\)=>window\.print\(\)\)/,'the report uses the native browser print dialog');

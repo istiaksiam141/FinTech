@@ -382,6 +382,9 @@ body[data-page="planner"] .planningModeNote{padding:12px 14px;border-radius:11px
 .navlinks .navDropdown a{display:block;padding:10px 12px;border-radius:8px;color:#36564c;font-size:.86rem;white-space:nowrap}
 .navlinks .navDropdown a:hover,.navlinks .navDropdown a[aria-current=page]{background:#e5f3ed;color:#085041}
 .navlinks .navDropdown a[aria-current=page]{font-weight:700;box-shadow:inset 3px 0 #168564}
+.navlinks .navDropdown a{display:flex;align-items:center;gap:10px;min-height:42px}
+.navlinks .navDropdown .navIcon{width:16px;height:16px;flex:0 0 16px;opacity:.78}
+.navlinks .navDropdown a>span{min-width:0}
 .navGroupToggle:focus-visible,.burger:focus-visible,.navlinks a:focus-visible{outline:3px solid #b8ead5;outline-offset:3px}
 @media(max-width:1200px){
   .topbar .navlinks{max-height:calc(100vh - 78px);max-height:calc(100dvh - 78px);overflow-y:auto;overscroll-behavior:contain}

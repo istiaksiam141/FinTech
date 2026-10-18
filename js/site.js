@@ -1,9 +1,9 @@
 (function () {
   "use strict";
   const groups = [
-    { id: "planning", label: "Financial Planning", icon: "chart", pages: [["planner", "Planner", "/planner.html"], ["roadmap", "Savings roadmap", "/roadmap.html"], ["stress", "Stress tests", "/stress-tests.html"]] },
-    { id: "support", label: "Transfers & Support", icon: "transfer", pages: [["transfers", "Transfers", "/transfers.html"], ["assistant", "AI assistant", "/assistant.html"]] },
-    { id: "account", label: "My Account", icon: "user", pages: [["report", "Financial report", "/report.html"], ["account", "Account", "/account.html"], ["privacy", "Privacy", "/privacy.html"]] }
+    { id: "planning", label: "Financial Planning", icon: "chart", pages: [["planner", "Planner", "/planner.html", "calculator"], ["roadmap", "Savings roadmap", "/roadmap.html", "route"], ["stress", "Stress tests", "/stress-tests.html", "chart"]] },
+    { id: "support", label: "Transfers & Support", icon: "transfer", pages: [["transfers", "Transfers", "/transfers.html", "arrowsLeftRight"], ["assistant", "AI assistant", "/assistant.html", "messageCircle"]] },
+    { id: "account", label: "My Account", icon: "user", pages: [["report", "Financial report", "/report.html", "fileText"], ["account", "Account", "/account.html", "userRound"], ["privacy", "Privacy", "/privacy.html", "shieldCheck"]] }
   ];
   const createIcon = name => {
     const drawings = {
@@ -11,6 +11,13 @@
       chart: '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
       transfer: '<path d="M17 3l4 4-4 4"/><path d="M3 7h18"/><path d="m7 21-4-4 4-4"/><path d="M21 17H3"/>',
       user: '<circle cx="12" cy="8" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/>',
+      calculator: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 12h2m4 0h2m-8 4h2m4 0h2"/>',
+      route: '<circle cx="6" cy="19" r="2"/><path d="M8 19h4a4 4 0 0 0 4-4V9a4 4 0 0 1 4-4"/><circle cx="20" cy="5" r="2"/><path d="M6 17V7a2 2 0 0 1 2-2h3"/>',
+      arrowsLeftRight: '<path d="M17 8H3m0 0 4-4M3 8l4 4"/><path d="M7 16h14m0 0-4-4m4 4-4 4"/>',
+      messageCircle: '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/>',
+      fileText: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8m-8 4h8"/>',
+      userRound: '<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>',
+      shieldCheck: '<path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"/><path d="m9 12 2 2 4-4"/>',
       chevron: '<path d="m6 9 6 6 6-6"/>',
       menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
       close: '<path d="m18 6-12 12M6 6l12 12"/>'
@@ -55,8 +62,10 @@
       if (active) { toggle.dataset.active = "true"; toggle.setAttribute("aria-current", "location"); }
       const chevron = createIcon("chevron"); chevron.classList.add("navChevron"); toggle.append(chevron);
       const submenu = document.createElement("div"); submenu.id = `nav-${group.id}-links`; submenu.className = "navDropdown"; submenu.hidden = true;
-      for (const [id, label, href] of group.pages) {
-        const link = document.createElement("a"); link.href = href; link.textContent = label;
+      for (const [id, label, href, iconName] of group.pages) {
+        const link = document.createElement("a"); link.href = href;
+        const linkLabel = document.createElement("span"); linkLabel.textContent = label;
+        link.append(createIcon(iconName), linkLabel);
         if (id === page) link.setAttribute("aria-current", "page");
         submenu.append(link);
       }
