@@ -479,3 +479,23 @@ body[data-page="planner"] .planningModeNote{padding:12px 14px;border-radius:11px
 .resultsReportAction .button{flex:0 0 auto}
 @media(max-width:760px){.homeUspSection{padding-top:25px}.homeUspGrid{grid-template-columns:1fr}.homeUspCard{padding:21px}.resultsReportAction{align-items:flex-start;flex-direction:column}.resultsReportAction .button{width:100%}}
 @media print{.resultsReportAction{display:none!important}}
+
+/* Cautionary clear-plan confirmation */
+.clearPlanButton{white-space:nowrap;border-color:rgba(226,130,120,.34);background:rgba(125,44,48,.14);color:#ffe5e1}
+.clearPlanButton:hover{border-color:rgba(240,152,142,.66);background:rgba(137,49,51,.27);color:#fff1ee}
+.clearPlanButton:focus-visible{outline:3px solid #f0a49a;outline-offset:3px}
+.clearPlanDialog{width:min(480px,calc(100vw - 32px));max-width:none;padding:0;border:1px solid rgba(174,203,231,.24);border-radius:20px;background:linear-gradient(145deg,#102841,#0c2037);color:var(--ink);box-shadow:0 28px 90px rgba(0,0,0,.5)}
+.clearPlanDialog::backdrop{background:rgba(3,12,22,.68);backdrop-filter:blur(3px)}
+.clearPlanDialogContent{padding:26px}
+.clearPlanDialog h2{font-size:1.45rem;color:var(--ink)}
+.clearPlanDialogContent>p{margin-top:12px;color:var(--muted);font-size:.94rem;line-height:1.7}
+.clearPlanDialogContent>.clearPlanDialogNote{padding-top:12px;border-top:1px solid var(--line);font-size:.8rem;color:var(--quiet)}
+.clearPlanDialogContent>.clearPlanDialogError{color:#ffc2b9;font-size:.84rem}
+.clearPlanDialogActions{display:flex;justify-content:flex-end;gap:10px;margin-top:23px}
+.clearPlanDialogActions button{min-width:130px}
+.clearPlanDialogActions [data-keep-plan]{border-color:rgba(166,230,206,.35);background:rgba(166,230,206,.1);color:#dff7eb}
+.clearPlanDialogActions [data-keep-plan]:hover{border-color:rgba(190,240,216,.62);background:rgba(166,230,206,.18)}
+.clearPlanConfirm{border-color:rgba(226,130,120,.42);background:rgba(125,44,48,.2);color:#ffe5e1}
+.clearPlanConfirm:hover{border-color:rgba(240,152,142,.68);background:rgba(137,49,51,.34)}
+.clearPlanDialog button:focus-visible{outline:3px solid #b8ead5;outline-offset:3px}
+@media(max-width:520px){.clearPlanDialogContent{padding:22px}.clearPlanDialogActions{flex-direction:column}.clearPlanDialogActions button{width:100%}}

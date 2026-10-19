@@ -54,7 +54,21 @@ test('shared navigation points to every migrated page and preserves real static 
   assert.match(authStatus, /account\.href = "\/account\.html"/);
   assert.match(authStatus, /account\.textContent = "My Account"/, 'Account remains available from the profile menu');
   assert.match(authStatus, /document\.body\.dataset\.page === "account"\) account\.setAttribute\("aria-current", "page"\)/, 'Account keeps its active-page indicator inside the profile menu');
-  assert.match(site, /confirm\(/);
+  assert.match(site, /nav\.append\(accountStatus, clear\)/, 'the existing clear-plan control remains in the shared header');
+});
+
+test('Clear Plan uses an accessible dialog and only explicit confirmation removes the current plan', () => {
+  const site = fs.readFileSync(path.join(root, 'js/site.js'), 'utf8');
+  assert.match(site, /createElement\("dialog"\); dialog\.id = "clear-plan-dialog"; dialog\.className = "clearPlanDialog"/);
+  assert.match(site, /aria-labelledby", "clear-plan-title"/);
+  assert.match(site, /aria-describedby", "clear-plan-message"/);
+  for (const text of ['Clear your plan?', 'This will remove your current plan from the planner. Make sure you no longer need it before continuing.', 'Keep My Plan', 'Clear Plan', 'Account-saved plans are not deleted.']) assert.ok(site.includes(text), `confirmation dialog should explain ${text}`);
+  assert.match(site, /dialog\.showModal\(\)[\s\S]*querySelector\("\[data-keep-plan\]"\)\.focus\(\)/, 'the modal opens and initially focuses the safe choice');
+  assert.match(site, /keep\.addEventListener\("click", \(\) => dialog\.close\("keep"\)\)/);
+  assert.match(site, /dialog\.addEventListener\("cancel", event => \{ event\.preventDefault\(\); dialog\.close\("keep"\); \}\)/, 'Escape closes without clearing');
+  assert.match(site, /confirmClear\.addEventListener\("click", \(\) => \{[\s\S]*CampusBridgePlanState\?\.clearPlan\(\)[\s\S]*dialog\.close\("clear"\)/, 'only the explicit confirmation button clears the plan');
+  assert.match(site, /dialog\.addEventListener\("close", \(\) => clearPlanTrigger\?\.focus/);
+  assert.doesNotMatch(site, /window\.confirm\(/, 'the browser confirm prompt is replaced by the accessible dialog');
 });
 
 test('every shared dropdown option receives its own decorative outline icon', () => {

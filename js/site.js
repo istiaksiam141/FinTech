@@ -135,10 +135,31 @@
   }
   const updateHeader = () => document.getElementById("topbar")?.classList.toggle("scrolled", window.scrollY > 12);
   window.addEventListener("scroll", updateHeader, { passive: true }); updateHeader();
+  let clearPlanTrigger = null;
   document.querySelectorAll("[data-clear-plan]").forEach(button => button.addEventListener("click", () => {
-    if (!window.confirm("Clear the saved plan from this browser tab? This cannot be undone.")) return;
-    const cleared = window.CampusBridgePlanState?.clearPlan();
-    if (!cleared) { window.alert("The saved plan could not be cleared in this browser session."); return; }
-    window.location.href = "/planner.html";
+    const dialog = document.getElementById("clear-plan-dialog");
+    if (!dialog || typeof dialog.showModal !== "function") return;
+    dialog.returnValue = "";
+    const error = dialog.querySelector("[data-clear-plan-error]");
+    error.hidden = true; error.textContent = "";
+    clearPlanTrigger = button;
+    dialog.showModal();
+    dialog.querySelector("[data-keep-plan]").focus();
   }));
+  if (document.querySelector("[data-clear-plan]") && !document.getElementById("clear-plan-dialog")) {
+    const dialog = document.createElement("dialog"); dialog.id = "clear-plan-dialog"; dialog.className = "clearPlanDialog";
+    dialog.setAttribute("aria-labelledby", "clear-plan-title"); dialog.setAttribute("aria-describedby", "clear-plan-message");
+    dialog.innerHTML = '<div class="clearPlanDialogContent"><h2 id="clear-plan-title">Clear your plan?</h2><p id="clear-plan-message">This will remove your current plan from the planner. Make sure you no longer need it before continuing.</p><p class="clearPlanDialogNote">This clears this browser tab’s current planner state only. Account-saved plans are not deleted.</p><p class="clearPlanDialogError" data-clear-plan-error role="status" aria-live="polite" hidden></p><div class="clearPlanDialogActions"><button type="button" class="button" data-keep-plan>Keep My Plan</button><button type="button" class="button clearPlanConfirm" data-confirm-clear-plan>Clear Plan</button></div></div>';
+    document.body.append(dialog);
+    const keep = dialog.querySelector("[data-keep-plan]"), confirmClear = dialog.querySelector("[data-confirm-clear-plan]"), error = dialog.querySelector("[data-clear-plan-error]");
+    keep.addEventListener("click", () => dialog.close("keep"));
+    dialog.addEventListener("cancel", event => { event.preventDefault(); dialog.close("keep"); });
+    confirmClear.addEventListener("click", () => {
+      const cleared = window.CampusBridgePlanState?.clearPlan();
+      if (!cleared) { error.textContent = "The current plan could not be cleared in this browser tab. No saved account plan was changed."; error.hidden = false; keep.focus(); return; }
+      dialog.close("clear");
+      window.location.href = "/planner.html";
+    });
+    dialog.addEventListener("close", () => clearPlanTrigger?.focus({ preventScroll: true }));
+  }
 })();

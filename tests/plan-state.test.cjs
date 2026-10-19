@@ -53,10 +53,12 @@ test('plan state safely rejects missing, corrupt, unsupported, incomplete and in
 
 test('clearing plan removes the current tab state and mode switching stays valid', () => {
   const storage = memoryStorage(), state = create(storage);
+  storage.setItem('unrelated-record', 'preserve this data');
   assert.equal(state.savePlan(validProfile({ planningMode: Finance.PLANNING_MODES.TUITION_ONLY })).ok, true);
   assert.equal(state.loadPlan().profile.planningMode, Finance.PLANNING_MODES.TUITION_ONLY);
   assert.equal(state.clearPlan(), true);
   assert.equal(state.loadPlan().reason, 'missing');
+  assert.equal(storage.getItem('unrelated-record'), 'preserve this data', 'clearing the planner preserves unrelated saved data');
 });
 
 test('saved stress inputs are validated and results are recalculated from the saved baseline', () => {
