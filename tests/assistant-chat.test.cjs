@@ -51,7 +51,7 @@ test('assistant chat validates saved messages and scopes operations to the authe
   assert.equal((await other.deleteConversation(created.conversation.id)).ok, false);
 });
 
-test('assistant page exposes saved conversations while retaining the question-only AI request', () => {
+test('assistant page exposes saved conversations and sends only trusted conversation references, not browser history', () => {
   const root = path.join(__dirname, '..');
   const page = fs.readFileSync(path.join(root, 'assistant.html'), 'utf8');
   const script = fs.readFileSync(path.join(root, 'js', 'assistant-page.js'), 'utf8');
@@ -59,7 +59,13 @@ test('assistant page exposes saved conversations while retaining the question-on
   assert.ok(page.indexOf('assistant-conversation-list') < page.indexOf('assistant-form'));
   assert.match(page, /assistant-chat\.js[\s\S]*assistant-page\.js/);
   assert.match(page, /Signed-in conversations, including your questions and answers, are saved/);
-  assert.match(script, /JSON\.stringify\(\{ question: text \}\)/);
+  assert.match(page, /prior messages remain available in your account but are not sent to the AI service/);
+  assert.match(script, /Sending only your question to CampusBridge AI/);
+  assert.match(script, /requestBody = \{ question: text \}/);
+  assert.match(script, /requestBody\.conversationId = savedQuestion\.conversationId/);
+  assert.match(script, /requestBody\.currentMessageId = savedQuestion\.currentMessageId/);
+  assert.match(script, /headers\.Authorization = `Bearer \$\{accessToken\}`/);
+  assert.doesNotMatch(script, /requestBody\.messages|JSON\.stringify\(\{[^}]*messages/);
   assert.match(script, /assistant-new-conversation/);
   assert.match(script, /deleteConversation\(row\.id\)/);
   const submitFlow = script.slice(script.indexOf('form.addEventListener("submit"'));

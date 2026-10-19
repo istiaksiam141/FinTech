@@ -850,7 +850,7 @@ test('active UI has blank financial inputs and working external quote paths; scr
 
 test('student-facing privacy notices, progressive quote entry, and technical disclosures are present',()=>{
   const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'planner.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
-  for(const marker of ['id="privacy"','Your question is sent to the AI assistant','Your financial form and quote entries are not included','id="addQuoteProvider"','What will the downloaded report contain?','id="requirements"','Technical integration readiness','formal privacy/terms documents are not configured']) assert.ok(html.includes(marker),`missing ${marker}`);
+  for(const marker of ['id="privacy"','Supported planning and quote questions are answered locally. General questions are sent to the AI assistant.','Your financial form and quote entries are not included','id="addQuoteProvider"','What will the downloaded report contain?','id="requirements"','Technical integration readiness','formal privacy/terms documents are not configured']) assert.ok(html.includes(marker),`missing ${marker}`);
   assert.match(app,/providerDefs\.slice\(0,\s*visibleProviderCount\)/,'quote forms are shown progressively');
   assert.match(app,/quoteDrafts\.clear\(\)/,'clearing planner inputs also clears saved-in-page quote drafts');
   assert.match(app,/What this estimate uses/);

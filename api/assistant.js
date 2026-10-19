@@ -1,6 +1,7 @@
 "use strict";
 
 const { randomUUID } = require("node:crypto");
+const AssistantContext = require("../lib/assistant-context.js");
 const DEFAULT_MODEL = "openai/gpt-oss-20b";
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 const MAX_QUESTION_CHARS = 1000;
@@ -10,7 +11,7 @@ const MAX_OUTPUT_CHARS = 16000;
 const GROQ_REQUEST_TIMEOUT_MS = 30000;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_REQUESTS = 12;
-const SYSTEM_PROMPT = "You are CampusBridge AI, a helpful explainer for students planning overseas tuition payments. Give a direct, accurate answer first, followed by enough explanation to help the student understand. Adapt the length to the actual question and do not pad answers just to use the available output. For a simple question, usually answer in about two to four sentences and include one relevant example when useful. For an ordinary explanatory question, use a few clear paragraphs or three to six useful bullet points. For a complex question, give a structured, more detailed explanation with helpful examples and important caveats. Use natural, simple English and Markdown that is clear and easy to read; use headings only when they help organize a genuinely detailed answer. Avoid filler, repetition, unnecessary introductions, and excessive formatting. Finish each explanation, example, list, and sentence before stopping; prioritize the direct answer and essential details over optional detail if space is limited. Never begin a table unless you can finish it; prefer brief prose or useful bullets for comparisons. If you are unsure or the question lacks essential context, say so plainly and ask one focused clarifying question rather than guessing. Never invent facts, rates, fees, dates, statistics, provider offers, quote validity, or verification claims, and never claim to have accessed live data or completed an action unless that actually happened. You receive only the user's question, not their financial profile, exchange rates, or provider quotes. Never calculate or invent personal financial figures or savings projections. Direct personal plan calculations to the deterministic local planner. This is educational information, not financial advice.";
+const SYSTEM_PROMPT = "You are CampusBridge AI, a helpful explainer for students planning overseas tuition payments. Give a direct, accurate answer first, followed by enough explanation to help the student understand. Adapt the length to the actual question and do not pad answers just to use the available output. For a simple question, usually answer in about two to four sentences and include one relevant example when useful. For an ordinary explanatory question, use a few clear paragraphs or three to six useful bullet points. For a complex question, give a structured, more detailed explanation with helpful examples and important caveats. Use natural, simple English and Markdown that is clear and easy to read; use headings only when they help organize a genuinely detailed answer. Avoid filler, repetition, unnecessary introductions, and excessive formatting. Finish each explanation, example, list, and sentence before stopping; prioritize the direct answer and essential details over optional detail if space is limited. Never begin a table unless you can finish it; prefer brief prose or useful bullets for comparisons. If you are unsure or the question lacks essential context, say so plainly and ask one focused clarifying question rather than guessing. Never invent facts, rates, fees, dates, statistics, provider offers, quote validity, or verification claims, and never claim to have accessed live data or completed an action unless that actually happened. You receive only the current question. You do not receive prior conversation messages, the user's financial plan, balances, quotes, or other database records. Never calculate or invent personal financial figures or savings projections. Direct personal plan calculations to the deterministic local planner. This is educational information, not financial advice.";
 
 function trimToNaturalBoundary(text, maxLength) {
   if (text.length <= maxLength) return text.trim();
@@ -78,12 +79,17 @@ function readQuestion(request) {
   }
   if (!body || typeof body !== "object" || Array.isArray(body)) return { error: "The request must contain a JSON object." };
   if (Buffer.byteLength(JSON.stringify(body), "utf8") > MAX_BODY_BYTES) return { error: "The request is too large." };
-  if (Object.keys(body).some(key => key !== "question")) return { error: "Only a question is accepted; financial profile and quote data are not accepted." };
+  if (Object.keys(body).some(key => !["question", "conversationId", "currentMessageId"].includes(key))) return { error: "Only a question and saved conversation references are accepted; financial profile, quote data, and message history are not accepted." };
   if (typeof body.question !== "string") return { error: "Question must be text." };
   const question = body.question.trim();
   if (!question) return { error: "Enter a question first." };
   if (question.length > MAX_QUESTION_CHARS) return { error: `Question must be ${MAX_QUESTION_CHARS} characters or fewer.` };
-  return { question };
+  const conversationId = body.conversationId;
+  const currentMessageId = body.currentMessageId;
+  if ((conversationId !== undefined || currentMessageId !== undefined) && (!AssistantContext.UUID.test(String(conversationId || "")) || !AssistantContext.UUID.test(String(currentMessageId || "")))) {
+    return { error: "Saved conversation context requires valid conversation and current message identifiers." };
+  }
+  return { question, conversationId: conversationId || null, currentMessageId: currentMessageId || null };
 }
 
 function requestIdentity(request) {
@@ -99,7 +105,7 @@ function safeDiagnostic(error) {
   return diagnostic;
 }
 
-function createAssistantHandler({ env = process.env, createClient, rateLimiter = createRateLimiter() } = {}) {
+function createAssistantHandler({ env = process.env, createClient, rateLimiter = createRateLimiter(), contextLoader = AssistantContext.loadOwnedConversationContext, fetchImpl = globalThis.fetch } = {}) {
   let client;
   return async function assistantHandler(request, response) {
     if (request.method !== "POST") {
@@ -107,7 +113,7 @@ function createAssistantHandler({ env = process.env, createClient, rateLimiter =
       return sendJson(response, 405, { error: "Use POST to ask the assistant." });
     }
 
-    const { question, error: validationError } = readQuestion(request);
+    const { question, conversationId, currentMessageId, error: validationError } = readQuestion(request);
     if (validationError) return sendJson(response, 400, { error: validationError });
 
     const limit = rateLimiter(requestIdentity(request));
@@ -121,6 +127,19 @@ function createAssistantHandler({ env = process.env, createClient, rateLimiter =
 
     const requestId = randomUUID();
     try {
+      let conversationMessages = [{ role: "user", content: question }];
+      if (conversationId) {
+        const context = await contextLoader({
+          conversationId, currentMessageId, question,
+          authorization: request.headers?.authorization || request.headers?.Authorization,
+          env, fetchImpl
+        });
+        if (!context?.ok) return sendJson(response, context?.status || 502, { error: context?.error || "Could not load saved conversation context.", requestId });
+        conversationMessages = context.messages;
+        if (!Array.isArray(conversationMessages) || conversationMessages.length !== 1 || conversationMessages[0]?.role !== "user" || conversationMessages[0]?.content !== question) {
+          return sendJson(response, 502, { error: "Could not prepare saved conversation context.", requestId });
+        }
+      }
       if (!client) {
         const OpenAI = createClient ? null : require("openai");
         client = createClient
@@ -132,7 +151,7 @@ function createAssistantHandler({ env = process.env, createClient, rateLimiter =
         model,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: question }
+          ...conversationMessages
         ],
         max_completion_tokens: MAX_OUTPUT_TOKENS
       });
