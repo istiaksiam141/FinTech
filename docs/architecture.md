@@ -12,6 +12,7 @@ The repository identifies CampusBridge AI as a FinTechathon 2026 project for stu
 | --- | --- |
 | `app.js`, `js/*-page.js` | Page interaction and rendering. The planner remains the primary source for plan inputs. |
 | `lib/finance.js` | Validates financial inputs and calculates estimates, contribution schedules, stress scenarios, and quote eligibility/ranking. |
+| `lib/assistant-task.js` | Routes supported assistant tasks through existing deterministic finance functions using current validated planner state; it does not send that state to the AI endpoint. |
 | `lib/plan-state.js` | Stores a versioned allowlist of validated current planner inputs and stress inputs in tab-scoped `sessionStorage`; dependent pages recalculate from the inputs. |
 | `lib/bangladesh-bank-rates.js`, `lib/exchange-rates.js` | Fetch/parse/validate official rate sheet data and map it into planner rates. |
 | `lib/cloud-plans.js` | Authenticated, validated operations on Supabase `saved_plans`. |
@@ -57,8 +58,8 @@ The repository identifies CampusBridge AI as a FinTechathon 2026 project for stu
 
 ### AI and chat history
 
-1. The assistant UI runs selected funding-gap questions locally through `lib/finance.js`.
-2. For general questions, the browser posts only `{ question }` to `/api/assistant`.
+1. The shared assistant task router uses validated current planner state and `lib/finance.js` for supported funding, savings, budget, rate-provenance, and quote-comparison tasks. Missing inputs are not guessed.
+2. For general questions not handled locally, the browser posts only `{ question }` to `/api/assistant`.
 3. `api/assistant.js` validates the request, reads `GROQ_API_KEY` from the server environment, and sends a system instruction plus that one question to Groq. Saved conversation history, planner data, quotes, and account details are not sent as context.
 4. For a signed-in user, `lib/assistant-chat.js` separately saves the question and displayed answer in `assistant_messages`, associated with `assistant_conversations`. The browser lists and filters by the authenticated user ID; intended authorization is enforced by the policies in `docs/supabase-assistant-chat.sql`.
 5. Signed-out chat remains in page memory only. The conversation SQL file is a reviewed migration artifact; this repository cannot confirm it has been applied to any Supabase project.

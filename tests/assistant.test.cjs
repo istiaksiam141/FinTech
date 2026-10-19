@@ -223,6 +223,7 @@ test('existing Phase 1/2 finance and quote rules remain deterministic', () => {
   assert.equal(typeof Finance.compareEnteredQuotes, 'function');
   assert.equal(typeof Finance.validateEnteredQuote, 'function');
   const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
-  assert.match(app, /Scheduled monthly target/);
+  assert.match(app, /CampusBridgeAssistantTask\.run/);
+  assert.match(fs.readFileSync(path.join(__dirname, '..', 'lib', 'assistant-task.js'), 'utf8'), /Finance\.describeMonthlySavingsTarget/);
   assert.match(app, /Finance\.describeMonthlySavingsTarget/);
 });

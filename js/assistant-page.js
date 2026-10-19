@@ -125,13 +125,11 @@
 
     try {
       const plan = loadPlan();
-      if (plan.ok && /funding gap|how much.*save|monthly target|can i afford/.test(text.toLowerCase())) {
-        const target = Finance.describeMonthlySavingsTarget(plan.result);
-        const targetText = target.state === "covered" ? target.message : target.state === "unavailable" ? target.message : `The adjusted contribution schedule is ${money(target.regularAmount)} for each regular cycle, then ${money(target.finalAmount)} in the final cycle.`;
-        const content = `Based on your saved plan, the estimated funding gap is ${money(plan.result.gap)}. ${targetText} The projection assumes your entered monthly surplus continues; it is not a guarantee.`;
-        Renderer.render(turn.response, content);
-        status.textContent = "Answered locally from the deterministic planner. No plan details were sent to the AI service.";
-        if (requestConversationId && requestConversationId === activeConversationId) await saveAnswer(content);
+      const task = window.CampusBridgeAssistantTask.run({ question: text, Finance, plan, money });
+      if (task.handled) {
+        Renderer.render(turn.response, task.answer);
+        status.textContent = "Answered locally using validated planner results. No plan or quote details were sent to the AI service.";
+        if (requestConversationId && requestConversationId === activeConversationId) await saveAnswer(task.answer);
         return;
       }
 
