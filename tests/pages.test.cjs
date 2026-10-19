@@ -60,6 +60,9 @@ test('shared navigation points to every migrated page and preserves real static 
   assert.match(css, /\.topbar \.navlinks>\.aiNavPill\[aria-current=page\]\{border-color:#dce3ff;background:#dce3ff;color:#2d3a75/);
   assert.match(css, /\.topbar \.navlinks>\.aiNavPill:focus-visible\{outline:3px solid #c5d0ff/);
   assert.match(css, /\.topbar \.navlinks>a\.navPill:focus-visible/);
+  assert.match(css, /\.navAuthSlot \.profileDropdown a\{border-color:#e7ece5;background:#f5f7f3;color:#245b47\}/, 'profile links have an explicit readable resting state inside the navigation');
+  assert.match(css, /\.navAuthSlot \.profileDropdown a:hover,\.navAuthSlot \.profileDropdown a:focus-visible\{border-color:#d4e3d6;background:#edf4ee;color:#104b38\}/, 'profile-link hover and keyboard focus states stay readable');
+  assert.match(css, /\.navAuthSlot \.profileDropdown a\[aria-current=page\]\{border-color:#dcebe0;background:#e7f1e9;color:#124f3b\}/, 'the active My Account link keeps its separate pale-sage state');
 });
 
 test('Clear Plan uses an accessible dialog and only explicit confirmation removes the current plan', () => {

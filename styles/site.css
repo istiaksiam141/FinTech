@@ -456,7 +456,12 @@ body[data-page="planner"] .planningModeNote{padding:12px 14px;border-radius:11px
 .profileDropdown .accountStatus{padding-bottom:10px;border-bottom:1px solid #e7ebe5}
 .profileDropdown a,.profileDropdown .profileLogout{display:flex;align-items:center;min-height:42px;padding:9px 11px;border:1px solid transparent;border-radius:10px;background:transparent;color:#245b47;font:600 .88rem 'DM Sans',sans-serif;text-align:left;text-decoration:none;cursor:pointer}
 .profileDropdown a:hover,.profileDropdown .profileLogout:hover{border-color:#e0e9e1;background:#edf4ee;color:#104b38}
-.profileDropdown a[aria-current=page]{border-color:#dcebe0;background:#e7f1e9;color:#124f3b}
+.navAuthSlot .profileDropdown a{border-color:#e7ece5;background:#f5f7f3;color:#245b47}
+.navAuthSlot .profileDropdown a:visited{color:#245b47}
+.navAuthSlot .profileDropdown a:hover,.navAuthSlot .profileDropdown a:focus-visible{border-color:#d4e3d6;background:#edf4ee;color:#104b38}
+.navAuthSlot .profileDropdown a:active{border-color:#c8dccd;background:#e1eee4;color:#104b38}
+.navAuthSlot .profileDropdown a[aria-current=page]{border-color:#dcebe0;background:#e7f1e9;color:#124f3b}
+.navAuthSlot .profileDropdown a:focus-visible{outline:3px solid #8cbea5;outline-offset:2px}
 .profileDropdown .profileLogout{width:100%}
 @media(max-width:1200px){
   .navAuthSlot{width:100%;justify-content:flex-start;padding:5px 0}
