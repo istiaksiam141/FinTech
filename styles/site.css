@@ -656,6 +656,7 @@ body[data-page="planner"] .resultDetails .metric strong{font-size:1rem;color:#34
 :root{color-scheme:light}
 body:before{background-image:linear-gradient(rgba(120,139,119,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(120,139,119,.025) 1px,transparent 1px)}
 .pageHero .lead{color:#64655e}
+.featureForm label{color:#4d5751}
 .homeUspCard .eyebrow{color:#23795d}
 .homeUspCard h3{color:#193a32}
 .homeUspCard>p{color:#5c665e}

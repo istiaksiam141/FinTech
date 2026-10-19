@@ -253,3 +253,8 @@ test('shared navigation uses a subtle translucent glass treatment', () => {
   assert.match(css, /\.topbar,\.topbar\.scrolled\{[^}]*backdrop-filter:blur\(18px\) saturate\(140%\)/);
   assert.match(css, /\.topbar,\.topbar\.scrolled\{[^}]*-webkit-backdrop-filter:blur\(18px\) saturate\(140%\)/);
 });
+
+test('light feature form labels use readable dark text', () => {
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(css, /\.featureForm label\{color:#4d5751\}/);
+});
