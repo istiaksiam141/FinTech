@@ -6,6 +6,7 @@
 
   const fieldsets = [...form.querySelectorAll(":scope > fieldset.formSection")];
   const intro = form.querySelector(":scope > .formIntro");
+  const outcomePreview = form.querySelector(":scope > .plannerOutcomePreview");
   const footer = form.querySelector(":scope > .formFooter");
   const planningMode = form.querySelector(":scope > .planningModeSelector");
   const requiredHint = form.querySelector(":scope > .requiredHint");
@@ -182,7 +183,7 @@
   progressStatus.className = "plannerProgressStatus";
   progressStatus.setAttribute("aria-live", "polite");
   stepper.append(progress, progressStatus, ...panels);
-  intro.after(stepper);
+  (outcomePreview || intro).after(stepper);
   const stageErrors = panels.map(panel => panel.querySelector(".plannerStepError"));
   const progressButtons = [...progress.querySelectorAll("button")];
   const requiredControls = [...form.querySelectorAll("[required]")].map(control => ({

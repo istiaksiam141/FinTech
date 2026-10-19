@@ -8,7 +8,7 @@
   <title>Financial Planner — CampusBridge AI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles/site.css">
 </head>
 <body data-page="planner">
@@ -38,6 +38,16 @@
       <div class="sectionHead"><span class="eyebrow">01 · Study-abroad financial readiness</span><h2>Your plan, in one view.</h2><p>Estimate your study-abroad costs, available funds, and the gap to your deadline. Calculations run locally and do not fill in missing cost or rate data.</p></div>
       <div class="plannerGrid"><form class="surface formCard" id="profileForm">
         <div class="formIntro"><div><span class="eyebrow">Your financial profile</span><h3>Plan your study-abroad costs</h3><p>Use current figures from your bank or provider. Calculations run in this tab; inputs clear when you reload or clear the planner.</p></div><span class="formSecure"><span aria-hidden="true">●</span> Calculated on this device</span></div>
+        <section class="plannerOutcomePreview" aria-labelledby="plannerOutcomeTitle">
+          <div class="plannerOutcomeIntro"><span class="eyebrow">Your first result</span><h2 id="plannerOutcomeTitle">Know what the numbers will tell you.</h2></div>
+          <div class="plannerOutcomeGrid">
+            <article><span class="plannerOutcomeNumber" aria-hidden="true">01</span><div><h3>Total estimated cost</h3><p>Tuition plus the costs you include.</p></div></article>
+            <article><span class="plannerOutcomeNumber" aria-hidden="true">02</span><div><h3>Available funds</h3><p>Savings, excluding protected and committed amounts.</p></div></article>
+            <article><span class="plannerOutcomeNumber" aria-hidden="true">03</span><div><h3>Funding gap</h3><p>What remains after available funds.</p></div></article>
+            <article><span class="plannerOutcomeNumber" aria-hidden="true">04</span><div><h3>Needed by your deadline</h3><p>A dated savings target, checked against your monthly surplus.</p></div></article>
+          </div>
+          <p class="plannerOutcomeNote">You’ll see these after you review your assumptions and calculate your plan.</p>
+        </section>
         <fieldset class="planningModeSelector" aria-describedby="planningModeHelp"><legend>Choose your planning mode</legend><p id="planningModeHelp" class="small muted">Your entries stay in the form when you switch modes.</p><div class="planningModeChoices"><label class="planningModeCard isSelected"><input type="radio" name="planningMode" value="all-costs" checked><span><strong>All Study-Abroad Costs</strong><small>Estimate your complete study-abroad budget and find out how much funding you still need.</small></span></label><label class="planningModeCard"><input type="radio" name="planningMode" value="tuition-only"><span><strong>Tuition Only</strong><small>Calculate your tuition costs and the funding gap for tuition.</small></span></label></div><p id="planningModeNote" class="planningModeNote" aria-live="polite">Optional cost estimates left blank are not included in the total.</p></fieldset>
         <p class="requiredHint"><span aria-hidden="true">*</span> Required fields are marked. Optional cost, savings, and fee estimates can be left blank if they do not apply.</p>
         <fieldset class="formSection"><legend><span class="stepNumber">01</span>Destination &amp; tuition</legend><div class="fieldGrid">
@@ -98,7 +108,7 @@
       </div>
     </div></section>
     <section class="section" id="assistant"><div class="wrap">
-      <div class="sectionHead"><span class="eyebrow">03 · Explainable assistant</span><h2>Ask about your plan.</h2><p>Tuition calculations and quote comparisons stay in your browser. General questions are sent to CampusBridge AI for an explanation; the assistant cannot access your plan, accounts, provider quotes, or payment tools.</p></div>
+      <div class="sectionHead"><span class="eyebrow">03 · Explanations after calculation</span><h2>Understand your results.</h2><p>The planner is the source of your validated financial figures; calculations and quote comparisons stay in your browser. The assistant can explain general concepts, but it does not calculate, verify, or change your plan.</p></div>
       <div class="surface assistantPanel"><label for="question">Your question</label><div class="privacyNotice" role="note"><strong>Before you ask</strong><span>Supported planning and quote questions are answered locally. General questions are sent to the AI assistant. Do not include your name, student ID, account details, or other sensitive information. Your financial form and quote entries are not included.</span></div><div class="askRow"><input id="question" type="text" maxlength="1000" autocomplete="off" placeholder="Ask a general question about tuition planning"><button class="button primary" id="askButton" type="button">Ask CampusBridge</button></div><p id="assistant-inline-status" class="small muted" role="status" aria-live="polite"></p><div id="answer" class="answer assistantConversation" role="log" aria-live="polite" aria-relevant="additions text">Try asking about your funding gap, monthly savings, or transfer fees.</div><div class="activityHead"><h3>Recent actions in this tab</h3><button class="button smallbtn" id="clearLog" type="button">Clear activity</button></div><ol id="activityLog" class="activityLog"></ol><p class="small muted">The activity list is held in this page and does not include your question text or financial values.</p></div>
     </div></section>
     <section class="section" id="privacy"><div class="wrap">

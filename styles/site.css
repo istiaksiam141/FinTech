@@ -10,7 +10,7 @@
     :root{color-scheme:light;--ink:#1a1a18;--muted:#6b6b66;--quiet:#77766f;--navy:#fdfcf9;--panel:#fff;--panel2:#f7f6f2;--line:#e8e5de;--cyan:#1d9e75;--mint:#e1f5ee;--gold:#d9593f;--r:20px;font-family:'DM Sans',system-ui,sans-serif}
     body{background:#fdfcf9;color:var(--ink);font-family:'DM Sans',system-ui,sans-serif}
     body:before{display:none}
-    h1,h2,.sectionHead h2,.requirementsAside h2{font-family:Fraunces,Georgia,serif;letter-spacing:-.035em;color:#085041}
+    h1,h2,.sectionHead h2,.requirementsAside h2{font-family:Manrope,sans-serif;letter-spacing:-.035em;color:#085041}
     h3{font-family:'DM Sans',sans-serif;letter-spacing:-.025em;color:#193a32}
     .topbar,.topbar.scrolled{background:rgba(253,252,249,.94);border-color:#e8e5de;box-shadow:0 1px 0 rgba(26,26,24,.025);backdrop-filter:blur(16px)}
     .brand{color:#085041;font-family:'DM Sans',sans-serif}
@@ -111,7 +111,7 @@
     .connectSection{background:rgba(233,224,203,.32)}
     @media(max-width:640px){.navlinks{background:rgba(250,247,240,.98)}}
     .hero{background:radial-gradient(ellipse at 82% 13%,rgba(190,151,79,.12),transparent 34%),radial-gradient(ellipse at 14% 78%,rgba(29,158,117,.055),transparent 32%),#f8f4eb;color:#1a1a18;font-family:'DM Sans',system-ui,sans-serif}
-    .hero h1,.hero h2,.hero h3{font-family:Fraunces,Georgia,serif;color:#085041;letter-spacing:-.035em}
+    .hero h1,.hero h2,.hero h3{font-family:Manrope,sans-serif;color:#085041;letter-spacing:-.035em}
     .hero h1 em{font-style:italic;background:none;color:#b75539}
     .hero .lead{color:#64655e}
     .hero .trustline{color:#646b62}
@@ -154,7 +154,7 @@
     .deadlineCalendar{position:absolute;z-index:15;top:calc(100% + 10px);left:0;width:min(340px,calc(100vw - 48px));padding:17px;border:1px solid #e6e2d8;border-radius:18px;background:#fffefa;box-shadow:0 20px 55px rgba(34,49,39,.18),0 3px 10px rgba(34,49,39,.06);color:#28372f}
     .deadlineCalendar[hidden]{display:none}
     .calendarNav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
-    .calendarMonth{color:#193a32;font:600 1rem Fraunces,Georgia,serif}
+    .calendarMonth{color:#193a32;font:600 1rem Manrope,sans-serif}
     .calendarNavButtons{display:flex;gap:6px}
     .calendarNav button{display:grid;width:34px;height:34px;place-items:center;border:1px solid #e8e5de;border-radius:10px;background:#fff;color:#155b49;font-size:1.1rem;cursor:pointer}
     .calendarNav button:hover:not(:disabled){border-color:#a8cdb9;background:#f1faf6}
@@ -271,7 +271,7 @@ body[data-page="planner"] #home,body[data-page="planner"] #roadmap,body[data-pag
 :root,body{font-family:'DM Sans',sans-serif}
 h1,h2,h3,.hero h1,.hero h2,.hero h3{font-family:Manrope,sans-serif}
 .brand{font-family:Manrope,sans-serif}
-.hero h1{font-family:Fraunces,Georgia,serif;letter-spacing:-.035em}
+.hero h1{font-family:Manrope,sans-serif;letter-spacing:-.035em}
 .hero{font-family:'DM Sans',sans-serif}
 .hero .button{font-family:'DM Sans',sans-serif}
 .pageSummary:empty,.featureResults:empty,.answer:empty,.readinessReportPage:empty{display:none}
@@ -336,7 +336,7 @@ body[data-page="home"] .homeNotice p{margin-top:6px;color:#64655e}
 @media(max-width:900px){body[data-page="home"] .hero{min-height:auto;padding:126px 0 58px}body[data-page="home"] .heroGrid{grid-template-columns:1fr;gap:34px}body[data-page="home"] .heroCopy{max-width:760px}body[data-page="home"] .hero .homeCards{max-width:760px;grid-template-columns:minmax(0,1fr) minmax(190px,250px) minmax(0,1fr);gap:12px}}
 @media(max-width:640px){body[data-page="home"] .hero{padding:108px 0 46px}body[data-page="home"] .heroGrid{gap:28px}body[data-page="home"] .hero h1{font-size:clamp(2.8rem,12vw,4rem)}body[data-page="home"] .hero .lead{font-size:.98rem;line-height:1.72}body[data-page="home"] .hero .homeCards{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto;gap:10px}body[data-page="home"] .hero .homeCard{grid-area:auto;min-height:126px;padding:14px}body[data-page="home"] .homeGlobe{position:relative;top:auto;left:auto;grid-column:1/-1;grid-row:1;width:174px;margin:0 auto 2px;transform:none}body[data-page="home"] .hero .homeCard:nth-of-type(1){grid-area:2/1}body[data-page="home"] .hero .homeCard:nth-of-type(2){grid-area:2/2}body[data-page="home"] .hero .homeCard:nth-of-type(3){grid-area:3/1}body[data-page="home"] .hero .homeCard:nth-of-type(4){grid-area:3/2}body[data-page="home"] .hero .homeCard:nth-of-type(5){grid-area:4/1}body[data-page="home"] .hero .homeCard:nth-of-type(6){grid-area:4/2}body[data-page="home"] .hero .homeCard h2{font-size:.95rem}body[data-page="home"] .hero .homeCard p{font-size:.74rem}body[data-page="home"] .section{padding:66px 0}}
 @media(prefers-reduced-motion:reduce){body[data-page="home"] .homeGlobeAura,body[data-page="home"] .homeGlobeSphere,body[data-page="home"] .homeGlobeMap{animation:none}}
-.hero h1,.pageHero h1,.sectionHead h2,.requirementsAside h2{font-family:Fraunces,Georgia,serif;letter-spacing:-.035em;color:#085041}
+.hero h1,.pageHero h1,.sectionHead h2,.requirementsAside h2{font-family:Manrope,sans-serif;letter-spacing:-.035em;color:#085041}
 
 /* Planner layout follows the roomy, green-and-ivory reference while retaining the existing form and result behavior. */
 .wrap{width:min(1476px,calc(100% - 48px))}
@@ -866,12 +866,30 @@ body[data-page="planner"] #profileForm h5,
 body[data-page="planner"] #profileForm legend,
 body[data-page="planner"] #profileForm .planningModeCard strong{font-family:Manrope,sans-serif}
 
-/* Shared type system: keep large h1/h2 display treatments intact */
+/* Shared type system: keep large heading sizes and treatments intact */
 body[data-page]{font-family:'DM Sans',sans-serif}
 body[data-page] :is(button,input,select,textarea){font-family:'DM Sans',sans-serif}
-body[data-page] :is(h3,h4,h5,legend,summary,.calendarMonth){font-family:Manrope,sans-serif}
+body[data-page] :is(h1,h2,h3,h4,h5,legend,summary,.calendarMonth){font-family:Manrope,sans-serif}
 body[data-page] .brand{font-family:Manrope,sans-serif}
 body[data-page] .transferPageQuotes .providerNameLabel input{font-family:'DM Sans',sans-serif}
+
+/* Put the planner's calculation outcome before the input flow */
+body[data-page="planner"] .plannerOutcomePreview{max-width:100%;margin:0 0 16px;padding:18px;border:1px solid #dce8dc;border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(237,246,238,.88));box-shadow:0 12px 30px rgba(38,87,55,.07)}
+body[data-page="planner"] .plannerOutcomeIntro{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px}
+body[data-page="planner"] .plannerOutcomeIntro .eyebrow{flex:none;font-size:.63rem}
+body[data-page="planner"] .plannerOutcomeIntro h2{color:#193a32;font:700 .99rem Manrope,sans-serif;letter-spacing:-.025em}
+body[data-page="planner"] .plannerOutcomeGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+body[data-page="planner"] .plannerOutcomeGrid article{display:flex;min-width:0;align-items:flex-start;gap:9px;padding:10px;border:1px solid rgba(213,228,214,.9);border-radius:12px;background:rgba(255,255,255,.8)}
+body[data-page="planner"] .plannerOutcomeNumber{display:grid;width:23px;height:23px;flex:0 0 23px;place-items:center;border-radius:8px;background:#e6f2e8;color:#267357;font-size:.61rem;font-weight:800}
+body[data-page="planner"] .plannerOutcomeGrid h3{margin:1px 0 2px;color:#193a32;font:700 .76rem Manrope,sans-serif;letter-spacing:-.01em}
+body[data-page="planner"] .plannerOutcomeGrid p{color:#626d64;font-size:.68rem;line-height:1.4}
+body[data-page="planner"] .plannerOutcomeNote{margin-top:10px;color:#687168;font-size:.7rem;line-height:1.45}
+@media(max-width:520px){
+  body[data-page="planner"] .plannerOutcomePreview{padding:14px}
+  body[data-page="planner"] .plannerOutcomeIntro{align-items:flex-start;flex-direction:column;gap:3px}
+  body[data-page="planner"] .plannerOutcomeGrid{grid-template-columns:1fr}
+  body[data-page="planner"] .plannerOutcomeGrid article{padding:9px 10px}
+}
 
 /* Shared warm ivory and evergreen theme */
 :root{color-scheme:light;--ink:#1a1a18;--muted:#606b63;--quiet:#77776f;--navy:#f5f3ec;--panel:#fffefa;--panel2:#f8f7f2;--line:#e7e5dc;--cyan:#267357;--mint:#8fc6a5;--gold:#c9a969}

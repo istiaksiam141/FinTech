@@ -40,6 +40,33 @@ test('planner loads its validated guided steps and review stage', () => {
   new vm.Script(steps, { filename: 'js/planner-steps.js' });
 });
 
+test('planner previews its first calculation and keeps AI explanations secondary', () => {
+  const planner = fs.readFileSync(path.join(root, 'planner.html'), 'utf8');
+  const steps = fs.readFileSync(path.join(root, 'js/planner-steps.js'), 'utf8');
+  const home = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const assistant = fs.readFileSync(path.join(root, 'assistant.html'), 'utf8');
+  const outcomes = [
+    'Total estimated cost',
+    'Available funds',
+    'Funding gap',
+    'Needed by your deadline'
+  ];
+  const previewIndex = planner.indexOf('class="plannerOutcomePreview"');
+  const introIndex = planner.indexOf('class="formIntro"');
+  const planningModeIndex = planner.indexOf('class="planningModeSelector"');
+  assert.ok(previewIndex > introIndex && previewIndex < planningModeIndex, 'the preview appears in the planner before the guided inputs');
+  for (const outcome of outcomes) assert.ok(planner.includes(outcome), `planner previews ${outcome}`);
+  assert.match(planner, /after you review your assumptions and calculate your plan/i);
+  assert.match(planner, /the planner is the source of your validated financial figures/i);
+  assert.match(steps, /\(outcomePreview \|\| intro\)\.after\(stepper\)/, 'the guided stepper stays below the outcome preview');
+  assert.match(assistant, /Use the planner for validated financial calculations/i);
+  assert.match(home, /Calculate first · Understand next/);
+  assert.match(home, /the planner—not the assistant—is the source of the calculation/);
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(css, /body\[data-page="planner"\] \.plannerOutcomeGrid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css, /@media\(max-width:520px\)\{[\s\S]*?\.plannerOutcomeGrid\{grid-template-columns:1fr\}/);
+});
+
 test('planner form uses project fonts without changing its large page headings', () => {
   const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
   assert.match(css, /body\[data-page="planner"\] #profileForm,[\s\S]*?#profileForm button\{font-family:'DM Sans',sans-serif\}/);
@@ -47,11 +74,13 @@ test('planner form uses project fonts without changing its large page headings',
   assert.doesNotMatch(css, /body\[data-page="planner"\] #planner(?: h1| h2)/, 'large planner page headings remain outside the form typography override');
   assert.match(css, /body\[data-page\]\{font-family:'DM Sans',sans-serif\}/, 'every page uses DM Sans for body text');
   assert.match(css, /body\[data-page\] :is\(button,input,select,textarea\)\{font-family:'DM Sans',sans-serif\}/, 'interactive controls use DM Sans on every page');
-  assert.match(css, /body\[data-page\] :is\(h3,h4,h5,legend,summary,\.calendarMonth\)\{font-family:Manrope,sans-serif\}/, 'secondary headings use Manrope without changing large h1/h2 display rules');
+  assert.match(css, /body\[data-page\] :is\(h1,h2,h3,h4,h5,legend,summary,\.calendarMonth\)\{font-family:Manrope,sans-serif\}/, 'all headings use Manrope while the existing size and display rules remain untouched');
+  assert.doesNotMatch(css, /Fraunces/, 'the former display font no longer overrides shared heading styles');
   assert.doesNotMatch(css, /Plus Jakarta Sans/, 'the unused font no longer overrides the shared type system');
   for (const file of routes) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.doesNotMatch(html, /family=Plus\+Jakarta\+Sans/, `${file} does not download an unused font`);
+    assert.doesNotMatch(html, /family=Fraunces/, `${file} does not download the unused display font`);
     assert.match(html, /family=DM\+Sans/, `${file} loads the shared body font`);
     assert.match(html, /family=Manrope/, `${file} loads the shared heading font`);
   }
