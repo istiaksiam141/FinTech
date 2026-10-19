@@ -22,7 +22,7 @@ function loadRateUiHarness(overrides={}) {
   const controls={corridor:{value:'USD'},useExchangeRate:{hidden:false,disabled:false,textContent:''},exchangeRateStatus:{textContent:'',dataset:{}},refreshExchangeRate:{disabled:false},exchangeRate:{value:'manual-rate'},rateSource:{value:'manual-source'},rateTimestamp:{value:'manual-time'},formError:{textContent:''},plannerResults:{innerHTML:''}};
   const now=Date.parse('2026-10-13T12:00:00Z');
   const context={Date:class extends Date { static now(){return now;} },exchangeRateState:{lastResponse:null,nextRequestAt:0,pending:false,mode:'manual',appliedCurrency:null,appliedUpdatedAtMs:null,appliedNextUpdateAtMs:null,selectedCurrency:'USD',staleTimer:null},FX_MIN_REQUEST_INTERVAL:30*60*1000,FX_FAILED_RETRY_DELAY:30*1000,ExchangeRates:{isWithinCacheWindow:()=>false,fetchLatestRates:async()=>({})},corridorMap:{USD:{currency:'USD'}},Finance:{CURRENCY_NAMES:{USD:'US Dollar'}},byId:id=>controls[id],setExchangeRateStatus:(message,state='')=>{controls.exchangeRateStatus.textContent=message;controls.exchangeRateStatus.dataset.state=state;},clearTimeout:()=>{},setTimeout:()=>1,AbortController:class {abort(){}},syncRateTimestampPicker:()=>{},compute:()=>{},renderContributionRoadmap:()=>{},latest:null,...overrides};
-  const functions=[functionSource(app,'function isFetchedExchangeRateStale','function renderFetchedRateStatus'),functionSource(app,'function renderFetchedRateStatus','async function refreshExchangeRate'),functionSource(app,'async function refreshExchangeRate','function useFetchedExchangeRate'),functionSource(app,'function useFetchedExchangeRate','function handleManualRateEdit')].join('\n');
+  const functions='function planCurrency(){return "USD";}\n'+[functionSource(app,'function isFetchedExchangeRateStale','function renderFetchedRateStatus'),functionSource(app,'function renderFetchedRateStatus','async function refreshExchangeRate'),functionSource(app,'async function refreshExchangeRate','function useFetchedExchangeRate'),functionSource(app,'function useFetchedExchangeRate','function handleManualRateEdit')].join('\n');
   vm.runInNewContext(functions,context);
   return {context,controls,now};
 }
@@ -109,7 +109,7 @@ test('all primary corridors have real-currency support without preset conversion
   const referenceRates={GBP:0.79,BDT:120};
   assert.ok(Math.abs(Finance.convert(100,'GBP','BDT',referenceRates)-100*120/.79)<1e-8);
   assert.throws(()=>Finance.convert(1,'GBP','BDT'),/source-identified rate/);
-  assert.throws(()=>Finance.convert(1e12,'GBP','BDT',{GBP:1,BDT:2}),/supported maximum/);
+  assert.equal(Finance.convert(1e12,'GBP','BDT',{GBP:1,BDT:2}),2e12,'conversion output is not limited by the BDT calculation ceiling');
 });
 
 test('requested currencies convert both ways using exact BDT-per-unit rates',()=>{
@@ -129,7 +129,9 @@ test('all requested destination corridors accept matching source-identified rate
   const chinaResult=Finance.calculateTuition(chinaPlan,today);
   assert.equal(chinaResult.tuitionHome,148000);
   assert.equal(Finance.buildReadinessReportData(chinaPlan,chinaResult).tuitionCurrencyName,'Chinese yuan (offshore)');
-  assert.ok(Finance.calculateTuition(profile({destinationCountry:'China',tuitionCur:'USD'}),today).errors.length,'mismatched corridor currencies are rejected');
+  const independentCurrency=Finance.calculateTuition(profile({destinationCountry:'China',tuitionCur:'USD',tuition:'5000',exchangeRate:'123.4'}),today);
+  assert.equal(independentCurrency.ok,true,'planning currency can differ from destination-country currency');
+  assert.equal(independentCurrency.tuitionHome,617000);
 });
 
 test('Bangladesh Bank HTML sheet parses published BDT-per-currency ask, bid, and USD WAR',()=>{
@@ -196,6 +198,7 @@ test('Bangladesh Bank parser rejects missing date, malformed layout, and invalid
   assert.throws(()=>BangladeshBankRates.parseBangladeshBankPage(officialHtml({date:''}),new Date('2026-10-13T12:00:00Z')),/publication date/);
   assert.throws(()=>BangladeshBankRates.parseBangladeshBankPage(`<html><p>FX Rate Sheet effective for 13/10/2026</p>${'x'.repeat(120)}</html>`,new Date('2026-10-13T12:00:00Z')),/layout/);
   assert.throws(()=>BangladeshBankRates.parseBangladeshBankPage(officialHtml({gbp:'0'}),new Date('2026-10-13T12:00:00Z')),/invalid/);
+  assert.throws(()=>BangladeshBankRates.parseBangladeshBankPage(officialHtml({gbp:'1000000000001'}),new Date('2026-10-13T12:00:00Z')),/invalid/);
   assert.throws(()=>BangladeshBankRates.parseBangladeshBankPage(officialHtml({cad:'-2'}),new Date('2026-10-13T12:00:00Z')),/malformed/);
   assert.throws(()=>BangladeshBankRates.parseBangladeshBankPage(officialHtml({war:'NaN'}),new Date('2026-10-13T12:00:00Z')),/malformed/);
   assert.throws(()=>BangladeshBankRates.parseBangladeshBankPage(officialHtml({date:'32/13/2026'}),new Date('2026-10-13T12:00:00Z')),/invalid/);
@@ -229,7 +232,7 @@ test('Vercel endpoint returns validated source metadata and a 24-hour shared-cac
   globalThis.fetch=async(_url,options)=>{upstreamOptions=options;return {ok:true,status:200,headers:{get:()=> 'text/html; charset=utf-8'},text:async()=>fs.readFileSync(path.join(__dirname,'fixtures','bangladesh-bank-live-2026-10-13.html'),'utf8')};};
   try { await exchangeRateHandler({},response); } finally { globalThis.fetch=originalFetch; }
   assert.equal(response.statusCode,200);
-  assert.equal(response.headers['Cache-Control'],'public, max-age=0, s-maxage=86400, stale-if-error=604800');
+  assert.equal(response.headers['Cache-Control'],'public, max-age=0, s-maxage=86400');
   assert.equal(response.headers['Content-Type'],'application/json; charset=utf-8');
   assert.equal(response.body.publicationDate,'2026-10-13');
   assert.match(response.body.retrievedAt,/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,'the successful fetch timestamp is part of the cacheable response');
@@ -252,7 +255,7 @@ test('expired Vercel cache requests can refresh the source timestamp, while inva
     globalThis.Date=class extends realNow { constructor(...args){super(...(args.length?args:[currentTime]));} static now(){return currentTime.getTime();} };
     try { await exchangeRateHandler({},second); } finally { globalThis.Date=realNow; }
     assert.notEqual(first.body.retrievedAt,second.body.retrievedAt,'a cache miss after expiry fetches a new source timestamp');
-    assert.equal(second.headers['Cache-Control'],'public, max-age=0, s-maxage=86400, stale-if-error=604800');
+    assert.equal(second.headers['Cache-Control'],'public, max-age=0, s-maxage=86400');
     globalThis.fetch=async()=>({ok:true,status:200,headers:{get:()=> 'text/html'},text:async()=>'<html>invalid source response'.padEnd(150,'x')});
     const invalid=createResponse(); await exchangeRateHandler({},invalid);
     assert.equal(invalid.statusCode,502);
@@ -296,7 +299,7 @@ test('a successful official-rate response remains reusable for the full 24-hour 
 
 test('failed rate refreshes use a bounded retry delay and preserve the last response and manual rate',async()=>{
   const previous={source:'Bangladesh Bank FX Rate Sheet',sourceUrl:ExchangeRates.OFFICIAL_SOURCE_URL,rates:{USD:120},rateDetails:{USD:{currencyCode:'USD',rateType:'USD/BDT interbank rate',bid:119,ask:120,weightedAverage:null}},publicationDate:'2026-10-12',retrievedAt:'2026-10-12T12:00:00.000Z',updatedAtMs:Date.parse('2026-10-12T12:00:00Z'),nextUpdateAtMs:Date.parse('2026-10-13T12:00:00Z'),stale:true,cacheStatus:'STALE',staleAfterDays:5,retrievalStaleAfterHours:24};
-  let attempts=0; const h=loadRateUiHarness({exchangeRateState:{lastResponse:previous,nextRequestAt:0,pending:false,mode:'manual',appliedCurrency:null,appliedUpdatedAtMs:null,appliedNextUpdateAtMs:null,selectedCurrency:'USD',staleTimer:null},ExchangeRates:{isWithinCacheWindow:()=>false,fetchLatestRates:async()=>{attempts++;throw new Error('upstream unavailable');}}});
+  let attempts=0; const h=loadRateUiHarness({exchangeRateState:{lastResponse:previous,nextRequestAt:0,pending:false,mode:'manual',appliedCurrency:null,appliedUpdatedAtMs:null,appliedNextUpdateAtMs:null,selectedCurrency:'USD',staleTimer:null},ExchangeRates:{isWithinCacheWindow:()=>true,fetchLatestRates:async()=>{attempts++;throw new Error('upstream unavailable');}}});
   await h.context.refreshExchangeRate();
   assert.equal(attempts,1); assert.equal(h.context.exchangeRateState.lastResponse,previous); assert.equal(h.context.exchangeRateState.nextRequestAt,h.now+30_000); assert.equal(h.controls.exchangeRate.value,'manual-rate'); assert.equal(h.controls.rateSource.value,'manual-source'); assert.equal(h.controls.rateTimestamp.value,'manual-time'); assert.equal(h.controls.refreshExchangeRate.disabled,false); assert.match(h.controls.exchangeRateStatus.textContent,/Refresh failed/); assert.match(h.controls.exchangeRateStatus.textContent,/Retry after/);
   await h.context.refreshExchangeRate();
@@ -470,6 +473,21 @@ test('tuition, fees, and projected contributions cannot exceed the supported BDT
   assert.match(projectionOverflow.errors.join(' '),/Calculated BDT amounts exceed the supported maximum/);
 });
 
+test('display conversion may exceed the BDT calculation ceiling without weakening finance validation',()=>{
+  const displayed=Finance.convert(928000000000,'BDT','JPY',{BDT:0.778,JPY:1});
+  assert.ok(displayed>Finance.MAX_CALCULATED_BDT,'a valid JPY display amount can exceed the BDT calculation ceiling');
+  assert.throws(()=>Finance.convert(1e308,'BDT','JPY',{BDT:1e-308,JPY:1}),/finite/,'non-finite conversions remain rejected');
+  const input=profile({tuitionCur:'JPY',tuition:'1000000000000',exchangeRate:'0.778',savings:'0',emergency:'0',committed:'0',paymentFee:'220000000000',income:'0',expenses:'0'});
+  const result=Finance.calculateTuition(input,today);
+  assert.equal(result.ok,true,'the BDT-normalized plan remains within the deterministic calculation limit');
+  const report=Finance.buildReadinessReportData(input,result);
+  assert.equal(report.ok,true);
+  assert.ok(report.destinationCurrencyTotalEquivalent>Finance.MAX_CALCULATED_BDT,'readiness display equivalent is not incorrectly capped as BDT');
+  const text=Finance.buildFinancialReport(input,result);
+  assert.match(text,/required funds [\d,.]+ JPY/);
+  assert.doesNotMatch(text,/required funds [\d,.]+ BDT/);
+});
+
 test('optional study-abroad costs add once to tuition funding and preserve the existing plan when blank',()=>{
   const empty=profile();
   const original=Finance.calculateTuition(empty,today);
@@ -566,9 +584,10 @@ test('readiness report maps optional study costs, currency equivalents, and exis
   assert.equal(report.oneTimeCostItems.find(item=>item.label==='Flights').amountBdt,null);
   assert.deepEqual(input,before);
   const text=Finance.buildFinancialReport(input,result);
-  assert.match(text,/Visa costs: 5000 BDT/);
-  assert.match(text,/initial living estimate 30000 BDT/i);
-  assert.match(text,/payment\/transfer fees 1200 BDT/);
+  assert.match(text,/Visa costs: 32\.26 GBP/);
+  assert.match(text,/initial living estimate 193\.55 GBP/i);
+  assert.match(text,/payment\/transfer fees 7\.74 GBP/);
+  assert.match(text,/Amounts below are shown in the selected planning currency \(GBP\)/);
 });
 
 test('stress scenarios recalculate rate, expense, and missed-contribution cases without mutating baseline inputs',()=>{
@@ -623,14 +642,14 @@ test('financial report includes inputs, formulas, provenance, adjusted schedule,
   const result=Finance.calculateTuition(input,today);
   const stress=Finance.calculateStressScenarios(input,{expenseIncrease:5000,missedContributions:1},today);
   const report=Finance.buildFinancialReport(input,result,{generatedAt:new Date('2026-10-13T12:00:00'),stressScenarios:stress.scenarios});
-  assert.match(report,/monthly income 60000 BDT/);
+  assert.match(report,/monthly income 387\.1 GBP/);
   assert.match(report,/tuition in BDT = tuition × rate/);
   assert.match(report,/Student-entered bank quote ref 123/);
   assert.match(report,/timestamp \(local\): 2026-10-13T10:00/);
-  assert.match(report,/333333 BDT for 2 cycle\(s\), then 333335 BDT in the final cycle/);
+  assert.match(report,/2,150\.54 GBP for 2 cycle\(s\), then 2,150\.55 GBP in the final cycle/);
   assert.match(report,/Exchange rate \+5%/);
   assert.match(report,/Exchange rate \+10%/);
-  assert.match(report,/assumed missed amount 20000 BDT/);
+  assert.match(report,/assumed missed amount 161\.29 GBP/);
   assert.match(report,/Increased monthly expenses/);
   assert.match(report,/One missed contribution/);
   assert.match(report,/projected shortfall/);
@@ -843,7 +862,7 @@ test('comparison ranking and report export share the same eligible quote list',(
 
 test('active UI has blank financial inputs and working external quote paths; scripts parse',()=>{
   const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'planner.html'),'utf8'),css=fs.readFileSync(path.join(root,'styles','site.css'),'utf8'),ui=html+css,app=fs.readFileSync(path.join(root,'app.js'),'utf8');
-  for(const code of ['USD','EUR','GBP','AUD','JPY','CAD','SEK','SGD','CNH','INR','LKR']) assert.ok(html.includes(`BDT → ${code}`),`${code} is selectable as a destination`);
+  for(const code of ['USD','EUR','GBP','AUD','JPY','CAD','SEK','SGD','CNH','INR','LKR']) assert.ok(html.includes(`value="${code}"`),`${code} is supported`);
   assert.doesNotMatch(html,/BDT → (?:CNY|KRW|MYR)/,'the corridor selector contains only the requested currency set');
   for(const marker of ['id="exchangeRate"','id="rateSource"','id="rateTimestamp"','id="rateTimestampHint"','id="rateTimestampTrigger"','id="rateTimestampCalendar"','id="rateTimestampTime"','id="useCurrentRateTimestamp"','id="refreshExchangeRate"','id="useExchangeRate"','id="exchangeRateStatus"','id="providerQuoteForms"','id="deadlineHint"','id="deadlineTrigger"','id="deadlineCalendar"','role="grid"','aria-haspopup="dialog"','.formSection .fieldGrid>label{align-self:start;align-content:start}','.timestampControl{display:flex;width:100%;min-width:0}','#providerQuoteForms .quoteTimestampLabel{grid-column:1/-1}','.calendarDay.isToday:not(.isSelected){background:#eaf6f0','.customSelect{position:relative;width:100%;min-width:0}','.customSelectOption[aria-selected=true]::after{content:"✓"','https://www.bb.org.bd/en/index.php/econdata/exchangerate','convera.com/students/faq','pay.flywire.com','id="applyScenario"','id="resetScenario"','id="stressExpenseIncrease"','id="runStressTest"','id="clearStressTest"','id="stressResults"','id="readinessStudentName"','id="generateReadinessReport"','id="readinessReportPreview"','id="printReadinessReport"','id="closeReadinessReport"','aria-live="polite"','@page{size:A4 portrait','@media print','id="exportReport"','src="lib/exchange-rates.js"']) assert.ok(ui.includes(marker),`missing ${marker}`);
   for(const marker of ['@keyframes globeTurn','animation:globeTurn 34s linear infinite','<div class="globeMap">','<g class="globeLand">','<g class="globeGrid">','.heroVisual .orb3d{width:min(430px,82vw)}','.heroVisual .tileB{right:-4%}']) assert.ok(ui.includes(marker),`missing ${marker}`);
@@ -853,7 +872,7 @@ test('active UI has blank financial inputs and working external quote paths; scr
   assert.ok(fs.readFileSync(path.join(root,'docs','financial-algorithms.md'),'utf8').includes('Bangladesh Bank published rates'));
   const endpoint=fs.readFileSync(path.join(root,'api','exchange-rates.js'),'utf8');
   assert.match(endpoint,/s-maxage=\$\{CACHE_TTL_SECONDS\}/);
-  assert.match(endpoint,/stale-if-error=\$\{STALE_IF_ERROR_SECONDS\}/);
+  assert.doesNotMatch(endpoint,/stale-if-error/i);
   assert.match(endpoint,/status\(502\)/);
   assert.doesNotMatch(html,/value="(?:12000|450000|80000|52000|200000)"/);
   assert.doesNotMatch(app,/fictional|illustrative/);
@@ -924,4 +943,40 @@ test('planner exposes accessible default mode choices and updates reports and st
   assert.match(app,/byId\("planningModeNote"\)/);
   assert.match(app,/Excluded in Tuition Only mode/);
   assert.match(app,/profileForm"\)\.addEventListener\("reset"/);
+});
+
+test('new plans begin with all supported planning currencies before financial inputs unlock',()=>{
+  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'planner.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  assert.match(html,/Which currency would you like to plan in\?/);
+  const currencyStep=html.match(/<select id="planningCurrency"[\s\S]*?<\/select>/)?.[0]||'';
+  const options=[...currencyStep.matchAll(/<option value="([A-Z]{3})">([^<]+)<\/option>/g)].map(match=>match[1]);
+  assert.deepEqual(options,Finance.CURRENCIES);
+  for(const code of Finance.CURRENCIES){assert.ok(currencyStep.toLowerCase().includes(Finance.CURRENCY_NAMES[code].toLowerCase()),`full currency name for ${code}`);assert.ok(currencyStep.includes(Finance.CURRENCY_SYMBOLS[code]),`symbol for ${code}`);}
+  assert.match(html,/<fieldset id="planningDetails" disabled hidden>/);
+  assert.match(app,/Finance\.convert\(amount,currency,"BDT",\{BDT:rate,\[currency\]:1\}\)/);
+  assert.match(app,/Finance\.convert\(n,"BDT",currency,\{BDT:planRate\(\),\[currency\]:1\}\)/);
+  const roadmap=fs.readFileSync(path.join(root,'js','roadmap-page.js'),'utf8');
+  assert.match(roadmap,/convert\(value, "BDT", currency, \{ BDT: rate, \[currency\]: 1 \}\)/);
+  const currencyHelpers=app.slice(app.indexOf('function planCurrency()'),app.indexOf('function updatePlanCurrencyLabels'));
+  const controls={planningCurrency:{value:'USD'},exchangeRate:{value:'123.4'}};
+  const context={Finance,byId:id=>controls[id]};
+  vm.runInNewContext(currencyHelpers,context);
+  assert.equal(vm.runInNewContext('toBdtAmount("10")',context),'1234');
+  assert.equal(vm.runInNewContext('planMoney(1234)',context),'10 USD');
+  controls.planningCurrency.value='BDT';controls.exchangeRate.value='1';
+  assert.equal(vm.runInNewContext('toBdtAmount("10")',context),'10');
+  assert.match(app,/window\.confirm\(`Changing the planning currency starts a new plan/);
+  assert.match(app,/if\(!confirmed\)\{selector\.value=previous;return;\}/);
+  assert.match(app,/byId\("profileForm"\)\.reset\(\);selector\.value=next;/,'confirmed change clears old values while retaining the newly chosen planning currency');
+});
+
+test('saved-plan reports use the selected planning currency while transfer sender costs remain BDT',()=>{
+  const root=path.join(__dirname,'..'),source=fs.readFileSync(path.join(root,'js','page-utils.js'),'utf8');
+  const window={CampusBridgeFinance:Finance,CampusBridgePlanState:{loadPlan:()=>({ok:true,profile:{tuitionCur:'USD',exchangeRate:'123.4'}})}};
+  vm.runInNewContext(source,{window,Intl,Number});
+  assert.equal(window.CampusBridgePageUtils.money(1234),'10 USD');
+  assert.equal(window.CampusBridgePageUtils.money(1234,'BDT'),'1,234 BDT');
+  const report=fs.readFileSync(path.join(root,'js','report-page.js'),'utf8'),transfers=fs.readFileSync(path.join(root,'js','transfers-page.js'),'utf8');
+  assert.match(report,/Estimated tuition in planning currency/);
+  assert.match(transfers,/money\(quote\.totalCost,\s*"BDT"\)/,'sender quote costs keep their own BDT denomination');
 });

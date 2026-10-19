@@ -27,28 +27,29 @@ const localDate = date => `${date.getFullYear()}-${String(date.getMonth()+1).pad
 function contributionScheduleText(result) {
   const target = Finance.describeMonthlySavingsTarget(result);
   if (target.state === "covered" || target.state === "unavailable") return target.message;
-  return result.contributionCycles === 1 ? money(target.finalAmount) : `${money(target.regularAmount)} for first ${result.contributionCycles - 1} cycle(s), then ${money(target.finalAmount)} in the final cycle`;
+  return result.contributionCycles === 1 ? planMoney(target.finalAmount) : `${planMoney(target.regularAmount)} for first ${result.contributionCycles - 1} cycle(s), then ${planMoney(target.finalAmount)} in the final cycle`;
 }
 function renderContributionRoadmap(roadmap,planningMode) {
   const section=byId("roadmap"),summary=byId("roadmapSummary"),capacityNote=byId("roadmapCapacityNote"),timeline=byId("roadmapTimeline");
   timeline.replaceChildren();
   if(!roadmap?.ok){section.hidden=false;summary.textContent="Calculate a valid plan to see dated contribution estimates.";capacityNote.textContent="";return;}
-  summary.textContent=`${planningMode===Finance.PLANNING_MODES.TUITION_ONLY?"Tuition-only plan: ":"All study-abroad costs plan: "}${roadmap.summary}`;
+  const readableSummary=roadmap.summary.replace(/([\d]+(?:\.\d+)?) BDT/g,(_match,amount)=>planMoney(Number(amount)));
+  summary.textContent=`${planningMode===Finance.PLANNING_MODES.TUITION_ONLY?"Tuition-only plan: ":"All study-abroad costs plan: "}${readableSummary}`;
   const reach=document.createElement("span");reach.className=`roadmapReachability${roadmap.targetCanBeReachedByDeadline?"":" isShort"}`;
   reach.textContent=roadmap.targetCanBeReachedByDeadline?"Projected target: reachable by deadline":"Projected target: not reachable with current savings capacity";
   summary.append(document.createTextNode(" "),reach);
-  capacityNote.textContent=`Required contribution schedule: ${money(roadmap.requiredContributionTotalBdt)} across ${roadmap.contributionCycles} complete 30-day cycle(s). Projected savings capacity: ${money(roadmap.projectedSavingsCapacityBdt)}. Current monthly savings capacity: ${money(roadmap.monthlySavingsCapacityBdt)}. Planned contributions are targets, not guaranteed future payments.`;
+  capacityNote.textContent=`Required contribution schedule: ${planMoney(roadmap.requiredContributionTotalBdt)} across ${roadmap.contributionCycles} complete 30-day cycle(s). Projected savings capacity: ${planMoney(roadmap.projectedSavingsCapacityBdt)}. Current monthly savings capacity: ${planMoney(roadmap.monthlySavingsCapacityBdt)}. Planned contributions are targets, not guaranteed future payments.`;
   for(const item of roadmap.contributions){
     const row=document.createElement("li"),heading=document.createElement("div"),cycle=document.createElement("span"),due=document.createElement("time"),details=document.createElement("dl");
     heading.className="roadmapCycleTitle";cycle.textContent=`Cycle ${item.cycle}`;due.dateTime=item.dueDate;due.textContent=`Due ${item.dueDate}`;heading.append(cycle,due);
     details.className="roadmapCycleDetails";
     const rows=[
-      ["Required planned contribution",money(item.requiredContributionBdt)],
-      ["Cumulative planned contributions",money(item.cumulativePlannedContributionsBdt)],
-      ["Projected savings balance after saving current surplus",money(item.projectedSavingsBalanceBdt)],
-      ["Remaining funding gap at projected capacity",money(item.remainingFundingGapBdt)],
-      ["Current monthly savings capacity",money(item.monthlySavingsCapacityBdt)],
-      ["Capacity check",item.exceedsMonthlyCapacityBdt>0?`Planned amount is ${money(item.exceedsMonthlyCapacityBdt)} above current monthly capacity`:"Within current monthly capacity"]
+      ["Required planned contribution",planMoney(item.requiredContributionBdt)],
+      ["Cumulative planned contributions",planMoney(item.cumulativePlannedContributionsBdt)],
+      ["Projected savings balance after saving current surplus",planMoney(item.projectedSavingsBalanceBdt)],
+      ["Remaining funding gap at projected capacity",planMoney(item.remainingFundingGapBdt)],
+      ["Current monthly savings capacity",planMoney(item.monthlySavingsCapacityBdt)],
+      ["Capacity check",item.exceedsMonthlyCapacityBdt>0?`Planned amount is ${planMoney(item.exceedsMonthlyCapacityBdt)} above current monthly capacity`:"Within current monthly capacity"]
     ];
     for(const [label,value] of rows){const term=document.createElement("dt"),description=document.createElement("dd"),entry=document.createElement("div");term.textContent=label;description.textContent=value;entry.append(term,description);details.append(entry);}
     row.append(heading,details);timeline.append(row);
@@ -497,17 +498,24 @@ document.addEventListener("pointerdown", event => {
 let latest = null; let latestStressTest = null; let latestReadinessReportProfile = null; let activity = []; let bankAccounts = []; let nextBankAccountId = 1;
 let visibleProviderCount = 1;
 const quoteDrafts = new Map();
-const exchangeRateState = { lastResponse: null, nextRequestAt: 0, pending: false, mode: "manual", appliedCurrency: null, appliedUpdatedAtMs: null, appliedNextUpdateAtMs: null, selectedCurrency: "CNH", staleTimer: null };
+const exchangeRateState = { lastResponse: null, nextRequestAt: 0, pending: false, mode: "manual", appliedCurrency: null, appliedUpdatedAtMs: null, appliedNextUpdateAtMs: null, selectedCurrency: "", staleTimer: null };
 const FX_MIN_REQUEST_INTERVAL = 30 * 60 * 1000;
 const FX_FAILED_RETRY_DELAY = 30 * 1000;
-const money = (n, cur = "BDT") => `${new Intl.NumberFormat("en", { maximumFractionDigits: cur === "BDT" ? 0 : 2 }).format(n)} ${cur}`;
+const money = (n, cur) => { const currency=cur||planCurrency()||"BDT",value=cur||currency==="BDT"?n:Finance.convert(n,"BDT",currency,{BDT:planRate(),[currency]:1}); return `${new Intl.NumberFormat("en", { maximumFractionDigits: currency === "BDT" ? 0 : 2 }).format(value)} ${currency}`; };
+function planCurrency() { return byId("planningCurrency")?.value || ""; }
+function planRate() { const rate=Number(byId("exchangeRate")?.value); return Number.isFinite(rate)&&rate>0?rate:NaN; }
+function planMoney(amountBdt) { const currency=planCurrency(),rate=planRate(); if(!currency||!Number.isFinite(rate)||!Number.isFinite(amountBdt))return "Not available"; return `${new Intl.NumberFormat("en",{maximumFractionDigits:2}).format(Finance.convert(amountBdt,"BDT",currency,{BDT:rate,[currency]:1}))} ${currency}`; }
+function toBdtAmount(value, rate=planRate()) { if(value===""||value==null)return ""; const amount=Number(value),currency=planCurrency(); if(!Number.isFinite(amount)||!Number.isFinite(rate)||!currency)return value; try{return String(Finance.convert(amount,currency,"BDT",{BDT:rate,[currency]:1}));}catch{return amount<0?value:"Infinity";} }
+function updatePlanCurrencyLabels() { const currency=planCurrency(); const full=currency?`${Finance.CURRENCY_SYMBOLS[currency]||""} ${Finance.CURRENCY_NAMES[currency]} · ${currency}`.trim():"selected currency"; document.querySelectorAll("[data-plan-currency]").forEach(node=>{node.textContent=full;}); byId("rateCurrencyLabel").textContent=currency?`(BDT per ${currency})`:"(BDT per selected currency)"; }
 function localDateTimeForInput(timestamp) { const d = new Date(timestamp); return `${localDate(d)}T${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
 function setExchangeRateStatus(message, state = "") { const status = byId("exchangeRateStatus"); status.textContent = message; status.dataset.state = state; }
 function isFetchedExchangeRateStale(data, nowMs = Date.now()) { return !data || data.stale === true || !Number.isFinite(data.nextUpdateAtMs) || nowMs >= data.nextUpdateAtMs; }
 function renderFetchedRateStatus(prefix = "") {
   const data = exchangeRateState.lastResponse;
-  const currency = corridorMap[byId("corridor").value].currency;
+  const currency = planCurrency();
   const useButton = byId("useExchangeRate");
+  if (currency === "BDT") { useButton.hidden=true; useButton.disabled=true; useButton.textContent="No conversion needed"; setExchangeRateStatus("This plan is in BDT. No currency conversion is needed.","success"); return; }
+  if (!currency) { useButton.hidden=true; useButton.disabled=true; setExchangeRateStatus("Choose a planning currency before entering financial information."); return; }
   if (!data) { useButton.hidden = true; useButton.disabled = true; setExchangeRateStatus(prefix || "No official rate loaded. Manual rate entry is available; use Refresh to retrieve Bangladesh Bank data."); return; }
   const appliedIsStale = exchangeRateState.mode === "api" && (isFetchedExchangeRateStale(data) || exchangeRateState.appliedNextUpdateAtMs && Date.now() >= exchangeRateState.appliedNextUpdateAtMs);
   if (appliedIsStale) {
@@ -541,8 +549,9 @@ function renderFetchedRateStatus(prefix = "") {
 }
 async function refreshExchangeRate() {
   if (exchangeRateState.pending) return;
+  if (!planCurrency() || planCurrency() === "BDT") return;
   const now = Date.now();
-  if (ExchangeRates.isWithinCacheWindow(exchangeRateState.lastResponse, now)) {
+  if (ExchangeRates.isWithinCacheWindow(exchangeRateState.lastResponse, now) && !isFetchedExchangeRateStale(exchangeRateState.lastResponse, now)) {
     renderFetchedRateStatus("Using the last successful Bangladesh Bank response; its 24-hour cache window has not expired, so no new request was sent.");
     return;
   }
@@ -577,7 +586,7 @@ async function refreshExchangeRate() {
 }
 function useFetchedExchangeRate() {
   const data = exchangeRateState.lastResponse;
-  const currency = corridorMap[byId("corridor").value].currency;
+  const currency = planCurrency();
   if (isFetchedExchangeRateStale(data)) { renderFetchedRateStatus(); return; }
   const rate = data.rates[currency];
   if (!Number.isFinite(rate) || !data.rateDetails[currency]) { renderFetchedRateStatus(); return; }
@@ -610,14 +619,17 @@ function handleManualRateEdit(event) {
   latest = null;
   byId("plannerResults").innerHTML = '<p class="muted">Rate details changed. Review the source and timestamp, then recalculate your plan.</p>';
   syncRateTimestampPicker();
-  setExchangeRateStatus("Manual rate entry selected. Use your rate for 1 destination-currency unit = BDT, and provide its source and local timestamp.", "");
+  setExchangeRateStatus(`Manual rate entry selected. Use your rate for 1 ${planCurrency() || "selected currency"} = BDT, and provide its source and local timestamp.`, "");
 }
 function profile() {
   const c = corridorMap[byId("corridor").value];
   const manualSavings = byId("savings").value;
-  const savings = manualSavings === "" && bankAccounts.length === 0 ? "" : String(BankAccounts.totalSavings(manualSavings, bankAccounts));
+  const rate=planRate(),selectedCurrency=planCurrency(),otherSavingsBdt=toBdtAmount(manualSavings,rate);
+  const accountBalancesBdt=bankAccounts.map(account=>Number(toBdtAmount(account.balance,rate)));
+  const savings = manualSavings === "" && bankAccounts.length === 0 ? "" : String((Number(otherSavingsBdt)||0)+accountBalancesBdt.reduce((sum,balance)=>sum+balance,0));
   const costFields = ["visaCost", "applicationCost", "flightCost", "insuranceCost", "documentCost", "accommodationDeposit", "initialSetupCost", "otherOneTimeCosts", "initialLivingMonths", "monthlyRent", "monthlyFood", "monthlyTransport", "monthlyUtilities", "monthlyOtherLiving"];
-  return { homeCountry: "Bangladesh", destinationCountry: c.country, homeCur: "BDT", tuitionCur: c.currency, tuition: byId("tuition").value, exchangeRate: byId("exchangeRate").value, rateSource: byId("rateSource").value, rateTimestamp: byId("rateTimestamp").value, rateProvenance: exchangeRateState.mode === "api" ? "Bangladesh Bank official reference rate; not a tuition-payment quote" : restoredRateProvenance || "User-provided manual rate; not independently verified", planningMode: document.querySelector('input[name="planningMode"]:checked')?.value || Finance.PLANNING_MODES.ALL_COSTS, savings, otherSavings: manualSavings, accountBalances: bankAccounts.map(account => account.balance), emergency: byId("emergency").value, committed: byId("committed").value || 0, income: byId("income").value, expenses: byId("expenses").value, paymentFee: byId("paymentFee").value || 0, ...Object.fromEntries(costFields.map(id => [id, byId(id).value])), deadline: byId("deadline").value };
+  const normalizedFields=Object.fromEntries(costFields.filter(id=>id!=="initialLivingMonths").map(id=>[id,toBdtAmount(byId(id).value,rate)]));
+  return { homeCountry: "Bangladesh", destinationCountry: c.country, homeCur: "BDT", tuitionCur: selectedCurrency, tuition: byId("tuition").value, exchangeRate: byId("exchangeRate").value, rateSource: byId("rateSource").value, rateTimestamp: byId("rateTimestamp").value, rateProvenance: exchangeRateState.mode === "api" ? "Bangladesh Bank official reference rate; not a tuition-payment quote" : restoredRateProvenance || (selectedCurrency==="BDT"?"Same-currency conversion; fixed at 1 BDT per BDT":"User-provided manual rate; not independently verified"), planningMode: document.querySelector('input[name="planningMode"]:checked')?.value || Finance.PLANNING_MODES.ALL_COSTS, savings, otherSavings: otherSavingsBdt, accountBalances: accountBalancesBdt, emergency: toBdtAmount(byId("emergency").value,rate), committed: toBdtAmount(byId("committed").value||0,rate), income: toBdtAmount(byId("income").value,rate), expenses: toBdtAmount(byId("expenses").value,rate), paymentFee: toBdtAmount(byId("paymentFee").value||0,rate), ...normalizedFields, initialLivingMonths: byId("initialLivingMonths").value, deadline: byId("deadline").value };
 }
 function updatePlanningModeUI() {
   const mode = document.querySelector('input[name="planningMode"]:checked')?.value || Finance.PLANNING_MODES.ALL_COSTS;
@@ -638,7 +650,7 @@ function renderBankAccounts() {
     item.append(text, document.createTextNode(" "), remove);
     return item;
   }));
-  byId("bankAccountTotal").textContent = `Added account balances: ${money(BankAccounts.totalBalance(bankAccounts))}. The planner adds listed balances to other savings.`;
+  byId("bankAccountTotal").textContent = `Added account balances: ${planCurrency()?`${new Intl.NumberFormat("en",{maximumFractionDigits:2}).format(BankAccounts.totalBalance(bankAccounts))} ${planCurrency()}`:"0"}. The planner adds listed balances to other savings.`;
 }
 byId("addBankAccount").addEventListener("click", () => {
   if (bankAccounts.length >= 50) { byId("bankAccountError").textContent = "You can add up to 50 manual savings balances."; return; }
@@ -650,7 +662,7 @@ byId("addBankAccount").addEventListener("click", () => {
   renderBankAccounts(); if (latest) compute();
 });
 renderBankAccounts();
-function refreshRate() { const c = corridorMap[byId("corridor").value]; const name = Finance.CURRENCY_NAMES[c.currency] || c.currency; byId("tuitionCurrencyLabel").textContent = `(${name} · ${c.currency})`; byId("rateCurrencyLabel").textContent = `(BDT per ${c.currency})`; }
+function refreshRate() { updatePlanCurrencyLabels(); if(planCurrency()==="BDT"){if(byId("exchangeRate").value!=="1")byId("exchangeRate").value="1";if(byId("rateSource").value!=="Same-currency conversion: 1 BDT = 1 BDT")byId("rateSource").value="Same-currency conversion: 1 BDT = 1 BDT";if(!byId("rateTimestamp").value)byId("rateTimestamp").value=localDateTimeForInput(Date.now());exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;renderFetchedRateStatus();} }
 function logEvent(tool, status, summary) {
   activity.unshift({ at: new Date().toLocaleString(), tool, status, summary }); activity = activity.slice(0, 20); renderLog();
 }
@@ -658,7 +670,7 @@ function renderLog() { const list = byId("activityLog"); list.replaceChildren(..
 function renderPlannerResultsSummary(input, result, roadmap, options) {
   const summary = window.CampusBridgePlannerResults.summarize(result, roadmap, input.deadline);
   const deadline = new Date(`${summary.deadline}T00:00:00Z`).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
-  const goalCurrency = options.destinationTotal === "Not available" ? "" : `<p class="goalCurrencyNote">Approximately ${options.destinationTotal} at your entered exchange rate</p>`;
+  const goalCurrency = "";
   const schedule = summary.state === "covered"
     ? `<p class="small">No additional contribution is required for the entered cost estimate.</p>`
     : summary.state === "no-dates"
@@ -667,7 +679,7 @@ function renderPlannerResultsSummary(input, result, roadmap, options) {
         ? `<p class="small">A contribution schedule is unavailable until the dated roadmap can confirm it. Review the roadmap section below.</p>`
       : `<p class="small">Required contribution schedule:<br><strong>${options.monthlyTargetText}</strong><br>${summary.contributionCycles} complete 30-day contribution cycle(s)</p>${summary.contributionDates.length ? `<ul class="resultContributionDates">${summary.contributionDates.map(item => `<li><time datetime="${escapeHtml(item.date)}">${escapeHtml(item.date)}</time><span>Cycle ${item.cycle}: ${money(item.amountBdt)}</span></li>`).join("")}</ul>` : summary.scheduleAvailable ? `<p class="small muted">The roadmap contains too many dates to list here. See the dated savings contribution roadmap below.</p>` : ""}`;
   const statusLabel = summary.state === "covered" ? "Goal covered" : summary.state === "shortfall" || summary.state === "no-dates" ? "Funding gap remains" : summary.state === "informational" ? "Projection needs review" : "Projected under current assumptions";
-  const details = `<details class="resultDetails"><summary>Calculation details and assumptions</summary><div class="metricGrid"><div class="metric"><span>${options.tuitionOnly ? "Other study costs" : "Additional cost estimates"}</span><strong>${options.tuitionOnly ? "Excluded in Tuition Only mode" : `${money(result.estimatedOtherCosts)}${options.destinationCosts === "Not available" ? "" : ` · ${options.destinationCosts}`}`}</strong></div><div class="metric"><span>Total savings entered</span><strong>${money(result.savings)}</strong></div><div class="metric"><span>Monthly surplus</span><strong>${money(result.disposable)}</strong></div><div class="metric"><span>Projected savings capacity</span><strong>${money(result.capacity)}</strong></div><div class="metric"><span>Projected shortfall</span><strong>${money(result.shortfall)}</strong></div></div><p class="small muted">Protected emergency fund: ${money(result.emergency)}. Committed savings excluded: ${money(result.committed)}. Usable funds are savings minus those amounts.</p><div class="resultAssumptions"><h3>What this estimate uses</h3><p>Tuition × your entered rate (${result.rate.toFixed(4)} BDT per ${result.tuitionCurrency})${options.tuitionOnly ? ", plus entered payment/transfer fees only. Other one-time and initial living costs are excluded." : ", payment/transfer fees, entered one-time costs, and entered initial living costs. All additional costs are student-entered BDT estimates; destination-currency equivalents use this rate and are not payment quotes. Do not count an expense in more than one field."} It assumes your full current monthly surplus is available to save; actual costs and payment terms may differ.</p><dl><dt>Rate source</dt><dd>${escapeHtml(input.rateSource)}</dd><dt>Rate timestamp (local time)</dt><dd>${escapeHtml(input.rateTimestamp)}</dd><dt>Rate verification</dt><dd>${escapeHtml(input.rateProvenance)}</dd><dt>Projected shortfall</dt><dd>${money(result.shortfall)} over ${result.contributionCycles} complete 30-day savings cycle(s)</dd></dl><p class="small muted">This is a planning estimate, not an invoice or guaranteed payment amount. CampusBridge does not independently verify your rate and excludes costs you did not enter.</p></div></details>`;
+  const details = `<details class="resultDetails"><summary>Calculation details and assumptions</summary><div class="metricGrid"><div class="metric"><span>${options.tuitionOnly ? "Other study costs" : "Additional cost estimates"}</span><strong>${options.tuitionOnly ? "Excluded in Tuition Only mode" : `${money(result.estimatedOtherCosts)}`}</strong></div><div class="metric"><span>Total savings entered</span><strong>${money(result.savings)}</strong></div><div class="metric"><span>Monthly surplus</span><strong>${money(result.disposable)}</strong></div><div class="metric"><span>Projected savings capacity</span><strong>${money(result.capacity)}</strong></div><div class="metric"><span>Projected shortfall</span><strong>${money(result.shortfall)}</strong></div></div><p class="small muted">Protected emergency fund: ${money(result.emergency)}. Committed savings excluded: ${money(result.committed)}. Usable funds are savings minus those amounts.</p><div class="resultAssumptions"><h3>What this estimate uses</h3><p>Tuition × your entered rate (${result.rate.toFixed(4)} BDT per ${result.tuitionCurrency})${options.tuitionOnly ? ", plus entered payment/transfer fees only. Other one-time and initial living costs are excluded." : ", payment/transfer fees, entered one-time costs, and entered initial living costs. All plan inputs are entered in the selected planning currency and normalized to BDT for calculation. The Bangladesh Bank rate is an official reference, not a payment quote. Do not count an expense in more than one field."} It assumes your full current monthly surplus is available to save; actual costs and payment terms may differ.</p><dl><dt>Rate source</dt><dd>${escapeHtml(input.rateSource)}</dd><dt>Rate timestamp (local time)</dt><dd>${escapeHtml(input.rateTimestamp)}</dd><dt>Rate verification</dt><dd>${escapeHtml(input.rateProvenance)}</dd><dt>Projected shortfall</dt><dd>${money(result.shortfall)} over ${result.contributionCycles} complete 30-day savings cycle(s)</dd></dl><p class="small muted">This is a planning estimate, not an invoice or guaranteed payment amount. CampusBridge does not independently verify your rate and excludes costs you did not enter.</p></div></details>`;
   byId("plannerResults").innerHTML = `<section class="plannerResultSummary" aria-label="Financial plan summary"><p class="assumptionNote">${options.tuitionOnly ? "Tuition Only includes tuition and entered payment/transfer fees; it excludes other study-abroad costs and is not a full readiness result." : "All Study-Abroad Costs includes only additional estimates entered. Blank estimates are not included."}</p><div class="resultGoal"><span class="resultEyebrow">Education Funding Goal</span><strong>${money(summary.fundingGoalBdt)}</strong>${goalCurrency}<div class="progressTrack" role="img" aria-label="${Math.round(summary.fundedRatio * 100)} percent of estimated need covered by available savings"><i style="width:${Math.round(summary.fundedRatio * 100)}%"></i></div><p class="small muted">${Math.round(summary.fundedRatio * 100)}% covered by available savings</p></div><span class="statusPill resultStatus ${summary.state}">${statusLabel}</span><p class="resultRealism ${summary.state}" role="status">${summary.message}</p><div class="metricGrid resultKeyMetrics"><div class="metric"><span>Available Savings</span><strong>${money(summary.availableSavingsBdt)}</strong><small>After emergency reserve and committed savings</small></div><div class="metric ${summary.fundingGapBdt === 0 ? "covered" : "hasGap"}"><span>${options.tuitionOnly ? "Tuition Funding Gap" : "Funding Gap"}</span><strong>${money(summary.fundingGapBdt)}</strong></div></div><div class="resultDeadline"><span>Deadline</span><strong>${escapeHtml(deadline)}</strong><small>${summary.daysRemaining} ${summary.daysRemaining === 1 ? "day" : "days"} remaining</small></div><section class="resultSavingsPlan" aria-labelledby="resultSavingsPlanTitle"><h3 id="resultSavingsPlanTitle">Savings Plan</h3>${schedule}</section>${details}<h3>Suggested next steps</h3><ol class="small muted"><li>${options.priorities[0]}</li><li>${options.priorities[1]}</li><li>${options.priorities[2]}</li></ol></section>`;
   byId("plannerResults").append(renderFinancialCharts(window.CampusBridgePlannerResults.charts(result, roadmap), "planner-results"));
 }
@@ -681,7 +693,7 @@ function renderFinancialCharts(chartData, idPrefix) {
   const columnsFigure=document.createElement("figure");columnsFigure.className="financialChart financialColumnChart";
   const columnsCaption=document.createElement("figcaption");columnsCaption.textContent="Funding comparison";columnsFigure.append(columnsCaption);
   const columnsSvg=svgEl("svg",{viewBox:"0 0 360 205",role:"img","aria-labelledby":`${idPrefix}-columns-title ${idPrefix}-columns-desc`});
-  columnsSvg.append(svgEl("title",{id:`${idPrefix}-columns-title`},"Education funding amounts in BDT"));
+  columnsSvg.append(svgEl("title",{id:`${idPrefix}-columns-title`},`Education funding amounts in ${planCurrency()||"BDT"}`));
   columnsSvg.append(svgEl("desc",{id:`${idPrefix}-columns-desc`},chartData.columns.map(item=>`${item.label}: ${money(item.amountBdt)}`).join(". ")));
   columnsSvg.append(svgEl("line",{x1:20,y1:160,x2:340,y2:160,class:"chartBaseline"}));
   const barX=[49,154,259];
@@ -712,9 +724,10 @@ function renderFinancialCharts(chartData, idPrefix) {
   return section;
 }
 function compute() {
+  if(!planCurrency()){byId("formError").textContent="Choose a planning currency before entering financial information.";byId("plannerResults").innerHTML='<p class="muted">Choose a planning currency to begin your plan.</p>';return;}
   refreshRate();
-  const activeCurrency = corridorMap[byId("corridor").value].currency;
-  if (exchangeRateState.mode === "api" && (exchangeRateState.appliedCurrency !== activeCurrency || !exchangeRateState.appliedNextUpdateAtMs || Date.now() >= exchangeRateState.appliedNextUpdateAtMs)) {
+  const activeCurrency = planCurrency();
+  if (exchangeRateState.mode === "api" && (exchangeRateState.appliedCurrency !== activeCurrency || !exchangeRateState.appliedNextUpdateAtMs || Date.now() >= exchangeRateState.appliedNextUpdateAtMs || isFetchedExchangeRateStale(exchangeRateState.lastResponse))) {
     PlanState?.clearPlan();
     latest = null;
     renderContributionRoadmap(null);
@@ -737,8 +750,8 @@ function compute() {
   byId("formError").textContent = savedPlan?.ok === false ? "The calculation is ready, but this browser could not save the plan for the other pages. Check browser session-storage settings and try again." : ""; latest = { input, result, roadmap, profile: enteredProfile }; renderContributionRoadmap(roadmap,input.planningMode); const tuitionOnly = input.planningMode === Finance.PLANNING_MODES.TUITION_ONLY;
   const priorities = result.gap === 0 ? ["Keep the emergency reserve protected.","Confirm the university payment deadline and instructions.","Refresh assumptions before paying."] : [result.shortfall > 0 ? "Close the projected shortfall: current savings capacity is not enough." : "Set aside the monthly target before the tuition deadline.", "Verify the payment route and any institution-specific fees.", "Keep emergency savings and committed funds separate from tuition."];
   const monthlyTargetText = result.gap === 0 ? Finance.describeMonthlySavingsTarget(result).message : contributionScheduleText(result);
-  const destinationCosts = Number.isFinite(result.estimatedOtherCosts / result.rate) && result.estimatedOtherCosts / result.rate <= Finance.MAX_CALCULATED_BDT ? money(result.estimatedOtherCosts / result.rate, result.tuitionCurrency) : "Not available";
-  const destinationTotal = Number.isFinite(result.requiredFunds / result.rate) && result.requiredFunds / result.rate <= Finance.MAX_CALCULATED_BDT ? money(result.requiredFunds / result.rate, result.tuitionCurrency) : "Not available";
+  const destinationCosts = Number.isFinite(result.estimatedOtherCosts / result.rate) ? money(result.estimatedOtherCosts / result.rate, result.tuitionCurrency) : "Not available";
+  const destinationTotal = Number.isFinite(result.requiredFunds / result.rate) ? money(result.requiredFunds / result.rate, result.tuitionCurrency) : "Not available";
   renderPlannerResultsSummary(input, result, roadmap, { tuitionOnly, destinationCosts, destinationTotal, monthlyTargetText, priorities });
   const reportAction = document.createElement("div"); reportAction.className = "resultsReportAction";
   const reportCopy = document.createElement("div"), reportHeading = document.createElement("strong"), reportHint = document.createElement("p");
@@ -901,12 +914,16 @@ function enteredQuotes() {
   });
 }
 function currentQuoteComparison(){const cur=corridorMap[byId("corridor").value].currency;return Finance.compareEnteredQuotes({amount:byId("transferAmount").value,to:cur,sort:byId("sortBy").value},enteredQuotes());}
-function renderTransfers(){const amount=byId("transferAmount").value,cur=corridorMap[byId("corridor").value].currency;const root=byId("transferResults");if(!amount||Number(amount)<=0){root.innerHTML='<p class="muted">Enter the same positive BDT principal used for all quotes.</p>';return;}const entered=enteredQuotes();if(entered.every(q=>q.totalCost===""&&q.recipientAmount===""&&q.reference==="")){root.innerHTML='<p class="muted">No provider quotes entered. Get current terms from your institution-approved provider or bank; nothing is estimated here.</p>';return;}const cmp=currentQuoteComparison();if(!cmp.ok){root.innerHTML=`<p class="error">${cmp.errors.join(" ")}</p>`;return;}const usable=cmp.available;if(!usable.length){root.innerHTML=`<p class="muted">No complete quotes can be ranked. ${cmp.unavailable.map(x=>`${escapeHtml(x.quote.name)}: ${escapeHtml(x.reason)}`).join(" ")}</p>`;return;}root.innerHTML=`<div class="quoteGrid">${usable.map((q,i)=>`<article class="quote"><span class="tag">${i===0?"Ranks first by selected objective · student-entered":"Student-entered quote"} · not provider-verified</span><h3>${escapeHtml(q.quote.name)}</h3><dl><dt>Total sender cost</dt><dd><strong>${money(q.totalCost)}</strong></dd><dt>Principal</dt><dd>${money(Number(amount))}</dd><dt>Stated provider fee</dt><dd>${q.fee?money(q.fee):"Not separately stated"}</dd><dt>Recipient amount</dt><dd><strong>${money(q.recipientAmount,cur)}</strong></dd><dt>Quoted rate</dt><dd>${q.quotedRate===null?"Not stated":`1 ${cur} = ${q.quotedRate.toFixed(5)} BDT`}</dd><dt>Delivery estimate</dt><dd>${q.days===null?"Not provided":`${q.days} business days`}</dd></dl><p>Source/reference: ${escapeHtml(q.reference)}. Quote timestamp: ${escapeHtml(q.timestamp)}. Validation does not authenticate this manually entered quote. Verify expiry and all terms on the provider’s official page before paying.</p></article>`).join("")}</div><p class="assumptionNote">${cmp.unavailable.map(x=>`${escapeHtml(x.quote.name)}: ${escapeHtml(x.reason)}`).join(" ")}</p>`;logEvent("compare_payment_options","success",`${usable.length} entered quotes ranked by ${byId("sortBy").selectedOptions[0].text.toLowerCase()}`);}
+function renderTransfers(){const amount=byId("transferAmount").value,cur=corridorMap[byId("corridor").value].currency;const root=byId("transferResults");if(!amount||Number(amount)<=0){root.innerHTML='<p class="muted">Enter the same positive BDT principal used for all quotes.</p>';return;}const entered=enteredQuotes();if(entered.every(q=>q.totalCost===""&&q.recipientAmount===""&&q.reference==="")){root.innerHTML='<p class="muted">No provider quotes entered. Get current terms from your institution-approved provider or bank; nothing is estimated here.</p>';return;}const cmp=currentQuoteComparison();if(!cmp.ok){root.innerHTML=`<p class="error">${cmp.errors.join(" ")}</p>`;return;}const usable=cmp.available;if(!usable.length){root.innerHTML=`<p class="muted">No complete quotes can be ranked. ${cmp.unavailable.map(x=>`${escapeHtml(x.quote.name)}: ${escapeHtml(x.reason)}`).join(" ")}</p>`;return;}root.innerHTML=`<div class="quoteGrid">${usable.map((q,i)=>`<article class="quote"><span class="tag">${i===0?"Ranks first by selected objective · student-entered":"Student-entered quote"} · not provider-verified</span><h3>${escapeHtml(q.quote.name)}</h3><dl><dt>Total sender cost</dt><dd><strong>${money(q.totalCost,"BDT")}</strong></dd><dt>Principal</dt><dd>${money(Number(amount),"BDT")}</dd><dt>Stated provider fee</dt><dd>${q.fee?money(q.fee,"BDT"):"Not separately stated"}</dd><dt>Recipient amount</dt><dd><strong>${money(q.recipientAmount,cur)}</strong></dd><dt>Quoted rate</dt><dd>${q.quotedRate===null?"Not stated":`1 ${cur} = ${q.quotedRate.toFixed(5)} BDT`}</dd><dt>Delivery estimate</dt><dd>${q.days===null?"Not provided":`${q.days} business days`}</dd></dl><p>Source/reference: ${escapeHtml(q.reference)}. Quote timestamp: ${escapeHtml(q.timestamp)}. Validation does not authenticate this manually entered quote. Verify expiry and all terms on the provider’s official page before paying.</p></article>`).join("")}</div><p class="assumptionNote">${cmp.unavailable.map(x=>`${escapeHtml(x.quote.name)}: ${escapeHtml(x.reason)}`).join(" ")}</p>`;logEvent("compare_payment_options","success",`${usable.length} entered quotes ranked by ${byId("sortBy").selectedOptions[0].text.toLowerCase()}`);}
 byId("profileForm").addEventListener("submit", e=>{e.preventDefault();planRequested=true;updateDeadlineHint();compute();});
+function hasPlanEntries(){return ["tuition","savings","emergency","committed","income","expenses","paymentFee","visaCost","applicationCost","flightCost","insuranceCost","documentCost","accommodationDeposit","initialSetupCost","otherOneTimeCosts","initialLivingMonths","monthlyRent","monthlyFood","monthlyTransport","monthlyUtilities","monthlyOtherLiving","deadline"].some(id=>byId(id).value!=="")||bankAccounts.length>0||exchangeRateState.mode==="api"||planCurrency()!=="BDT"&&byId("rateSource").value!=="";}
+function activatePlanningCurrency(currency){exchangeRateState.selectedCurrency=currency;byId("planningDetails").disabled=!currency;byId("planningDetails").hidden=!currency;updatePlanCurrencyLabels();if(currency==="BDT"){byId("planningCurrencyStatus").textContent="Financial entries will be in BDT. No conversion is needed.";refreshRate();}else{for(const id of ["exchangeRate","rateSource","rateTimestamp"])byId(id).value="";exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;byId("planningCurrencyStatus").textContent=`Financial entries will be in ${currency}. The exchange rate converts them to the BDT calculation base.`;renderFetchedRateStatus();refreshExchangeRate();}}
+function handlePlanningCurrencyChange(){const selector=byId("planningCurrency"),next=selector.value,previous=exchangeRateState.selectedCurrency;if(!next||next===previous)return;if(previous&&hasPlanEntries()){const confirmed=window.confirm(`Changing the planning currency starts a new plan and clears the current plan inputs. Historical browser-saved roadmaps and account-saved plans remain unchanged in their original currencies. Continue?`);if(!confirmed){selector.value=previous;return;}PlanState?.clearPlan();byId("profileForm").reset();selector.value=next;byId("planningDetails").disabled=true;byId("planningDetails").hidden=true;planRequested=false;bankAccounts=[];nextBankAccountId=1;latest=null;clearStressTestResults();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Choose a planning currency, then enter your financial figures.</p>';byId("formError").textContent="";}activatePlanningCurrency(next);}
+byId("planningCurrency").addEventListener("change",handlePlanningCurrencyChange);
 byId("deadline").addEventListener("change",()=>{updateDeadlineHint();if(planRequested)compute();});
 initializeCustomSelect(byId("corridor"));
 initializeCustomSelect(byId("sortBy"));
-byId("corridor").addEventListener("change",()=>{const currency=corridorMap[byId("corridor").value].currency;const changed=currency!==exchangeRateState.selectedCurrency;exchangeRateState.selectedCurrency=currency;if(changed&&["exchangeRate","rateSource","rateTimestamp"].some(id=>byId(id).value!=="")){for(const id of ["exchangeRate","rateSource","rateTimestamp"])byId(id).value="";exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;latest=null;if(exchangeRateState.lastResponse)renderFetchedRateStatus("Destination currency changed; the previous rate and its source/time were cleared.");else setExchangeRateStatus("Destination currency changed. The previous rate, source, and timestamp were cleared to avoid using the wrong currency. Enter or fetch a rate for the new currency.");}else renderFetchedRateStatus();refreshRate();renderQuoteForms();renderTransfers();if(byId("tuition").value||byId("exchangeRate").value)compute();});
+byId("corridor").addEventListener("change",()=>{renderQuoteForms();renderTransfers();});
 byId("transferAmount").addEventListener("input",renderTransfers); byId("sortBy").addEventListener("change",renderTransfers);
 byId("providerQuoteForms").addEventListener("input",renderTransfers);
 byId("addQuoteProvider").addEventListener("click", () => {
@@ -916,7 +933,7 @@ byId("addQuoteProvider").addEventListener("click", () => {
   renderTransfers();
   byId("providerQuoteForms").querySelector(`[data-provider="${providerDefs[visibleProviderCount - 1].id}"] .customSelectTrigger`).focus();
 });
-byId("resetProfile").addEventListener("click",()=>{PlanState?.clearPlan();restoredRateProvenance="";byId("profileForm").reset();syncCustomSelect(byId("corridor"));planRequested=false;updateDeadlineHint();syncRateTimestampPicker();closeRateTimestampCalendar();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="CN";syncCustomSelect(byId("corridor"));exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;exchangeRateState.selectedCurrency="CNH";byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Enter the required fields and calculate to see your estimate. This is not a provider quote or guaranteed payable amount.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
+byId("resetProfile").addEventListener("click",()=>{PlanState?.clearPlan();restoredRateProvenance="";byId("profileForm").reset();byId("planningDetails").disabled=true;byId("planningDetails").hidden=true;exchangeRateState.selectedCurrency="";syncCustomSelect(byId("corridor"));planRequested=false;updateDeadlineHint();syncRateTimestampPicker();closeRateTimestampCalendar();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="CN";syncCustomSelect(byId("corridor"));exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Choose a planning currency, then enter your financial figures.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
 byId("refreshExchangeRate").addEventListener("click",refreshExchangeRate);
 byId("useExchangeRate").addEventListener("click",useFetchedExchangeRate);
 byId("rateTimestamp").addEventListener("input",syncRateTimestampPicker);
@@ -934,7 +951,7 @@ async function answerQuestion() {
  const turn=CampusBridgeAssistantConversation.createTurn(answer,rawQuestion),reply=turn.response;reply.textContent="CampusBridge AI is preparing an explanation…";CampusBridgeAssistantConversation.scrollToLatest(turn.element);
  try{
   compute();
-  const task=CampusBridgeAssistantTask.run({question:rawQuestion,Finance,plan:latest?{ok:true,profile:latest.input,result:latest.result}:null,quotes:enteredQuotes(),quoteInput:{amount:byId("transferAmount").value,to:corridorMap[byId("corridor").value].currency,sort:byId("sortBy").value},money});
+  const task=CampusBridgeAssistantTask.run({question:rawQuestion,Finance,plan:latest?{ok:true,profile:latest.input,result:latest.result}:null,quotes:enteredQuotes(),quoteInput:{amount:byId("transferAmount").value,to:corridorMap[byId("corridor").value].currency,sort:byId("sortBy").value},money:value=>money(value,"BDT")});
   if(task.handled){reply.textContent=task.answer;status.textContent="Answered locally from validated planner results. Financial values and quote status were not sent to the AI service.";logEvent(Finance.assistantIntent(rawQuestion),"success","Answered using local validated state; question and financial details omitted");return;}
   status.textContent="Sending only your question to CampusBridge AI…";
   let safeFailure="Could not reach the assistant endpoint. Check that the deployed CampusBridge site is available.";
@@ -945,7 +962,7 @@ async function answerQuestion() {
 byId("askButton").addEventListener("click",answerQuestion);byId("question").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();answerQuestion();}});
 byId("clearLog").addEventListener("click",()=>{activity=[];renderLog();});
 function resetScenario(){byId("scenarioSavings").value=byId("savings").value;byId("scenarioMonthly").value=byId("income").value&&byId("expenses").value?Math.max(0,Number(byId("income").value)-Number(byId("expenses").value)):"";byId("scenarioPreview").textContent="Scenario reset to your current plan.";}
-function previewScenario(){if(!latest)return;const savings=Number(byId("scenarioSavings").value),monthly=Number(byId("scenarioMonthly").value),income=Number(byId("income").value);if(!Number.isFinite(savings)||savings<0||!Number.isFinite(monthly)||monthly<0||monthly>income){byId("scenarioPreview").textContent="Enter non-negative savings and monthly savings no greater than monthly income.";return;}const scenario={...latest.input,savings:String(savings),expenses:String(income-monthly)};const r=Finance.calculateTuition(scenario);const target=Finance.describeMonthlySavingsTarget(r);byId("scenarioPreview").textContent=r.ok?`Preview: gap ${money(r.gap)}; monthly target ${target.state==="covered"?target.message:target.state==="unavailable"?"unavailable (no 30-day contribution date before deadline)":money(target.amount)}; projected shortfall ${money(r.shortfall)}. Compared with current gap ${money(latest.result.gap)}. Scenario assumes monthly savings are sustained through the deadline.`:"This scenario has invalid inputs.";}
+function previewScenario(){if(!latest)return;const savings=Number(byId("scenarioSavings").value),monthly=Number(byId("scenarioMonthly").value),income=Number(byId("income").value);if(!Number.isFinite(savings)||savings<0||!Number.isFinite(monthly)||monthly<0||monthly>income){byId("scenarioPreview").textContent="Enter non-negative savings and monthly savings no greater than monthly income.";return;}const scenario={...latest.input,savings:toBdtAmount(savings),expenses:toBdtAmount(income-monthly)};const r=Finance.calculateTuition(scenario);const target=Finance.describeMonthlySavingsTarget(r);byId("scenarioPreview").textContent=r.ok?`Preview: gap ${money(r.gap)}; monthly target ${target.state==="covered"?target.message:target.state==="unavailable"?"unavailable (no 30-day contribution date before deadline)":money(target.amount)}; projected shortfall ${money(r.shortfall)}. Compared with current gap ${money(latest.result.gap)}. Scenario assumes monthly savings are sustained through the deadline.`:"This scenario has invalid inputs.";}
 byId("scenarioSavings").addEventListener("input",previewScenario);byId("scenarioMonthly").addEventListener("input",previewScenario);
 byId("resetScenario").addEventListener("click",resetScenario);
 byId("applyScenario").addEventListener("click",()=>{const savings=Number(byId("scenarioSavings").value),monthly=Number(byId("scenarioMonthly").value),income=Number(byId("income").value);if(!latest){byId("scenarioPreview").textContent="Calculate your current tuition plan before applying a scenario.";return;}if(byId("scenarioSavings").value===""||byId("scenarioMonthly").value===""||!Number.isFinite(savings)||savings<0||!Number.isFinite(monthly)||monthly<0||monthly>income){previewScenario();return;}byId("savings").value=String(savings);byId("expenses").value=String(income-monthly);compute();byId("planner").scrollIntoView({behavior:reducedMotion.matches?"auto":"smooth"});});
@@ -960,7 +977,7 @@ function stressContributionText(scenario){
 function renderStressTestResults(stress,tuitionCurrency,planningMode=Finance.PLANNING_MODES.ALL_COSTS){
   const output=byId("stressResults");output.replaceChildren();
   if(!stress.ok){const error=document.createElement("p");error.className="error";error.setAttribute("role","alert");error.textContent=stress.errors.join(" ");output.append(error);output.hidden=false;return;}
-  const intro=document.createElement("p");intro.className="assumptionNote";intro.textContent=`These hypothetical ${planningMode===Finance.PLANNING_MODES.TUITION_ONLY?"tuition-only":"study-abroad cost"} results use the current form values. One missed contribution is the scheduled whole-BDT amount, capped at the positive monthly surplus; with no cycles or surplus, it is zero. Your original plan is unchanged.`;output.append(intro);
+  const intro=document.createElement("p");intro.className="assumptionNote";intro.textContent=`These hypothetical ${planningMode===Finance.PLANNING_MODES.TUITION_ONLY?"tuition-only":"study-abroad cost"} results use the current form values. One missed contribution uses the scheduled amount in ${tuitionCurrency}, capped at the positive monthly surplus; with no cycles or surplus, it is zero. Your original plan is unchanged.`;output.append(intro);
   for(const scenario of stress.scenarios){
     const card=document.createElement("section");card.className="resultAssumptions";card.setAttribute("aria-label",`${scenario.name} results`);
     const title=document.createElement("h3");title.textContent=scenario.name;card.append(title);
@@ -988,16 +1005,16 @@ function runStressTest(){
   expenseInput.removeAttribute("aria-invalid");
   const options={missedContributions:1};
   if(expenseInput.validity.badInput||(rawExpense!==""&&(!Number.isFinite(expenseInput.valueAsNumber)||expenseInput.valueAsNumber<0||expenseInput.valueAsNumber>Finance.MAX_CALCULATED_BDT))){
-    expenseInput.setAttribute("aria-invalid","true");renderStressTestResults({ok:false,errors:["Enter a finite monthly expense increase from 0 to 1,000,000,000,000 BDT."]});return;
+    expenseInput.setAttribute("aria-invalid","true");renderStressTestResults({ok:false,errors:[`Enter a finite monthly expense increase in ${planCurrency()} from 0 to 1,000,000,000,000.`]});return;
   }
-  if(rawExpense!=="")options.expenseIncrease=expenseInput.valueAsNumber;
+  if(rawExpense!=="")options.expenseIncrease=Number(toBdtAmount(rawExpense));
   const enteredProfile=profile();
   const input=Finance.profileForPlanningMode(enteredProfile,enteredProfile.planningMode);
   const stress=Finance.calculateStressScenarios({...input},options);
   if(stress.ok){latestStressTest={profile:{...input},scenarios:stress.scenarios};PlanState?.saveStressOptions(options);}
   renderStressTestResults(stress,input.tuitionCur,input.planningMode);
 }
-function reportAmount(value,currency="BDT"){if(value===null||value===undefined)return "Not provided";const formatted=money(value,currency||"");return currency?formatted:formatted.trim();}
+function reportAmount(value,currency){if(value===null||value===undefined)return "Not provided";if(currency==="")return new Intl.NumberFormat("en",{maximumFractionDigits:2}).format(value);return currency?money(value,currency):money(value);}
 function appendReadinessBlock(parent,title,entries){
   const block=document.createElement("section");block.className="readinessReportBlock";
   const heading=document.createElement("h3");heading.textContent=title;block.append(heading);
@@ -1021,16 +1038,16 @@ function renderReadinessReport(data, chartData){
     ["Planning mode",data.planningModeName],
     ["Destination",data.destinationCountry||"Not provided"],
     ["Tuition",reportAmount(data.tuitionAmount,data.tuitionCurrency?`${data.tuitionCurrencyName} (${data.tuitionCurrency})`:"")],
-    ["Estimated tuition in BDT",reportAmount(data.tuitionEstimateBdt)],
+    ["Tuition value in the planning currency",reportAmount(data.tuitionEstimateBdt)],
     ["Payment / transfer fees",reportAmount(data.paymentFeesBdt)],
     ["One-time cost details (student estimates)",data.planningMode===Finance.PLANNING_MODES.TUITION_ONLY?"Excluded in Tuition Only mode":enteredOneTime||"Not provided"],
     ["Monthly living details (student estimates)",data.planningMode===Finance.PLANNING_MODES.TUITION_ONLY?"Excluded in Tuition Only mode":enteredMonthlyLiving||"Not provided"],
     ["Initial living-cost period",data.planningMode===Finance.PLANNING_MODES.TUITION_ONLY?"Excluded in Tuition Only mode":data.initialLivingMonths===null?"Not provided":`${reportAmount(data.initialLivingMonths,"")} month(s)`],
     ["Initial living-cost total",data.planningMode===Finance.PLANNING_MODES.TUITION_ONLY?"Excluded in Tuition Only mode":reportAmount(data.initialLivingCostsBdt)],
     [data.planningMode===Finance.PLANNING_MODES.TUITION_ONLY?"Other study costs":"Additional costs included",data.planningMode===Finance.PLANNING_MODES.TUITION_ONLY?"Excluded in Tuition Only mode":reportAmount(data.otherEnteredCostsBdt)],
-    ["Additional costs in destination currency",reportAmount(data.destinationCurrencyCostEquivalent,data.destinationCurrencyCostEquivalent===null?"":data.tuitionCurrency)],
+    ["Additional costs in planning currency",reportAmount(data.destinationCurrencyCostEquivalent,data.destinationCurrencyCostEquivalent===null?"":data.tuitionCurrency)],
     ["Total required funding",reportAmount(data.totalRequiredFundsBdt)],
-    ["Total in destination currency",reportAmount(data.destinationCurrencyTotalEquivalent,data.destinationCurrencyTotalEquivalent===null?"":data.tuitionCurrency)],
+    ["Total in planning currency",reportAmount(data.destinationCurrencyTotalEquivalent,data.destinationCurrencyTotalEquivalent===null?"":data.tuitionCurrency)],
     ["Planned deadline / intake",data.deadline||"Not provided"]
   ]);
   appendReadinessBlock(summary,"Savings and monthly plan",[
@@ -1042,7 +1059,7 @@ function renderReadinessReport(data, chartData){
     ["Income / expenses",`${reportAmount(data.monthlyIncomeBdt)} / ${reportAmount(data.monthlyExpensesBdt)} per month`],
     ["Disposable income",`${reportAmount(data.monthlySurplusBdt)} per month`],
     ["Contribution target",data.fundingGapBdt===0?"No additional contribution needed":data.monthlyContributionTargetBdt===null?"No contribution dates available":data.contributionCycles===1?`${reportAmount(data.contributionSchedule.finalAmountBdt)} in the final cycle`:`${reportAmount(data.contributionSchedule.regularAmountBdt)} for ${data.contributionCycles-1} cycle(s), then ${reportAmount(data.contributionSchedule.finalAmountBdt)} in the final cycle`],
-    ["Available contribution cycles",reportAmount(data.contributionCycles)],
+    ["Available contribution cycles",reportAmount(data.contributionCycles,"")],
     ["Projected savings capacity",reportAmount(data.projectedSavingsCapacityBdt)],
     ["Projected shortfall",reportAmount(data.projectedShortfallBdt)]
   ]);
@@ -1056,7 +1073,7 @@ function renderReadinessReport(data, chartData){
       ["Required contribution schedule total",reportAmount(roadmap.requiredContributionTotalBdt)],
       ["Monthly / total projected capacity",`${reportAmount(roadmap.monthlySavingsCapacityBdt)} / ${reportAmount(roadmap.projectedSavingsCapacityBdt)}`],
       ["Ending projected savings / remaining gap",`${reportAmount(roadmap.endingProjectedSavingsBalanceBdt)} / ${reportAmount(roadmap.endingRemainingFundingGapBdt)}`],
-      ["Assumption",roadmap.summary||"Not provided"]
+      ["Assumption",(roadmap.summary||"Not provided").replace(/([\d,.]+) BDT/g,(_match,amount)=>money(Number(amount.replaceAll(",",""))))]
     ]);
   }
   page.append(summary,renderFinancialCharts(chartData,"readiness-report"));
@@ -1087,7 +1104,7 @@ function renderReadinessReport(data, chartData){
   }
   const nextSection=document.createElement("section");nextSection.className="readinessReportSection";
   const nextTitle=document.createElement("h3");nextTitle.textContent="Suggested next steps";const steps=document.createElement("ol");steps.className="readinessNextSteps";
-  for(const text of data.nextSteps){const item=document.createElement("li");item.textContent=text;steps.append(item);}nextSection.append(nextTitle,steps);page.append(nextSection);
+  for(const text of data.nextSteps){const item=document.createElement("li");item.textContent=text.replace(/([\d,.]+) BDT/g,(_match,amount)=>money(Number(amount.replaceAll(",",""))));steps.append(item);}nextSection.append(nextTitle,steps);page.append(nextSection);
   const modeNote=document.createElement("p");modeNote.className="readinessDisclaimer";modeNote.textContent=data.planningModeNote;page.append(modeNote);
   const disclaimer=document.createElement("p");disclaimer.className="readinessDisclaimer";disclaimer.textContent=data.disclaimer;page.append(disclaimer);
 }
@@ -1113,7 +1130,7 @@ byId("resetProfile").addEventListener("click",()=>{byId("stressExpenseIncrease")
 byId("generateReadinessReport").addEventListener("click",generateReadinessReport);
 byId("printReadinessReport").addEventListener("click",()=>window.print());
 byId("closeReadinessReport").addEventListener("click",()=>{byId("readinessReportPreview").hidden=true;byId("generateReadinessReport").focus();});
-byId("exportReport").addEventListener("click",()=>{compute();if(!latest){byId("planner").scrollIntoView({behavior:reducedMotion.matches?"auto":"smooth"});return;}const {input:p,result:r}=latest;const cmp=currentQuoteComparison();const comparison=cmp.ok?cmp.available:[];const excluded=cmp.ok?cmp.unavailable:[];const scenarioValue=byId("scenarioMonthly").value;const scenarioMonthly=Number(scenarioValue);const scenarioIncome=Number(p.income);const scenarioExpenses=scenarioIncome-scenarioMonthly;const expenseIncrease=scenarioValue!==""&&Number.isFinite(scenarioExpenses)&&scenarioMonthly>=0&&scenarioMonthly<=scenarioIncome?Math.max(0,scenarioExpenses-Number(p.expenses)):0;const stressOptions={missedContributions:1};if(expenseIncrease>0)stressOptions.expenseIncrease=expenseIncrease;const stress=Finance.calculateStressScenarios(p,stressOptions);const report=Finance.buildFinancialReport(p,r,{quotes:comparison,excludedQuotes:excluded,quoteErrors:cmp.ok?[]:cmp.errors,stressScenarios:stress.scenarios||[],stressErrors:stress.ok?[]:stress.errors||[]});const blob=new Blob([report],{type:"text/plain"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="campusbridge-financial-report.txt";a.click();URL.revokeObjectURL(a.href);logEvent("export_financial_report","success","Local report generated from entered data");});
+byId("exportReport").addEventListener("click",()=>{compute();if(!latest){byId("planner").scrollIntoView({behavior:reducedMotion.matches?"auto":"smooth"});return;}const {input:p,result:r}=latest;const cmp=currentQuoteComparison();const comparison=cmp.ok?cmp.available:[];const excluded=cmp.ok?cmp.unavailable:[];const scenarioValue=byId("scenarioMonthly").value;const scenarioMonthly=Number(toBdtAmount(scenarioValue));const scenarioIncome=Number(p.income);const scenarioExpenses=scenarioIncome-scenarioMonthly;const expenseIncrease=scenarioValue!==""&&Number.isFinite(scenarioExpenses)&&scenarioMonthly>=0&&scenarioMonthly<=scenarioIncome?Math.max(0,scenarioExpenses-Number(p.expenses)):0;const stressOptions={missedContributions:1};if(expenseIncrease>0)stressOptions.expenseIncrease=expenseIncrease;const stress=Finance.calculateStressScenarios(p,stressOptions);const report=Finance.buildFinancialReport(p,r,{quotes:comparison,excludedQuotes:excluded,quoteErrors:cmp.ok?[]:cmp.errors,stressScenarios:stress.scenarios||[],stressErrors:stress.ok?[]:stress.errors||[]});const blob=new Blob([report],{type:"text/plain"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="campusbridge-financial-report.txt";a.click();URL.revokeObjectURL(a.href);logEvent("export_financial_report","success","Local report generated from entered data");});
 
 // Pointer-responsive 3D treatment is decorative and disabled for touch/reduced motion.
 const visual=document.querySelector(".heroVisual"),orb=document.querySelector(".orb3d");
@@ -1122,17 +1139,19 @@ function restoreSavedPlan() {
   const saved = PlanState?.loadPlan();
   if (!saved?.ok) return false;
   const p = saved.profile;
-  const corridor = Object.entries(corridorMap).find(([, value]) => value.currency === p.tuitionCur)?.[0];
-  if (!corridor) { PlanState.clearPlan(); return false; }
+  const corridor = Object.entries(corridorMap).find(([, value]) => value.country === p.destinationCountry)?.[0] || Object.entries(corridorMap).find(([, value]) => value.currency === p.tuitionCur)?.[0];
+  if (!corridor || !Finance.CURRENCIES.includes(p.tuitionCur)) { PlanState.clearPlan(); return false; }
   byId("corridor").value = corridor; syncCustomSelect(byId("corridor"));
+  byId("planningCurrency").value=p.tuitionCur; byId("planningDetails").disabled=false; byId("planningDetails").hidden=false; exchangeRateState.selectedCurrency=p.tuitionCur; updatePlanCurrencyLabels();
   const fields = ["tuition", "exchangeRate", "rateSource", "rateTimestamp", "savings", "emergency", "committed", "income", "expenses", "paymentFee", "visaCost", "applicationCost", "flightCost", "insuranceCost", "documentCost", "accommodationDeposit", "initialSetupCost", "otherOneTimeCosts", "initialLivingMonths", "monthlyRent", "monthlyFood", "monthlyTransport", "monthlyUtilities", "monthlyOtherLiving", "deadline"];
-  for (const id of fields) byId(id).value = p[id] ?? "";
-  byId("savings").value = p.otherSavings;
-  bankAccounts = p.accountBalances.map((balance, index) => ({ id: nextBankAccountId++, label: `Saved balance ${index + 1}`, balance }));
+  const rate=Number(p.exchangeRate),fromBdt=value=>value===""||value==null?"":String(Number(value)/rate);
+  for (const id of fields) byId(id).value = ["tuition","exchangeRate","rateSource","rateTimestamp","initialLivingMonths","deadline"].includes(id)?p[id]??"":fromBdt(p[id]);
+  byId("savings").value = fromBdt(p.otherSavings);
+  bankAccounts = p.accountBalances.map((balance, index) => ({ id: nextBankAccountId++, label: `Saved balance ${index + 1}`, balance: balance/rate }));
   renderBankAccounts();
   document.querySelectorAll('input[name="planningMode"]').forEach(input => { input.checked = input.value === p.planningMode; });
   restoredRateProvenance = p.rateProvenance.includes("Bangladesh Bank") ? "Previously selected Bangladesh Bank reference; saved timestamp shown, not refreshed on this page" : "Saved user-provided rate; not independently verified";
-  exchangeRateState.mode = "manual"; exchangeRateState.selectedCurrency = p.tuitionCur;
+  exchangeRateState.mode = "manual";
   updatePlanningModeUI(); syncRateTimestampPicker(); updateDeadlineHint(); planRequested = true;
   return true;
 }

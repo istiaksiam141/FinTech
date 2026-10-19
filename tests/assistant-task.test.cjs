@@ -22,12 +22,13 @@ function makePlan(input = profile()) {
 function run(question, overrides = {}) {
   return AssistantTask.run({ question, Finance, plan: makePlan(), money: value => `${Math.round(value)} BDT`, today, ...overrides });
 }
+function selectedAmount(value, plan = makePlan()) { return `${new Intl.NumberFormat("en", { maximumFractionDigits: 2 }).format(value / Number(plan.profile.exchangeRate))} ${plan.profile.tuitionCur}`; }
 
 test('recognized funding requests use the current deterministic result', () => {
   const plan = makePlan();
   const response = run('What is my tuition funding gap?', { plan });
   assert.equal(response.handled, true);
-  assert.ok(response.answer.includes(`${Math.round(plan.result.gap)} BDT`));
+  assert.ok(response.answer.includes(selectedAmount(plan.result.gap, plan)));
   assert.ok(response.answer.includes('Bangladesh Bank cross rate; publication 2026-10-19; ASK'));
   assert.match(response.answer, /not current|still current/);
 });
@@ -41,7 +42,7 @@ test('a plain tuition statement is not routed to saved-plan calculations, while 
   for (const question of ['What is my funding gap?', 'Calculate my tuition funding gap.', 'Can I afford my tuition?']) {
     const response = run(question);
     assert.equal(response.handled, true);
-    assert.ok(response.answer.includes(`${Math.round(makePlan().result.gap)} BDT`));
+    assert.ok(response.answer.includes(selectedAmount(makePlan().result.gap)));
   }
 });
 
@@ -59,10 +60,10 @@ test('savings schedule uses finance-engine contributions and matching projected 
   const target = Finance.describeMonthlySavingsTarget(plan.result);
   const response = run('How much should I save each month?', { plan });
   assert.equal(response.handled, true);
-  assert.ok(response.answer.includes(`${target.regularAmount} BDT`));
-  assert.ok(response.answer.includes(`${target.finalAmount} BDT`));
-  for (const contribution of roadmap.contributions) assert.ok(response.answer.includes(`${contribution.dueDate}: ${contribution.requiredContributionBdt} BDT`));
-  assert.ok(response.answer.includes(`${plan.result.shortfall} BDT`));
+  assert.ok(response.answer.includes(selectedAmount(target.regularAmount, plan)));
+  assert.ok(response.answer.includes(selectedAmount(target.finalAmount, plan)));
+  for (const contribution of roadmap.contributions) assert.ok(response.answer.includes(`${contribution.dueDate}: ${selectedAmount(contribution.requiredContributionBdt, plan)}`));
+  assert.ok(response.answer.includes(selectedAmount(plan.result.shortfall, plan)));
 });
 
 test('quote answers use only eligible comparisons and disclose their unverified status', () => {

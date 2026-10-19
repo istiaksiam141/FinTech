@@ -147,7 +147,7 @@
     for (const quote of result.available) {
       const card = document.createElement("article"); card.className = "surface quoteResult";
       const title = document.createElement("h2"); title.textContent = quote.quote.name; card.append(title);
-      const details = document.createElement("p"); details.textContent = `Sender cost ${money(quote.totalCost)} · recipient amount ${quote.recipientAmount} ${quote.currency} · source ${quote.reference} · timestamp ${quote.timestamp}.`; card.append(details); output.append(card);
+      const details = document.createElement("p"); details.textContent = `Sender cost ${money(quote.totalCost, "BDT")} · recipient amount ${quote.recipientAmount} ${quote.currency} · source ${quote.reference} · timestamp ${quote.timestamp}.`; card.append(details); output.append(card);
     }
     for (const quote of result.unavailable) { const item = document.createElement("p"); item.className = "error"; item.textContent = `${quote.quote.name}: ${quote.reason}`; output.append(item); }
   }

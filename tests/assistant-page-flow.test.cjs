@@ -20,6 +20,7 @@ function makePlan() {
   };
   return { ok: true, profile, result: Finance.calculateTuition(profile, new Date(2026, 9, 19, 12)) };
 }
+function selectedAmount(value, plan) { return `${new Intl.NumberFormat("en", { maximumFractionDigits: 2 }).format(value / Number(plan.profile.exchangeRate))} ${plan.profile.tuitionCur}`; }
 
 function makeElement(id = '') {
   return {
@@ -92,7 +93,7 @@ async function runAssistantPage({ signedIn, useHistory = false, conversationResu
 test('funding-gap task still returns the deterministic planner figure when persistence reports success without a message ID', async () => {
   const page = await runAssistantPage({ signedIn: true, userMessageResult: { ok: true } });
   const answer = page.elements.get('assistant-answer').textContent;
-  assert.match(answer, new RegExp(`${Math.round(page.plan.result.gap)} BDT`));
+  assert.ok(answer.includes(selectedAmount(page.plan.result.gap, page.plan)));
   assert.equal(page.requestCalls.length, 0, 'deterministic funding answer must not call the remote AI endpoint');
   assert.match(page.elements.get('assistant-status').textContent, /Answered locally using validated planner results/);
 });
@@ -101,7 +102,7 @@ test('signed-in deterministic funding answers still persist when the saved-messa
   const page = await runAssistantPage({ signedIn: true });
   assert.equal(page.requestCalls.length, 0);
   assert.equal(page.writes, 2, 'save the user question and deterministic assistant answer');
-  assert.match(page.elements.get('assistant-answer').textContent, new RegExp(`${Math.round(page.plan.result.gap)} BDT`));
+  assert.ok(page.elements.get('assistant-answer').textContent.includes(selectedAmount(page.plan.result.gap, page.plan)));
 });
 
 test('a plain tuition statement is sent for explanation instead of triggering a saved-plan calculation', async () => {
@@ -114,7 +115,7 @@ test('a plain tuition statement is sent for explanation instead of triggering a 
 test('funding-gap task remains available if conversation creation returns no ID', async () => {
   const page = await runAssistantPage({ signedIn: true, conversationResult: { ok: true } });
   assert.equal(page.requestCalls.length, 0);
-  assert.match(page.elements.get('assistant-answer').textContent, new RegExp(`${Math.round(page.plan.result.gap)} BDT`));
+  assert.ok(page.elements.get('assistant-answer').textContent.includes(selectedAmount(page.plan.result.gap, page.plan)));
   assert.doesNotMatch(page.elements.get('assistant-answer').textContent, /Cannot read properties of undefined/);
 });
 

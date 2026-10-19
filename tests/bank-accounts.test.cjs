@@ -33,7 +33,8 @@ test('planner combines manual account balances without sending or saving them re
   assert.match(html, /lib\/bank-accounts\.js/);
   assert.match(html, /Do not enter an account number, password, card number, or one-time code/);
   assert.match(html, /clear when you reload or clear the planner/);
-  assert.match(app, /BankAccounts\.totalSavings\(manualSavings, bankAccounts\)/);
+  assert.match(app, /accountBalancesBdt=bankAccounts\.map\(account=>Number\(toBdtAmount\(account\.balance,rate\)\)\)/);
+  assert.match(app, /savings, otherSavings: otherSavingsBdt, accountBalances: accountBalancesBdt/);
   assert.match(app, /byId\("resetProfile"\).*bankAccounts=\[\]/);
   assert.doesNotMatch(app, /localStorage|sessionStorage/);
 });
