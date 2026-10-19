@@ -578,6 +578,17 @@ body[data-page="planner"] .resultDetails .metric strong{font-size:1rem;color:#34
 
 /* Append-only assistant chat history */
 .assistantConversation{display:grid;gap:12px;max-height:min(65vh,720px);overflow-y:auto;overscroll-behavior:contain;scroll-behavior:smooth}
+.assistantHistory{display:grid;gap:12px;margin:18px 0;padding:18px;border:1px solid var(--line);border-radius:18px;background:rgba(12,32,55,.72)}
+.assistantHistoryHeading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.assistantHistoryHeading h2{font-size:1.1rem;letter-spacing:-.02em}
+.assistantConversationList{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.assistantConversationList li{display:flex;align-items:center;gap:8px}
+.assistantConversationOpen{flex:1;min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--ink);text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.assistantConversationOpen[aria-current="true"]{border-color:var(--cyan);color:var(--cyan)}
+.assistantHistoryHeading h2{margin:0}
+.assistantHistoryHeading .button{flex-shrink:0}
+.assistantHistory .muted:empty{display:none}
+@media(max-width:640px){.assistantHistoryHeading{align-items:flex-start}.assistantConversationList li{align-items:stretch}.assistantConversationOpen{white-space:normal}}
 .assistantTurn{min-width:0;padding:14px 16px;border:1px solid rgba(101,216,232,.17);border-radius:12px;background:rgba(9,27,46,.48)}
 .assistantTurnQuestion{display:grid;gap:4px;margin:0 0 12px!important;color:var(--ink)}
 .assistantTurnQuestion strong,.assistantTurnLabel{color:var(--mint);font-size:.78rem;letter-spacing:.02em}
