@@ -35,13 +35,19 @@ function makeFetch({ userId = USER_ID, conversationId = CONVERSATION_ID, latestI
     if (url.pathname === '/rest/v1/assistant_messages') {
       assert.equal(url.searchParams.get('conversation_id'), `eq.${CONVERSATION_ID}`);
       assert.equal(url.searchParams.get('user_id'), `eq.${userId}`);
-      assert.equal(url.searchParams.get('role'), 'eq.user');
-      assert.equal(url.searchParams.get('order'), 'created_at.desc,id.desc');
-      assert.equal(url.searchParams.get('limit'), '1');
-      assert.equal(url.searchParams.get('select'), 'id,content');
       const current = latestId ? [{ id: latestId, content: latestContent, role: 'user', created_at: '2026-10-19T00:01:00Z' }] : [];
-      const latest = [...priorMessages, ...current].filter(message => message.role === 'user').sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id)).slice(0, 1).map(({ id, content }) => ({ id, content }));
-      return response(200, latest);
+      if (url.searchParams.get('role') === 'eq.user') {
+        assert.equal(url.searchParams.get('order'), 'created_at.desc,id.desc');
+        assert.equal(url.searchParams.get('limit'), '1');
+        assert.equal(url.searchParams.get('select'), 'id,content,created_at');
+        const latest = [...priorMessages, ...current].filter(message => message.role === 'user').sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id)).slice(0, 1).map(({ id, content, created_at }) => ({ id, content, created_at }));
+        return response(200, latest);
+      }
+      assert.equal(url.searchParams.get('role'), null);
+      assert.equal(url.searchParams.get('order'), 'created_at.desc,id.desc');
+      assert.equal(url.searchParams.get('limit'), String(Context.CONTEXT_QUERY_LIMIT));
+      assert.equal(url.searchParams.get('select'), 'id,role,content,created_at');
+      return response(200, [...priorMessages, ...current].sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id)).slice(0, Context.CONTEXT_QUERY_LIMIT));
     }
     throw new Error(`Unexpected request path ${url.pathname}`);
   };
@@ -58,8 +64,8 @@ function handlerFor(mock, capture = {}) {
   return Assistant.createAssistantHandler({ env: ENV, fetchImpl: mock.fetchImpl, createClient: () => ({ chat: { completions: { create: async request => { capture.request = request; return { choices: [{ message: { content: 'Answer.' } }] }; } } } }) });
 }
 
-test('saved conversation verification returns only the current question and never queries history', async () => {
-  const mock = makeFetch();
+test('saved conversation consent is off by default and queries only the current question', async () => {
+  const mock = makeFetch({ priorMessages: [{ id: STALE_ID, role: 'user', content: 'I owe twelve thousand to the university.', created_at: '2026-10-18T00:00:00Z' }] });
   const loaded = await Context.loadOwnedConversationContext({ conversationId: CONVERSATION_ID, currentMessageId: CURRENT_ID, question: QUESTION, authorization: `Bearer ${TOKEN}`, env: ENV, fetchImpl: mock.fetchImpl });
   assert.equal(loaded.ok, true);
   assert.deepEqual(loaded.messages, [{ role: 'user', content: QUESTION }]);
@@ -68,30 +74,118 @@ test('saved conversation verification returns only the current question and neve
   assert.equal(mock.calls[2].url.searchParams.get('limit'), '1');
 });
 
-test('sensitive history examples and ordinary older messages are never included in Groq context', async () => {
-  const sensitivePairs = [
-    ['I owe twelve thousand to the university.', 'You said you owe twelve thousand to the university.'],
-    ['My tuition is twelve thousand taka.', 'Your tuition is twelve thousand taka.'],
-    ['I owe one hundred twenty-five thousand to the university.', 'You said you owe one hundred twenty-five thousand to the university.'],
-    ['The expected funding gap is twelve thousand.', 'The expected funding gap is twelve thousand.'],
-    ['My student number is ABC-XYZ.', 'Your student number is ABC-XYZ.'],
-    ['My student ID is STU-ABC.', 'You said your student ID is STU-ABC.'],
-    ['My tuition is $12,000.', 'Your tuition is $12,000.']
+test('consented history is loaded server-side in chronological order and current question appears once', async () => {
+  const followUp = 'Can you explain the second point?';
+  const priorMessages = [
+    { id: '00000001-23ef-43b8-9a31-2c60c1eb9a88', role: 'user', content: 'My university tuition is 5000 USD.', created_at: '2026-10-18T00:00:00Z' },
+    { id: '00000002-23ef-43b8-9a31-2c60c1eb9a88', role: 'assistant', content: 'Thanks. Is that the full annual tuition or one semester?', created_at: '2026-10-18T00:00:01Z' },
+    { id: '00000003-23ef-43b8-9a31-2c60c1eb9a88', role: 'user', content: 'One semester.', created_at: '2026-10-18T00:00:02Z' }
   ];
-  for (const pair of [...sensitivePairs, ['What is an emergency fund?', 'It is money set aside for unexpected essential expenses.']]) {
-    const priorMessages = pair.map((content, index) => ({
-      id: `${String(index + 1).padStart(8, '0')}-23ef-43b8-9a31-2c60c1eb9a88`,
-      role: index === 0 ? 'user' : 'assistant', content,
-      created_at: index === 0 ? '2026-10-18T00:00:00Z' : '2026-10-18T00:00:01Z'
-    }));
+  const mock = makeFetch({ priorMessages, latestContent: followUp });
+  const capture = {};
+  const result = await invoke(handlerFor(mock, capture), chatRequest({ includeHistory: true, question: followUp }));
+  assert.equal(result.statusCode, 200);
+  assert.deepEqual(capture.request.messages.slice(1), [
+    { role: 'user', content: 'My university tuition is 5000 USD.' },
+    { role: 'assistant', content: 'Thanks. Is that the full annual tuition or one semester?' },
+    { role: 'user', content: 'One semester.' },
+    { role: 'user', content: followUp }
+  ]);
+  assert.equal(capture.request.messages.filter(message => message.role === 'user' && message.content === followUp).length, 1);
+  assert.equal(mock.calls.length, 4);
+});
+
+test('consented tuition follow-ups use the latest authorized user fact despite intervening assistant messages', async () => {
+  const priorMessages = [
+    { id: '00000001-23ef-43b8-9a31-2c60c1eb9a88', role: 'user', content: 'My university tuition is 5000 USD.', created_at: '2026-10-18T00:00:00Z' },
+    { id: '00000002-23ef-43b8-9a31-2c60c1eb9a88', role: 'assistant', content: 'I think your tuition was 700 USD. Open the planner to review your funding gap.', created_at: '2026-10-18T00:00:01Z' }
+  ];
+  for (const followUp of ['How much is my tuition fee?', 'What amount did I just tell you?']) {
+    const mock = makeFetch({ priorMessages, latestContent: followUp });
+    let groqCalls = 0;
+    const handler = Assistant.createAssistantHandler({ env: ENV, fetchImpl: mock.fetchImpl, createClient: () => ({ chat: { completions: { create: async () => { groqCalls += 1; return { choices: [{ message: { content: 'incorrect model result' } }] }; } } } }) });
+    const result = await invoke(handler, chatRequest({ includeHistory: true, question: followUp }));
+    assert.deepEqual(result.body, { answer: 'Your university tuition fee is $5,000 USD.', incomplete: false });
+    assert.equal(groqCalls, 0, 'the verified saved fact should not depend on a probabilistic model response');
+  }
+});
+
+test('tuition recall without consent or without retrieved history does not use earlier facts', async () => {
+  const question = 'How much is my tuition fee?';
+  const priorMessages = [{ id: STALE_ID, role: 'user', content: 'My university tuition is 5000 USD.', created_at: '2026-10-18T00:00:00Z' }];
+  for (const { includeHistory, messages } of [
+    { includeHistory: false, messages: [{ role: 'user', content: question }] },
+    { includeHistory: true, messages: [{ role: 'user', content: question }] }
+  ]) {
+    const mock = makeFetch({ priorMessages: includeHistory ? [] : priorMessages, latestContent: question });
+    let sentMessages;
+    const handler = Assistant.createAssistantHandler({ env: ENV, fetchImpl: mock.fetchImpl, createClient: () => ({ chat: { completions: { create: async request => { sentMessages = request.messages; return { choices: [{ message: { content: 'I do not have that earlier detail in this request. Please repeat it.' } }] }; } } } }) });
+    const result = await invoke(handler, chatRequest({ includeHistory, question }));
+    assert.equal(result.statusCode, 200);
+    assert.deepEqual(sentMessages.slice(1), messages);
+    assert.match(sentMessages[0].content, /Do not claim to remember or know what the user said earlier/);
+  }
+});
+
+test('a consented history retrieval error fails closed before Groq', async () => {
+  const mock = makeFetch({ priorMessages: [{ id: STALE_ID, role: 'user', content: 'My university tuition is 5000 USD.', created_at: '2026-10-18T00:00:00Z' }], latestContent: 'How much is my tuition fee?' });
+  let messageRequests = 0;
+  const fetchImpl = async (input, options) => {
+    const url = new URL(input);
+    if (url.pathname === '/rest/v1/assistant_messages' && ++messageRequests === 2) return response(503, {});
+    return mock.fetchImpl(input, options);
+  };
+  let groqCalls = 0;
+  const handler = Assistant.createAssistantHandler({ env: ENV, fetchImpl, createClient: () => ({ chat: { completions: { create: async () => { groqCalls += 1; return { choices: [{ message: { content: 'must not be sent' } }] }; } } } }) });
+  const result = await invoke(handler, chatRequest({ includeHistory: true, question: 'How much is my tuition fee?' }));
+  assert.equal(result.statusCode, 502);
+  assert.equal(groqCalls, 0);
+});
+
+test('model prompt explicitly forbids recall claims without history and permits recall from consented history', async () => {
+  const priorMessages = [{ id: STALE_ID, role: 'user', content: 'My university tuition is 5000 USD.', created_at: '2026-10-18T00:00:00Z' }];
+  for (const includeHistory of [false, true]) {
     const mock = makeFetch({ priorMessages });
     const capture = {};
-    const handler = handlerFor(mock, capture);
-    const result = await invoke(handler, chatRequest());
+    const result = await invoke(handlerFor(mock, capture), chatRequest({ includeHistory }));
     assert.equal(result.statusCode, 200);
-    assert.deepEqual(capture.request.messages.slice(1), [{ role: 'user', content: QUESTION }]);
-    assert.equal(mock.calls.length, 3, 'only Auth, owned conversation, and latest user message are queried');
+    const [system, ...sentMessages] = capture.request.messages;
+    assert.match(system.content, /If no prior conversation messages are included.*Do not claim to remember or know what the user said earlier/s);
+    assert.match(system.content, /When prior messages are included.*you may use them to answer references and follow-ups/s);
+    if (includeHistory) {
+      assert.deepEqual(sentMessages, [{ role: 'user', content: 'My university tuition is 5000 USD.' }, { role: 'user', content: QUESTION }]);
+    } else {
+      assert.deepEqual(sentMessages, [{ role: 'user', content: QUESTION }]);
+    }
   }
+});
+
+test('repeated identical questions remain separate ordered messages and current reference is appended once', async () => {
+  const priorMessages = [{ id: STALE_ID, role: 'user', content: QUESTION, created_at: '2026-10-18T00:00:00Z' }];
+  const mock = makeFetch({ priorMessages });
+  const capture = {};
+  const result = await invoke(handlerFor(mock, capture), chatRequest({ includeHistory: true }));
+  assert.equal(result.statusCode, 200);
+  assert.deepEqual(capture.request.messages.slice(1), [{ role: 'user', content: QUESTION }, { role: 'user', content: QUESTION }]);
+  assert.equal(capture.request.messages.at(-1).content, QUESTION);
+});
+
+test('consented history enforces both message count and character limits while retaining recent useful context', async () => {
+  const priorMessages = Array.from({ length: 22 }, (_, i) => ({
+    id: `${String(i + 1).padStart(8, '0')}-23ef-43b8-9a31-2c60c1eb9a88`, role: i % 2 ? 'assistant' : 'user',
+    content: i === 0 ? 'Old useful context.' : `Message ${i} ${'x'.repeat(700)}`,
+    created_at: `2026-10-18T00:${String(i).padStart(2, '0')}:00Z`
+  }));
+  const mock = makeFetch({ priorMessages });
+  const capture = {};
+  const result = await invoke(handlerFor(mock, capture), chatRequest({ includeHistory: true }));
+  assert.equal(result.statusCode, 200);
+  const sent = capture.request.messages.slice(1);
+  assert.ok(sent.length <= Context.MAX_CONTEXT_MESSAGES);
+  assert.ok(sent.reduce((sum, message) => sum + message.content.length, 0) <= Context.MAX_CONTEXT_CHARS);
+  assert.deepEqual(sent.at(-1), { role: 'user', content: QUESTION });
+  assert.ok(sent.some(message => message.content.startsWith('Message 21')));
+  assert.equal(sent.filter(message => message.content === QUESTION).length, 1);
 });
 
 test('repeated identical questions are distinguished by current message ID and included once', async () => {
@@ -177,10 +271,15 @@ test('arbitrary browser-supplied history is rejected', async () => {
   assert.equal(groqCalls, 0);
 });
 
-test('API refuses any context loader output beyond the one current question', async () => {
+test('API enforces context bounds and final current-question position before Groq', async () => {
   let groqCalls = 0;
-  const handler = Assistant.createAssistantHandler({ env: ENV, contextLoader: async () => ({ ok: true, messages: [{ role: 'user', content: 'older message' }, { role: 'user', content: QUESTION }] }), createClient: () => ({ chat: { completions: { create: async () => { groqCalls += 1; return { choices: [{ message: { content: 'answer' } }] }; } } } }) });
-  const result = await invoke(handler, chatRequest());
-  assert.equal(result.statusCode, 502);
+  const sdk = () => ({ chat: { completions: { create: async () => { groqCalls += 1; return { choices: [{ message: { content: 'answer' } }] }; } } } });
+  const tooMany = Array.from({ length: Context.MAX_CONTEXT_MESSAGES }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', content: `context ${i}` }));
+  tooMany.push({ role: 'user', content: QUESTION });
+  for (const messages of [tooMany, [{ role: 'user', content: 'x'.repeat(Context.MAX_CONTEXT_CHARS) }, { role: 'user', content: QUESTION }], [{ role: 'user', content: QUESTION }, { role: 'assistant', content: 'not chronologically final' }]]) {
+    const handler = Assistant.createAssistantHandler({ env: ENV, contextLoader: async () => ({ ok: true, messages }), createClient: sdk });
+    const result = await invoke(handler, chatRequest({ includeHistory: true }));
+    assert.equal(result.statusCode, 502);
+  }
   assert.equal(groqCalls, 0);
 });

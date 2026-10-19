@@ -163,13 +163,14 @@ test('account route exposes email, OAuth, recovery, and explicit cloud-plan acti
   assert.match(css, /\.accountHero h1\{/, 'the Welcome back heading keeps its existing display typography');
 });
 
-test('feature pages reuse the finance engine and assistant remote request contains only question', () => {
+test('feature pages reuse the finance engine and assistant remote request contains only question and server-verified references', () => {
   for (const file of ['js/roadmap-page.js', 'js/stress-tests-page.js', 'js/report-page.js', 'js/transfers-page.js', 'js/assistant-page.js']) {
     assert.match(fs.readFileSync(path.join(root, file), 'utf8'), /CampusBridgePageUtils/);
   }
   const assistant = fs.readFileSync(path.join(root, 'js/assistant-page.js'), 'utf8');
-  assert.match(assistant, /JSON\.stringify\(\{ question: text \}\)/);
-  assert.doesNotMatch(assistant, /JSON\.stringify\(\{[^}]*profile/);
+  assert.match(assistant, /requestBody = \{ question: text \}/);
+  assert.match(assistant, /requestBody\.conversationId = savedQuestion\.conversationId/);
+  assert.doesNotMatch(assistant, /JSON\.stringify\(\{[^}]*profile|requestBody\.messages/);
   assert.ok(fs.existsSync(path.join(root, 'api/assistant.js')));
   assert.ok(fs.existsSync(path.join(root, 'api/exchange-rates.js')));
   assert.match(fs.readFileSync(path.join(root, 'app.js'), 'utf8'), /\/api\/assistant/);

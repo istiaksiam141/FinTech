@@ -32,6 +32,19 @@ test('recognized funding requests use the current deterministic result', () => {
   assert.match(response.answer, /not current|still current/);
 });
 
+test('a plain tuition statement is not routed to saved-plan calculations, while explicit requests remain deterministic', () => {
+  const statement = 'My university tuition is 5000 USD.';
+  assert.equal(Finance.assistantIntent(statement), 'general');
+  assert.deepEqual(run(statement), { handled: false });
+  assert.equal(Finance.assistantIntent('How much is my tuition fee?'), 'general');
+  assert.deepEqual(run('How much is my tuition fee?'), { handled: false });
+  for (const question of ['What is my funding gap?', 'Calculate my tuition funding gap.', 'Can I afford my tuition?']) {
+    const response = run(question);
+    assert.equal(response.handled, true);
+    assert.ok(response.answer.includes(`${Math.round(makePlan().result.gap)} BDT`));
+  }
+});
+
 test('missing or invalid planner inputs request completion without inventing financial figures', () => {
   for (const plan of [null, { ok: false }, { ok: true, profile: profile(), result: { ok: false } }]) {
     const response = run('Can I afford tuition?', { plan });
