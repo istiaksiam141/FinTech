@@ -75,7 +75,10 @@
     if (!activeConversationId) {
       const created = await chat.createConversation(text);
       if (userId !== ownerId) return null;
-      if (!created.ok) { status.textContent = `${created.error} The answer can still be viewed until you leave this page.`; return null; }
+      if (!created?.ok || typeof created.conversation?.id !== "string" || !created.conversation.id) {
+        status.textContent = `${created?.error || "Could not verify the saved conversation."} The answer can still be viewed until you leave this page.`;
+        return null;
+      }
       activeConversationId = created.conversation.id;
       conversations.unshift(created.conversation); renderList();
       historyNote.textContent = "Select a conversation to reopen it. Your chat is saved to your account.";
@@ -83,8 +86,11 @@
     const conversationId = activeConversationId;
     const result = await chat.saveMessage(conversationId, "user", text);
     if (userId !== ownerId) return null;
-    if (!result.ok) status.textContent = `${result.error} The answer can still be viewed until you leave this page.`;
-    return { conversationId, currentMessageId: result.ok ? result.message.id : null };
+    const currentMessageId = result?.ok && typeof result.message?.id === "string" && result.message.id ? result.message.id : null;
+    if (!currentMessageId) {
+      status.textContent = `${result?.error || "Could not verify the saved question."} The answer can still be viewed until you leave this page.`;
+    }
+    return { conversationId, currentMessageId };
   }
   async function saveAnswer(content) {
     if (!userId || !chat || !activeConversationId) return;
@@ -129,9 +135,11 @@
       if (task.handled) {
         Renderer.render(turn.response, task.answer);
         status.textContent = "Answered locally using validated planner results. No plan or quote details were sent to the AI service.";
-        if (savedQuestion?.conversationId && savedQuestion.conversationId === activeConversationId) await saveAnswer(task.answer);
+        if (savedQuestion?.conversationId && savedQuestion.currentMessageId && savedQuestion.conversationId === activeConversationId) await saveAnswer(task.answer);
         return;
       }
+
+      if (savedQuestion?.conversationId && !savedQuestion.currentMessageId) throw new Error("The saved question could not be verified. Please try again before using the AI assistant.");
 
       status.textContent = savedQuestion?.conversationId && savedQuestion.currentMessageId
         ? "Verifying this saved conversation…"
