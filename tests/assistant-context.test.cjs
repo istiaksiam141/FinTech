@@ -95,6 +95,24 @@ test('consented history is loaded server-side in chronological order and current
   assert.equal(mock.calls.length, 4);
 });
 
+test('model prompt explicitly forbids recall claims without history and permits recall from consented history', async () => {
+  const priorMessages = [{ id: STALE_ID, role: 'user', content: 'My university tuition is 5000 USD.', created_at: '2026-10-18T00:00:00Z' }];
+  for (const includeHistory of [false, true]) {
+    const mock = makeFetch({ priorMessages });
+    const capture = {};
+    const result = await invoke(handlerFor(mock, capture), chatRequest({ includeHistory }));
+    assert.equal(result.statusCode, 200);
+    const [system, ...sentMessages] = capture.request.messages;
+    assert.match(system.content, /If no prior conversation messages are included.*Do not claim to remember or know what the user said earlier/s);
+    assert.match(system.content, /When prior messages are included.*you may use them to answer references and follow-ups/s);
+    if (includeHistory) {
+      assert.deepEqual(sentMessages, [{ role: 'user', content: 'My university tuition is 5000 USD.' }, { role: 'user', content: QUESTION }]);
+    } else {
+      assert.deepEqual(sentMessages, [{ role: 'user', content: QUESTION }]);
+    }
+  }
+});
+
 test('repeated identical questions remain separate ordered messages and current reference is appended once', async () => {
   const priorMessages = [{ id: STALE_ID, role: 'user', content: QUESTION, created_at: '2026-10-18T00:00:00Z' }];
   const mock = makeFetch({ priorMessages });
