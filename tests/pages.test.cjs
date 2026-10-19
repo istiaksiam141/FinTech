@@ -40,6 +40,23 @@ test('planner loads its validated guided steps and review stage', () => {
   new vm.Script(steps, { filename: 'js/planner-steps.js' });
 });
 
+test('planner form uses project fonts without changing its large page headings', () => {
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(css, /body\[data-page="planner"\] #profileForm,[\s\S]*?#profileForm button\{font-family:'DM Sans',sans-serif\}/);
+  assert.match(css, /#profileForm h3,[\s\S]*?#profileForm \.planningModeCard strong\{font-family:Manrope,sans-serif\}/);
+  assert.doesNotMatch(css, /body\[data-page="planner"\] #planner(?: h1| h2)/, 'large planner page headings remain outside the form typography override');
+  assert.match(css, /body\[data-page\]\{font-family:'DM Sans',sans-serif\}/, 'every page uses DM Sans for body text');
+  assert.match(css, /body\[data-page\] :is\(button,input,select,textarea\)\{font-family:'DM Sans',sans-serif\}/, 'interactive controls use DM Sans on every page');
+  assert.match(css, /body\[data-page\] :is\(h3,h4,h5,legend,summary,\.calendarMonth\)\{font-family:Manrope,sans-serif\}/, 'secondary headings use Manrope without changing large h1/h2 display rules');
+  assert.doesNotMatch(css, /Plus Jakarta Sans/, 'the unused font no longer overrides the shared type system');
+  for (const file of routes) {
+    const html = fs.readFileSync(path.join(root, file), 'utf8');
+    assert.doesNotMatch(html, /family=Plus\+Jakarta\+Sans/, `${file} does not download an unused font`);
+    assert.match(html, /family=DM\+Sans/, `${file} loads the shared body font`);
+    assert.match(html, /family=Manrope/, `${file} loads the shared heading font`);
+  }
+});
+
 test('each dependent page declares every static element its module initializes', () => {
   const modules = [
     ['roadmap.html', 'js/roadmap-page.js'], ['stress-tests.html', 'js/stress-tests-page.js'],

@@ -7,13 +7,13 @@
     .formSection .fieldGrid>label{align-self:start;align-content:start}
     .planningModeSelector{margin:0 0 18px;padding:16px 0;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.planningModeSelector legend{font-weight:700;color:#193a32}.planningModeChoices{display:grid;grid-template-columns:1fr 1fr;gap:12px}.planningModeCard{display:flex;align-items:flex-start;gap:11px;padding:14px;border:1px solid var(--line);border-radius:13px;background:var(--panel);cursor:pointer}.planningModeCard.isSelected{border-color:var(--cyan);background:rgba(29,158,117,.06)}.planningModeCard:focus-within{outline:3px solid rgba(29,158,117,.25);outline-offset:2px}.planningModeCard input{margin-top:3px;accent-color:var(--cyan)}.planningModeCard span{display:grid;gap:5px}.planningModeCard small{color:var(--muted);line-height:1.5}.planningModeNote{margin:10px 0 0;padding:10px 12px;border-radius:9px;background:var(--panel2);color:var(--muted);font-size:.8rem}
     @media(max-width:640px){.formCard{padding:19px}.formIntro{align-items:flex-start;flex-direction:column;padding-bottom:18px}.formSecure{font-size:.7rem}.formSection{padding:16px 0}.formSection legend{margin-bottom:12px}.formSection .fieldGrid{gap:12px}.formFooter .inlineButtons .button{flex:1}.formSection .rateApiTools .inlineButtons .button{flex:1}.planningModeChoices{grid-template-columns:1fr}}
-    :root{color-scheme:light;--ink:#1a1a18;--muted:#6b6b66;--quiet:#77766f;--navy:#fdfcf9;--panel:#fff;--panel2:#f7f6f2;--line:#e8e5de;--cyan:#1d9e75;--mint:#e1f5ee;--gold:#d9593f;--r:20px;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
-    body{background:#fdfcf9;color:var(--ink);font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+    :root{color-scheme:light;--ink:#1a1a18;--muted:#6b6b66;--quiet:#77766f;--navy:#fdfcf9;--panel:#fff;--panel2:#f7f6f2;--line:#e8e5de;--cyan:#1d9e75;--mint:#e1f5ee;--gold:#d9593f;--r:20px;font-family:'DM Sans',system-ui,sans-serif}
+    body{background:#fdfcf9;color:var(--ink);font-family:'DM Sans',system-ui,sans-serif}
     body:before{display:none}
     h1,h2,.sectionHead h2,.requirementsAside h2{font-family:Fraunces,Georgia,serif;letter-spacing:-.035em;color:#085041}
-    h3{font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:-.025em;color:#193a32}
+    h3{font-family:'DM Sans',sans-serif;letter-spacing:-.025em;color:#193a32}
     .topbar,.topbar.scrolled{background:rgba(253,252,249,.94);border-color:#e8e5de;box-shadow:0 1px 0 rgba(26,26,24,.025);backdrop-filter:blur(16px)}
-    .brand{color:#085041;font-family:'Plus Jakarta Sans',sans-serif}
+    .brand{color:#085041;font-family:'DM Sans',sans-serif}
     .brandmark{border-color:rgba(29,158,117,.2);background:#e1f5ee;color:#138261;box-shadow:none}
     .navlinks a{color:#686a63}
     .navlinks a:hover,.navlinks a[aria-current=true]{color:#085041;background:#e1f5ee}
@@ -32,7 +32,7 @@
     .sectionHead p,.requirementsAside p{color:#6b6b66}
     .surface{border:1px solid #e8e5de;border-radius:20px;background:#fff;box-shadow:0 2px 12px rgba(28,43,35,.055);backdrop-filter:none}
     .connectSection{background:#f5f4ef}
-    .button{border-color:#d9e5de;border-radius:10px;background:#fff;color:#155b49;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600}
+    .button{border-color:#d9e5de;border-radius:10px;background:#fff;color:#155b49;font-family:'DM Sans',sans-serif;font-weight:600}
     .button:hover{transform:translateY(-1px);border-color:#1d9e75;background:#f1faf6}
     .button.primary{border-color:#1d9e75;background:#1d9e75;color:#fff;box-shadow:0 4px 12px rgba(29,158,117,.16)}
     .button.primary:hover{border-color:#147e5f;background:#147e5f}
@@ -55,7 +55,7 @@
     .formSection{border-color:#eeeae3}
     .stepNumber{border-color:#d2e9de;background:#eaf6f0;color:#168360}
     .fieldGrid label,.transferControls label,.assistantPanel>label,.quote label{color:#4d5751}
-    .fieldGrid input,.fieldGrid select,.transferControls input,.transferControls select,.askRow input,.quote input,.quote select{border-color:#dedfd8;background:#fff;color:#1a1a18;font-family:'Plus Jakarta Sans',sans-serif}
+    .fieldGrid input,.fieldGrid select,.transferControls input,.transferControls select,.askRow input,.quote input,.quote select{border-color:#dedfd8;background:#fff;color:#1a1a18;font-family:'DM Sans',sans-serif}
     .timestampPicker{position:relative;width:100%;min-width:0}
     .timestampControl{display:flex;width:100%;min-width:0}
     .timestampTrigger{min-height:50px}
@@ -67,9 +67,9 @@
     .timestampCalendar[hidden]{display:none}
     .timestampTime{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;margin-top:13px;padding:12px;border:1px solid #ece9e1;border-radius:12px;background:#fbfaf6}
     .timestampTime label{display:grid;gap:4px;color:#6b6b66;font-size:.67rem;font-weight:600}
-    .timestampTime input{width:100%;min-height:38px;padding:6px 9px;border:1px solid #dedfd8;border-radius:9px;background:white;color:#193a32;font:600 .82rem 'Plus Jakarta Sans',sans-serif;color-scheme:light}
+    .timestampTime input{width:100%;min-height:38px;padding:6px 9px;border:1px solid #dedfd8;border-radius:9px;background:white;color:#193a32;font:600 .82rem 'DM Sans',sans-serif;color-scheme:light}
     .timestampTime input:focus{outline:3px solid rgba(29,158,117,.16);border-color:#1d9e75}
-    .timestampNow{display:inline-flex;min-height:38px;align-items:center;justify-content:center;gap:6px;padding:0 11px;border:1px solid #d2e9de;border-radius:9px;background:#eaf6f0;color:#167656;font:600 .72rem 'Plus Jakarta Sans',sans-serif;cursor:pointer}
+    .timestampNow{display:inline-flex;min-height:38px;align-items:center;justify-content:center;gap:6px;padding:0 11px;border:1px solid #d2e9de;border-radius:9px;background:#eaf6f0;color:#167656;font:600 .72rem 'DM Sans',sans-serif;cursor:pointer}
     .timestampNow:hover{border-color:#9bc9ad;background:#e1f3e8}
     .timestampNow:focus-visible{outline:3px solid rgba(29,158,117,.22);outline-offset:2px}
     .quoteTimestampPicker{position:relative;width:100%;min-width:0;grid-column:1/-1}
@@ -110,14 +110,14 @@
     .topbar,.topbar.scrolled{background:linear-gradient(110deg,rgba(255,255,255,.78),rgba(250,247,240,.64));border-color:rgba(255,255,255,.72);box-shadow:0 8px 28px rgba(71,61,40,.08),inset 0 1px 0 rgba(255,255,255,.88);backdrop-filter:blur(22px) saturate(155%);-webkit-backdrop-filter:blur(22px) saturate(155%)}
     .connectSection{background:rgba(233,224,203,.32)}
     @media(max-width:640px){.navlinks{background:rgba(250,247,240,.98)}}
-    .hero{background:radial-gradient(ellipse at 82% 13%,rgba(190,151,79,.12),transparent 34%),radial-gradient(ellipse at 14% 78%,rgba(29,158,117,.055),transparent 32%),#f8f4eb;color:#1a1a18;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+    .hero{background:radial-gradient(ellipse at 82% 13%,rgba(190,151,79,.12),transparent 34%),radial-gradient(ellipse at 14% 78%,rgba(29,158,117,.055),transparent 32%),#f8f4eb;color:#1a1a18;font-family:'DM Sans',system-ui,sans-serif}
     .hero h1,.hero h2,.hero h3{font-family:Fraunces,Georgia,serif;color:#085041;letter-spacing:-.035em}
     .hero h1 em{font-style:italic;background:none;color:#b75539}
     .hero .lead{color:#64655e}
     .hero .trustline{color:#646b62}
     .hero .live{color:#167656}
     .hero .pulse{background:#1d9e75;box-shadow:0 0 0 4px rgba(29,158,117,.12)}
-    .hero .button{font-family:'Plus Jakarta Sans',sans-serif}
+    .hero .button{font-family:'DM Sans',sans-serif}
     .hero .button:not(.primary){border-color:#d9e5de;background:#fff;color:#155b49}
     .hero .button:not(.primary):hover{border-color:#1d9e75;background:#f1faf6}
     .hero .button.primary{border-color:#1d9e75;background:#1d9e75;color:#fff;box-shadow:0 4px 12px rgba(29,158,117,.16)}
@@ -142,7 +142,7 @@
     .requiredHint{margin:0 0 10px;color:#6b6b66;font-size:.76rem}.requiredHint span,.requiredField:after{color:#b74631;font-weight:700}.requiredField:after{content:" *";font-size:.85em}
     .fieldHint{color:#6b6b66;font-size:.72rem;font-weight:400;line-height:1.45}
     .deadlinePicker{position:relative}
-    .deadlineTrigger{display:flex;width:100%;min-height:50px;align-items:center;justify-content:space-between;gap:12px;padding:0 14px;border:1px solid #d8ded4;border-radius:12px;background:linear-gradient(135deg,#fff 0%,#fbfaf6 100%);color:#193a32;text-align:left;font:600 .88rem 'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:border-color .18s,box-shadow .18s,transform .18s}
+    .deadlineTrigger{display:flex;width:100%;min-height:50px;align-items:center;justify-content:space-between;gap:12px;padding:0 14px;border:1px solid #d8ded4;border-radius:12px;background:linear-gradient(135deg,#fff 0%,#fbfaf6 100%);color:#193a32;text-align:left;font:600 .88rem 'DM Sans',sans-serif;cursor:pointer;transition:border-color .18s,box-shadow .18s,transform .18s}
     .deadlineTrigger:hover,.deadlineTrigger[aria-expanded=true]{border-color:#87bca5;box-shadow:0 5px 18px rgba(36,91,68,.09)}
     .deadlineTrigger:focus-visible,.calendarNav button:focus-visible,.calendarDay:focus-visible,.calendarAction:focus-visible{outline:3px solid rgba(29,158,117,.25);outline-offset:2px}
     .deadlineTrigger[aria-invalid=true]{border-color:#c96b55}
@@ -163,7 +163,7 @@
     .calendarWeekday{padding:5px 0;color:#85877f;text-align:center;font-size:.65rem;font-weight:700}
     .calendarDays{display:grid;gap:4px}
     .calendarWeek{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
-    .calendarDay{display:grid;height:36px;place-items:center;border:0;border-radius:10px;background:transparent;color:#37443b;font:500 .78rem 'Plus Jakarta Sans',sans-serif;cursor:pointer}
+    .calendarDay{display:grid;height:36px;place-items:center;border:0;border-radius:10px;background:transparent;color:#37443b;font:500 .78rem 'DM Sans',sans-serif;cursor:pointer}
     .calendarDay:focus{outline:2px solid #1d9e75;outline-offset:-2px}
     .calendarDay:hover:not(:disabled){background:#edf7f1;color:#125b45}
     .calendarDay.isToday:not(.isSelected){background:#eaf6f0;color:#126649;font-weight:700;box-shadow:inset 0 0 0 1px #82b99d}
@@ -174,12 +174,12 @@
     .calendarSelection{min-width:0;color:#77766f;font-size:.68rem;line-height:1.4}
     .calendarSelection strong{display:block;overflow:hidden;color:#193a32;font-size:.76rem;text-overflow:ellipsis;white-space:nowrap}
     .calendarActions{display:flex;gap:7px}
-    .calendarAction{min-height:34px;padding:0 10px;border:1px solid #dfe8e1;border-radius:9px;background:#fff;color:#167656;font:600 .7rem 'Plus Jakarta Sans',sans-serif;cursor:pointer}
+    .calendarAction{min-height:34px;padding:0 10px;border:1px solid #dfe8e1;border-radius:9px;background:#fff;color:#167656;font:600 .7rem 'DM Sans',sans-serif;cursor:pointer}
     .calendarAction:hover{background:#f1faf6;border-color:#a8cdb9}
     .calendarAction.primary{border-color:#1d9e75;background:#1d9e75;color:white}
     .customSelect{position:relative;width:100%;min-width:0}
     .customSelect select{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important;padding:0!important;border:0!important}
-    .customSelectTrigger{display:flex;width:100%;min-height:46px;align-items:center;justify-content:space-between;gap:12px;padding:0 13px;border:1px solid #dedfd8;border-radius:11px;background:linear-gradient(135deg,#fff 0%,#fbfaf6 100%);color:#193a32;text-align:left;font:500 .8rem 'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:border-color .18s,box-shadow .18s,background .18s}
+    .customSelectTrigger{display:flex;width:100%;min-height:46px;align-items:center;justify-content:space-between;gap:12px;padding:0 13px;border:1px solid #dedfd8;border-radius:11px;background:linear-gradient(135deg,#fff 0%,#fbfaf6 100%);color:#193a32;text-align:left;font:500 .8rem 'DM Sans',sans-serif;cursor:pointer;transition:border-color .18s,box-shadow .18s,background .18s}
     .customSelectTrigger:hover,.customSelect.isOpen .customSelectTrigger{border-color:#96c2a8;background:#fff;box-shadow:0 4px 14px rgba(36,91,68,.08)}
     .customSelectTrigger:focus-visible,.customSelectOption:focus-visible{outline:3px solid rgba(29,158,117,.2);outline-offset:2px}
     .customSelectTrigger[aria-invalid=true]{border-color:#c96b55}
@@ -188,7 +188,7 @@
     .customSelect.isOpen .customSelectChevron{transform:rotate(225deg) translate(-1px,-1px)}
     .customSelectMenu{position:absolute;z-index:30;top:calc(100% + 7px);left:0;width:100%;min-width:max-content;max-width:min(360px,calc(100vw - 48px));padding:6px;border:1px solid rgba(220,226,216,.95);border-radius:14px;background:rgba(255,254,250,.97);box-shadow:0 16px 36px rgba(38,52,42,.16),inset 0 1px rgba(255,255,255,.95);backdrop-filter:blur(16px) saturate(145%);-webkit-backdrop-filter:blur(16px) saturate(145%)}
     .customSelectMenu[hidden]{display:none}
-    .customSelectOption{display:flex;width:100%;min-height:39px;align-items:center;justify-content:space-between;gap:20px;padding:0 10px;border:0;border-radius:9px;background:transparent;color:#505b52;text-align:left;font:500 .75rem 'Plus Jakarta Sans',sans-serif;white-space:nowrap;cursor:pointer}
+    .customSelectOption{display:flex;width:100%;min-height:39px;align-items:center;justify-content:space-between;gap:20px;padding:0 10px;border:0;border-radius:9px;background:transparent;color:#505b52;text-align:left;font:500 .75rem 'DM Sans',sans-serif;white-space:nowrap;cursor:pointer}
     .customSelectOption:hover,.customSelectOption[aria-selected=true]{background:#eaf6f0;color:#125b45}
     .customSelectOption[aria-selected=true]{font-weight:700}
     .customSelectOption[aria-selected=true]::after{content:"✓";color:#168360;font-size:.78rem}
@@ -826,3 +826,22 @@ body[data-page="planner"] .plannerStepPanel>.formFooter{margin-top:16px;padding:
   body[data-page="planner"] .plannerProgress li:after,body[data-page="planner"] .plannerProgress button,body[data-page="planner"] .plannerProgressNumber,body[data-page="planner"] .plannerOptionalGroup,body[data-page="planner"] .plannerStepButtons .button{transition:none}
   body[data-page="planner"] .plannerStepPanel:not([hidden]){animation:none}
 }
+
+/* Keep planner controls aligned with the project typography without changing page headlines */
+body[data-page="planner"] #profileForm,
+body[data-page="planner"] #profileForm input,
+body[data-page="planner"] #profileForm select,
+body[data-page="planner"] #profileForm textarea,
+body[data-page="planner"] #profileForm button{font-family:'DM Sans',sans-serif}
+body[data-page="planner"] #profileForm h3,
+body[data-page="planner"] #profileForm h4,
+body[data-page="planner"] #profileForm h5,
+body[data-page="planner"] #profileForm legend,
+body[data-page="planner"] #profileForm .planningModeCard strong{font-family:Manrope,sans-serif}
+
+/* Shared type system: keep large h1/h2 display treatments intact */
+body[data-page]{font-family:'DM Sans',sans-serif}
+body[data-page] :is(button,input,select,textarea){font-family:'DM Sans',sans-serif}
+body[data-page] :is(h3,h4,h5,legend,summary,.calendarMonth){font-family:Manrope,sans-serif}
+body[data-page] .brand{font-family:Manrope,sans-serif}
+body[data-page] .transferPageQuotes .providerNameLabel input{font-family:'DM Sans',sans-serif}
