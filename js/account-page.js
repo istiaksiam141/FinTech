@@ -6,13 +6,15 @@
   const authOptions = byId("account-auth-options"), challengePanel = byId("mfa-challenge-panel"), recoveryForm = byId("recovery-complete-form");
   const plansList = byId("cloud-plan-list"), saveForm = byId("cloud-save-form");
   const authForms = ["signup-form", "login-form", "reset-request-form", "recovery-complete-form", "cloud-save-form", "mfa-challenge-form", "mfa-enroll-form", "mfa-disable-form"].map(byId).filter(Boolean);
-  const say = (message, kind = "info") => { status.textContent = message; status.dataset.kind = kind; };
+  const say = (message, kind = "info") => { status.hidden = false; status.textContent = message; status.dataset.kind = kind; };
   const setBusy = (form, busy) => { form.querySelectorAll("button[type=submit]").forEach(button => { button.disabled = busy; button.dataset.originalText ||= button.textContent; button.textContent = busy ? "Please wait…" : button.dataset.originalText; }); };
   const accountFormHashes = new Set(["#signup-form", "#login-form", "#reset-request-form"]);
   function scrollToAccountHash() {
     if (!accountFormHashes.has(location.hash)) return;
     requestAnimationFrame(() => {
       const target = byId(location.hash.slice(1));
+      const disclosure = target?.closest("details");
+      if (disclosure) disclosure.open = true;
       if (target && !target.closest("[hidden]")) target.scrollIntoView({ block: "start" });
     });
   }

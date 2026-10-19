@@ -10,34 +10,59 @@
   <div id="site-header"></div>
   <main id="main-content">
     <section class="pageHero accountHero"><div class="wrap">
-      <span class="eyebrow">Student account</span><h1>Your plans, <em>in reach.</em></h1>
-      <p class="lead">Sign in to securely save and manage your own plans. You can still use the planner without an account.</p>
-      <nav class="accountJump" aria-label="Account options"><a href="#signup-form">Create an account</a><a href="#login-form">Sign in</a><a href="#reset-request-form">Reset password</a></nav>
-      <p id="account-message" class="pageSummary" role="status" aria-live="polite">Checking account setup…</p>
-      <section id="auth-panel" class="surface accountPanel">
-        <section id="mfa-challenge-panel" class="accountForm mfaPanel" aria-labelledby="mfa-challenge-title" hidden>
-          <h2 id="mfa-challenge-title">Verify your sign-in</h2>
-          <p class="small muted">Enter the current six-digit code from your authenticator app to continue.</p>
-          <form id="mfa-challenge-form" class="mfaCodeForm"><label for="mfa-challenge-code">Authenticator code</label><input id="mfa-challenge-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required><button class="button primary" type="submit">Verify code</button><button id="mfa-challenge-retry" class="button" type="button">Get a new challenge</button></form>
-          <button class="button" type="button" data-auth-logout>Cancel and log out</button>
-        </section>
-        <div class="accountGrid" id="account-auth-options">
-          <form id="signup-form" class="surface accountForm">
-            <h2>Create an account</h2><label for="signup-email">Email</label><input id="signup-email" type="email" autocomplete="email" required maxlength="254">
-            <label for="signup-password">Password</label><input id="signup-password" type="password" autocomplete="new-password" minlength="8" required>
-            <label for="signup-confirm-password">Confirm password</label><input id="signup-confirm-password" type="password" autocomplete="new-password" minlength="8" required>
-            <button class="button primary" type="submit">Sign up</button>
-          </form>
-          <form id="login-form" class="surface accountForm">
-            <h2>Sign in</h2><label for="login-email">Email</label><input id="login-email" type="email" autocomplete="username" required maxlength="254">
-            <label for="login-password">Password</label><input id="login-password" type="password" autocomplete="current-password" required>
-            <button class="button primary" type="submit">Log in</button><button id="google-signin" class="button" type="button">Continue with Google</button>
-          </form>
+      <div class="accountLayout">
+        <div class="accountMain">
+          <span class="eyebrow">Student account</span><h1>Welcome <em>back.</em></h1>
+          <p class="lead">Sign in to access your cloud-saved plans. You can keep planning without an account.</p>
+          <nav class="accountJump" aria-label="Account options"><a href="#login-form">Sign in</a><a href="#signup-form">Create an account</a><a href="#reset-request-form">Reset password</a></nav>
+          <p id="account-message" class="pageSummary" role="status" aria-live="polite" hidden></p>
+          <section id="auth-panel" class="surface accountPanel">
+            <section id="mfa-challenge-panel" class="accountForm mfaPanel" aria-labelledby="mfa-challenge-title" hidden>
+              <h2 id="mfa-challenge-title">Verify your sign-in</h2>
+              <p class="small muted">Enter the current six-digit code from your authenticator app to continue.</p>
+              <form id="mfa-challenge-form" class="mfaCodeForm"><label for="mfa-challenge-code">Authenticator code</label><input id="mfa-challenge-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required><button class="button primary" type="submit">Verify code</button><button id="mfa-challenge-retry" class="button" type="button">Get a new challenge</button></form>
+              <button class="button" type="button" data-auth-logout>Cancel and log out</button>
+            </section>
+            <div class="accountGrid" id="account-auth-options">
+              <form id="login-form" class="surface accountForm">
+                <h2>Sign in</h2><label for="login-email">Email</label><input id="login-email" type="email" autocomplete="username" required maxlength="254">
+                <label for="login-password">Password</label><input id="login-password" type="password" autocomplete="current-password" required>
+                <button class="button primary" type="submit">Log in</button><button id="google-signin" class="button" type="button">Continue with Google</button>
+              </form>
+              <details class="accountSecondary" id="signup-options">
+                <summary>Create an account</summary>
+                <form id="signup-form" class="surface accountForm">
+                  <h2>Create an account</h2><label for="signup-email">Email</label><input id="signup-email" type="email" autocomplete="email" required maxlength="254">
+                  <label for="signup-password">Password</label><input id="signup-password" type="password" autocomplete="new-password" minlength="8" required>
+                  <label for="signup-confirm-password">Confirm password</label><input id="signup-confirm-password" type="password" autocomplete="new-password" minlength="8" required>
+                  <button class="button primary" type="submit">Sign up</button>
+                </form>
+              </details>
+            </div>
+            <details class="accountSecondary resetRequestDetails">
+              <summary>Forgot your password?</summary>
+              <form id="reset-request-form" class="surface accountForm resetForm"><h2>Reset your password</h2><label for="reset-email">Account email</label><input id="reset-email" type="email" autocomplete="email" required maxlength="254"><button class="button" type="submit">Email me a reset link</button></form>
+            </details>
+            <form id="recovery-complete-form" class="surface accountForm resetForm" hidden><h2>Choose a new password</h2><label for="new-password">New password</label><input id="new-password" type="password" autocomplete="new-password" minlength="8" required><label for="new-password-confirm">Confirm new password</label><input id="new-password-confirm" type="password" autocomplete="new-password" minlength="8" required><button class="button primary" type="submit">Update password</button></form>
+            <p class="small muted accountConfirmNote">Email confirmation and password reset are handled by Supabase. Use the same email to sign in after confirming.</p>
+          </section>
+          <p class="small muted accountPrivacyLink">Cloud saving stores selected plan inputs in Supabase. <a href="/privacy.html">Read the privacy details.</a> Clearing local plan data does not delete cloud copies.</p>
         </div>
-        <form id="reset-request-form" class="surface accountForm resetForm"><h2>Reset your password</h2><label for="reset-email">Account email</label><input id="reset-email" type="email" autocomplete="email" required maxlength="254"><button class="button" type="submit">Email me a reset link</button></form>
-        <form id="recovery-complete-form" class="surface accountForm resetForm" hidden><h2>Choose a new password</h2><label for="new-password">New password</label><input id="new-password" type="password" autocomplete="new-password" minlength="8" required><label for="new-password-confirm">Confirm new password</label><input id="new-password-confirm" type="password" autocomplete="new-password" minlength="8" required><button class="button primary" type="submit">Update password</button></form>
-        <p class="small muted">Email confirmation and password reset are handled by Supabase. Use the same email to sign in after confirming.</p>
-      </section>
+        <aside class="accountStory" aria-label="About CampusBridge accounts">
+          <div class="accountStoryContent">
+            <span class="accountStoryLabel">CAMPUSBRIDGE · STUDENT PLANNING</span>
+            <h2>Clarity for your next step.</h2>
+            <p>Keep your planning tools close, with control over what you save to your account.</p>
+            <ul>
+              <li><span aria-hidden="true">✓</span> Save selected plan inputs when you choose</li>
+              <li><span aria-hidden="true">✓</span> Reopen cloud-saved plans after signing in</li>
+              <li><span aria-hidden="true">✓</span> Keep planning without an account</li>
+            </ul>
+          </div>
+          <p class="accountStoryFoot">LOCAL CALCULATIONS <span aria-hidden="true">·</span> CLOUD SAVING BY CHOICE</p>
+          <div class="accountStoryOrb" aria-hidden="true"></div>
+        </aside>
+      </div>
       <section id="cloud-plans-panel" class="surface accountPanel" hidden>
         <section id="mfa-settings" class="mfaSettings" aria-labelledby="mfa-settings-title">
           <h2 id="mfa-settings-title">Authenticator app</h2><p id="mfa-settings-status" class="small muted" aria-live="polite">Checking authenticator status…</p>
@@ -51,7 +76,6 @@
         <p id="cloud-plan-loading" class="small muted" hidden>Loading your plans…</p><div id="cloud-plan-list" class="cloudPlanList" aria-live="polite"></div>
         <button class="button" type="button" data-auth-logout>Log out</button>
       </section>
-      <p class="small muted accountPrivacyLink">Cloud saving stores selected plan inputs in Supabase. <a href="/privacy.html">Read the privacy details.</a> Clearing local plan data does not delete cloud copies.</p>
     </div></section>
   </main>
   <div id="site-footer"></div>

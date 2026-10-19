@@ -669,3 +669,63 @@ body:before{background-image:linear-gradient(rgba(120,139,119,.025) 1px,transpar
 .assistantTurnQuestion,.assistantTurnQuestion strong,.assistantTurnLabel{color:#193a32}
 .assistantTurnReply{border-top-color:#e8e5de}
 .assistantTurnResponse[aria-busy=true]{color:#6b6b66}
+body[data-page=account]{background:#f5f3ec}
+body[data-page=account] .accountHero{min-height:100vh;padding:124px 0 64px}
+body[data-page=account] .accountHero>.wrap{width:min(1160px,calc(100% - 40px));max-width:none}
+.accountLayout{display:grid;grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr);max-width:1120px;min-height:680px;margin:0 auto;overflow:hidden;border:1px solid #e7e5dc;border-radius:26px;background:#fffefa;box-shadow:0 22px 65px rgba(43,58,43,.11)}
+.accountMain{min-width:0;padding:clamp(30px,4.5vw,62px)}
+.accountHero>.wrap>.accountLayout .eyebrow{color:#267357}
+.accountHero h1{margin:12px 0;font-size:clamp(2.25rem,3.7vw,3.2rem);letter-spacing:-.045em}
+.accountHero h1 em{color:#167656}
+.accountHero .accountMain>.lead{max-width:470px;color:#62675f;font-size:.98rem;line-height:1.7}
+.accountJump{gap:14px;margin:14px 0 10px}
+.accountJump a{padding:0;border:0;border-radius:0;color:#426454;font-size:.76rem;text-decoration:none;transition:color .16s ease}
+.accountJump a:hover,.accountJump a:focus-visible{background:transparent;color:#145640;text-decoration:underline;text-underline-offset:3px}
+.accountJump a:focus-visible{outline:3px solid rgba(29,126,89,.22);outline-offset:2px}
+.accountMain #account-message{margin:10px 0;padding:10px 12px;border:1px solid #e7e8e0;border-radius:10px;background:#f8f7f2;color:#5f665f;font-size:.82rem;line-height:1.5}
+.accountMain #account-message[data-kind=error]{border-color:#edc9be;background:#fff5f1;color:#934c3a}
+.accountMain #account-message[data-kind=success]{border-color:#cfe2d2;background:#f1f7f1;color:#31664d}
+.accountMain #auth-panel{margin:12px 0 0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.accountMain .accountGrid{grid-template-columns:minmax(0,1fr);gap:22px}
+.accountMain .accountGrid{gap:16px}
+.accountMain [hidden]{display:none!important}
+.accountSecondary{border-top:1px solid #ebece5}
+.accountSecondary summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 0;color:#315b49;font-size:.86rem;font-weight:700;cursor:pointer;list-style:none}
+.accountSecondary summary::-webkit-details-marker{display:none}
+.accountSecondary summary::after{content:"+";color:#267357;font-size:1.15rem;font-weight:500}
+.accountSecondary[open] summary::after{content:"−"}
+.accountSecondary:not([open])>:not(summary){display:none}
+.accountSecondary summary:focus-visible{outline:3px solid rgba(39,132,95,.22);outline-offset:3px;border-radius:5px}
+.accountMain .accountSecondary .accountForm{padding:0 0 18px}
+.accountMain .accountForm{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.accountMain .accountForm h2{margin:0 0 5px;color:#183e32;font-size:1.3rem;letter-spacing:-.025em}
+.accountMain .accountForm label{color:#48564d;font-size:.8rem;font-weight:600}
+.accountMain .accountForm input{min-height:46px;border-color:#d9e1d9;border-radius:10px;background:#fff;color:#253d32;font-size:.92rem;box-shadow:inset 0 1px 2px rgba(22,46,32,.025)}
+.accountMain .accountForm input:hover{border-color:#abc9b5}
+.accountMain .accountForm input:focus{border-color:#27845f;outline:0;box-shadow:0 0 0 3px rgba(39,132,95,.14)}
+.accountMain .accountForm button{width:100%;min-height:46px;justify-self:stretch}
+.accountMain #login-form{gap:9px}
+.accountMain #login-form h2{margin-bottom:2px}
+.accountMain #login-form button.primary,.accountMain #signup-form button.primary{margin-top:4px;background:#0c4c49;color:#fff}
+.accountMain #login-form button.primary:hover,.accountMain #signup-form button.primary:hover{border-color:#0a403d;background:#0a403d}
+.accountMain #login-form #google-signin{border-color:#dfe4df;background:#fff;color:#36483e}
+.accountMain #login-form #google-signin:hover{border-color:#b8d3c1;background:#f7faf7}
+.accountMain #signup-form{padding-top:0;border-top:0}
+.accountMain .resetForm{margin:0;padding-top:0;border-top:0}
+.accountMain .accountConfirmNote{margin-top:18px;color:#747970;font-size:.76rem;line-height:1.55}
+.accountMain .accountPrivacyLink{margin-top:20px;color:#656d65;font-size:.76rem;line-height:1.6}
+.accountMain .accountPrivacyLink a{color:#176748}
+.accountStory{position:relative;display:flex;min-width:0;flex-direction:column;justify-content:space-between;overflow:hidden;padding:clamp(34px,5vw,64px);background:radial-gradient(ellipse at 100% 0%,rgba(115,185,151,.36),transparent 42%),linear-gradient(145deg,#0b514b,#073e3d 72%,#0b4a43);color:#f4fbf5}
+.accountStoryContent,.accountStoryFoot{position:relative;z-index:1}
+.accountStoryLabel{display:inline-block;color:#c2e4cf;font-size:.68rem;font-weight:700;letter-spacing:.16em}
+.accountStory h2{max-width:420px;margin:30px 0 14px;color:#fff;font-family:Manrope,sans-serif;font-size:clamp(2.1rem,3.3vw,3.25rem);font-weight:500;letter-spacing:-.045em;line-height:1.13}
+.accountStoryContent>p{max-width:390px;color:rgba(245,251,246,.82);font-size:.98rem;line-height:1.75}
+.accountStory ul{display:grid;gap:15px;margin:30px 0 0;padding:0;list-style:none}
+.accountStory li{display:flex;align-items:flex-start;gap:11px;color:#f1f8f2;font-size:.88rem;line-height:1.55}
+.accountStory li span{display:grid;width:21px;height:21px;flex:none;place-items:center;border:1px solid rgba(196,229,205,.5);border-radius:50%;color:#c5e6d0;font-size:.72rem}
+.accountStoryFoot{padding-top:18px;border-top:1px solid rgba(231,246,234,.24);color:#c2e4cf;font-size:.65rem;font-weight:700;letter-spacing:.13em}
+.accountStoryFoot span{padding:0 5px;color:#e5c98e}
+.accountStoryOrb{position:absolute;right:-120px;bottom:80px;width:330px;height:330px;border:1px solid rgba(222,242,226,.12);border-radius:50%;box-shadow:0 0 0 24px rgba(222,242,226,.025),0 0 0 54px rgba(222,242,226,.02);pointer-events:none}
+@media(max-width:900px){body[data-page=account] .accountHero{padding:108px 0 48px}.accountLayout{grid-template-columns:minmax(0,1fr) minmax(0,.85fr);min-height:0}.accountMain{padding:32px}.accountStory{padding:34px 28px}.accountStory h2{font-size:2.1rem}}
+@media(max-width:700px){.accountLayout{grid-template-columns:1fr;border-radius:20px}.accountMain{padding:30px 24px}.accountStory{min-height:390px;padding:34px 28px}.accountStory h2{margin-top:22px}.accountStory ul{margin-top:22px}}
+@media(max-width:480px){body[data-page=account] .accountHero>.wrap{width:calc(100% - 28px)}body[data-page=account] .accountHero{padding-top:94px}.accountMain{padding:26px 20px}.accountHero h1{font-size:2.35rem}.accountJump{gap:6px}.accountJump a{padding:7px 9px;font-size:.72rem}.accountStory{min-height:360px;padding:30px 23px}}
