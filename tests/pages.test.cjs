@@ -258,3 +258,14 @@ test('light feature form labels use readable dark text', () => {
   const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
   assert.match(css, /\.featureForm label\{color:#4d5751\}/);
 });
+
+test('financial report shows and can print or download a clearly fictional sample without a saved plan', () => {
+  const report = fs.readFileSync(path.join(root, 'js/report-page.js'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(report, /if \(!plan\.ok\) \{[\s\S]*?Illustrative sample · not your data/);
+  assert.match(report, /This is a fictional sample to demonstrate the report format/);
+  assert.match(report, /printButton\.textContent = "Print sample \/ Save as PDF"/);
+  assert.match(report, /downloadButton\.textContent = "Download sample text report"/);
+  assert.match(report, /campusbridge-sample-financial-readiness-report\.txt/);
+  assert.match(css, /\.readinessReportPage\.isSampleReport\{/);
+});

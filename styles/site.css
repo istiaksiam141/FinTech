@@ -657,6 +657,9 @@ body[data-page="planner"] .resultDetails .metric strong{font-size:1rem;color:#34
 body:before{background-image:linear-gradient(rgba(120,139,119,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(120,139,119,.025) 1px,transparent 1px)}
 .pageHero .lead{color:#64655e}
 .featureForm label{color:#4d5751}
+.readinessReportPage.isSampleReport{border-top:4px solid #8fc6a5}
+.sampleReportBadge{display:inline-flex;margin:0 0 10px;padding:5px 10px;border:1px solid #d3e8d9;border-radius:999px;background:#edf6ef;color:#256548;font-size:.76rem;font-weight:700}
+.sampleReportDisclaimer{padding:12px 14px;border:1px solid #eadfbe;border-radius:10px;background:#fbf7eb;color:#695729}
 .homeUspCard .eyebrow{color:#23795d}
 .homeUspCard h3{color:#193a32}
 .homeUspCard>p{color:#5c665e}
