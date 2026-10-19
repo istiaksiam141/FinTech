@@ -116,6 +116,7 @@
     pending = true; submit.disabled = true; question.disabled = true; answer.setAttribute("aria-busy", "true");
     status.textContent = "Preparing your answer…";
     const turn = Conversation.createTurn(answer, text);
+    question.value = "";
     turn.response.textContent = "Preparing your answer…";
     const conversationIdAtSubmit = activeConversationId;
     await saveQuestion(text);

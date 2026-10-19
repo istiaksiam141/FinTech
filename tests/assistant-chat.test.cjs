@@ -62,6 +62,11 @@ test('assistant page exposes saved conversations while retaining the question-on
   assert.match(script, /JSON\.stringify\(\{ question: text \}\)/);
   assert.match(script, /assistant-new-conversation/);
   assert.match(script, /deleteConversation\(row\.id\)/);
+  const submitFlow = script.slice(script.indexOf('form.addEventListener("submit"'));
+  const turnAt = submitFlow.indexOf('Conversation.createTurn(answer, text)');
+  const clearAt = submitFlow.indexOf('question.value = "";');
+  const persistAt = submitFlow.indexOf('await saveQuestion(text)');
+  assert.ok(turnAt >= 0 && turnAt < clearAt && clearAt < persistAt, 'clear only after the question is copied into history and before async persistence');
   assert.match(migration, /enable row level security/i);
   assert.match(migration, /auth\.uid\(\) = user_id/);
   assert.match(migration, /assistant_messages_owner_insert[\s\S]*exists/);
