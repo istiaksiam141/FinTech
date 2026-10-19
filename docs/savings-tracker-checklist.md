@@ -1,6 +1,6 @@
 # Savings Tracker: local testing and backup
 
-The Savings Tracker stores data only in this browser profile under `campusbridge.savings-tracker.v1`. It does not require a Supabase project, database table, RLS policy, MFA enrollment, or SQL. This checklist does not change the setup required by unrelated Supabase authentication and cloud-plan features.
+The Savings Tracker stores data only in this browser profile under `campusbridge.savings-tracker.v1`. It does not require a Supabase project, database table, RLS policy, MFA enrollment, or SQL. This checklist does not change the separate Supabase requirements for authentication, cloud-saved plans, or persistent signed-in AI chat.
 
 ## Try the tracker
 

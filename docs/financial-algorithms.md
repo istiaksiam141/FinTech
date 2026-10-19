@@ -1,5 +1,13 @@
 # Financial algorithms
 
+## Purpose, scope, and limits
+
+`lib/finance.js` is the source of truth for numeric calculations and financial-input validation. It runs in the browser and returns deterministic results for the same validated inputs and calculation date. The AI assistant supplies general explanations; it is not the calculation engine, does not set authoritative rates, and must not invent a user's financial figures. Selected funding-gap questions are answered locally from the finance engine. Model output is educational text, not financial advice.
+
+All results depend on student-entered tuition, savings, expenses, costs, deadlines, and rate inputs. The application does not verify those values or model interest, future exchange-rate movement, changes in income/expenses, provider fees beyond entered estimates, or actual payment schedules. A projection is not a guarantee. Financial input and calculated BDT ceilings are 1,000,000,000,000; values that are invalid, non-finite, or outside supported limits are rejected.
+
+Planning offers two modes. **All Study-Abroad Costs** adds entered tuition, payment/transfer fees, one-time costs, and initial living costs. **Tuition Only** calculates tuition and payment/transfer fees, while excluding the categorized one-time and initial living-cost fields. It is not a complete budget. Blank optional costs are treated as zero rather than estimated.
+
 ## Exchange rate
 
 The planner expects `1 unit of destination currency = rate BDT` (for example, BDT per GBP). The rate can be entered manually with a source and timestamp, or fetched on request as an indicative reference. Tuition cost in BDT is:
@@ -10,7 +18,7 @@ Manually entered rate timestamps must be valid local `YYYY-MM-DDTHH:mm` values a
 
 ### Bangladesh Bank published rates
 
-The Vercel function `GET /api/exchange-rates` fetches the official [Bangladesh Bank exchange-rate sheet](https://www.bb.org.bd/en/index.php/econdata/exchangerate) server-side. The official page currently presents a dated HTML table and links to date-specific XLS and PDF files. On 13 October 2026, the linked files were `https://www.bb.org.bd/econdata/exchange_rate/exchange_rate_13_10_2026.xls` (XLS) and `https://www.bb.org.bd/econdata/exchange_rate/exchange_rate_13_10_2026.pdf` (PDF); the date in the file path changes with the sheet. No documented JSON API for this sheet was found. The HTML parser validates the publication date, expected bid/ask table headers, supported rows, numeric values, and response content type. It fails closed on missing or changed layout. This is still page scraping and an upstream markup change can require parser maintenance; it is not represented as a guaranteed stable feed.
+The Vercel function `GET /api/exchange-rates` fetches the [Bangladesh Bank exchange-rate page](https://www.bb.org.bd/en/index.php/econdata/exchangerate) as HTML. The parser in `lib/bangladesh-bank-rates.js` expects a dated table with bid/ask headers and validates the publication date, supported rows, numeric values, and response content type. It fails closed on missing or changed layout. The checked-in HTML fixture records a sample dated 13 October 2026; this documentation audit did not fetch the live page or verify current rate values. This is page parsing, and upstream markup changes may require maintenance; it is not a guaranteed stable feed.
 
 The parser and response validator support the currencies shown in the sheet: USD, EUR, GBP, AUD, JPY, CAD, SEK, SGD, CNH, INR, and LKR. Each row is denominated as BDT per one unit of its exact `baseCurrency`; the planner uses the published **ask** and does not invert it. USD retains its distinct direct USD/BDT interbank rate type and weighted-average rate (WAR); the other currencies are labeled Bangladesh Bank cross rates. The UI and rate metadata preserve the currency code and rate type. The source provides CNH (offshore yuan); CNY, KRW, and MYR are not part of the supported currency list or represented as live rates. The source explains USD bid/ask represent previous Dhaka-close interbank rates and cross rates use New York and Dhaka closing rates. Bangladesh Bank says the schedule applies to its purchase/sale transactions with the Government and international organizations, so it is not a student's guaranteed bank or payment-provider rate.
 

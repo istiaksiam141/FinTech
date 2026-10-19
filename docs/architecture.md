@@ -1,35 +1,82 @@
-# Architecture
+# System architecture
 
-CampusBridge is a static multi-page site with shared CSS and small page-specific browser scripts. It uses Supabase Auth and RLS-protected browser access for account-backed cloud plans; financial calculations remain local and deterministic.
+## Verified project shape
 
-## Routes and responsibilities
+CampusBridge AI is a static multi-page HTML/CSS/JavaScript application with shared browser modules. There is no frontend build step declared in `package.json`. The `api/` directory contains Vercel serverless functions. The package manifest pins the `openai` SDK dependency; the browser loads Supabase JS v2 from jsDelivr.
 
-| Route | Responsibility | Main script |
-| --- | --- | --- |
-| `/` | Product overview and navigation | `js/site.js` |
-| `/planner.html` | Authoritative plan form, calculation, and existing integrated tools | `app.js` |
-| `/roadmap.html` | Dated contribution roadmap | `js/roadmap-page.js` |
-| `/savings.html` | Browser-local saved roadmap snapshots, JSON backup/restore, and student-entered BDT deposit history | `js/savings-page.js` |
-| `/stress-tests.html` | Independent financial scenarios | `js/stress-tests-page.js` |
-| `/transfers.html` | Student-entered quote validation and comparison | `js/transfers-page.js` |
-| `/assistant.html` | General assistant and selected local plan explanations | `js/assistant-page.js` |
-| `/report.html` | Local report built from the current plan and saved stress results | `js/report-page.js` |
-| `/privacy.html` | Storage and product limitations | `js/site.js` |
+The repository identifies CampusBridge AI as a FinTechathon 2026 project for students planning study abroad. No competition-specific requirements, endorsement, or judging outcome is inferred here.
 
-`styles/site.css` holds shared visual and print styles. `js/site.js` creates the common navigation and footer, marks the active route, handles the mobile menu and confirmed Clear Plan action, and adds the session-storage notice. Each feature page loads only its own behavior module plus the shared page utilities it needs.
+## Main components
 
-## Financial data flow
+| Component | Responsibility |
+| --- | --- |
+| `app.js`, `js/*-page.js` | Page interaction and rendering. The planner remains the primary source for plan inputs. |
+| `lib/finance.js` | Validates financial inputs and calculates estimates, contribution schedules, stress scenarios, and quote eligibility/ranking. |
+| `lib/plan-state.js` | Stores a versioned allowlist of validated current planner inputs and stress inputs in tab-scoped `sessionStorage`; dependent pages recalculate from the inputs. |
+| `lib/bangladesh-bank-rates.js`, `lib/exchange-rates.js` | Fetch/parse/validate official rate sheet data and map it into planner rates. |
+| `lib/cloud-plans.js` | Authenticated, validated operations on Supabase `saved_plans`. |
+| `lib/assistant-chat.js` | Authenticated conversation and message queries using Supabase RLS. |
+| `lib/savings-tracker.js` | Validates and stores Savings Tracker roadmaps/deposits in browser `localStorage`, including JSON backup/restore. |
+| `api/exchange-rates.js` | Serverless handler that fetches Bangladesh Bank rates and sets cache headers. |
+| `api/assistant.js` | Serverless endpoint that accepts one question and calls Groq through its OpenAI-compatible API. |
+| `js/supabase-client.js` | Creates one Supabase JS client from `js/supabase-config.js` and persists the Supabase Auth session using client defaults. |
 
-The planner calls `lib/finance.js` for validation and calculations. Other pages restore the validated profile using `lib/plan-state.js`, then call the same finance module for the roadmap, scenario results, quote checks, and report data. The state module uses an explicit schema version and field allowlists in tab-scoped `sessionStorage`; it rejects missing, malformed, outdated, unsupported, out-of-range, or otherwise invalid data. When present, stress-test scenario inputs are saved and their results are recalculated from the restored baseline; result numbers are not trusted from browser storage. It does not store a report-only name, account labels, API keys, tokens, or uploaded documents. `sessionStorage` is not encrypted and is not a user account backup.
+## Browser routes
 
-The planner remains the place to create or update the baseline. A successful recalculation replaces the saved profile and clears old stress results. Stress tests use cloned inputs; the report reads the same saved profile and only the optional stress outputs generated from it. If no valid plan is stored, dependent pages show an empty state rather than inventing inputs.
+| Route | Responsibility |
+| --- | --- |
+| `/` | Introduction and navigation. |
+| `/planner.html` | Baseline inputs, calculations, rates, quote comparison, stress tools, and report actions. |
+| `/roadmap.html` | Dated contribution schedule derived from the saved plan inputs. |
+| `/savings.html` | Browser-local historical roadmaps, deposits, comparison, and backup/restore. |
+| `/stress-tests.html` | Independent rate, expense, and missed-contribution scenarios. |
+| `/transfers.html` | Student-entered quote validation and comparison. |
+| `/assistant.html` | Local answers for selected plan questions; general questions go to the assistant endpoint. Signed-in chat is also saved to Supabase. |
+| `/report.html` | Locally generated readiness report and browser print flow. |
+| `/account.html` | Supabase email/password and Google auth flows, recovery, optional TOTP MFA, and cloud-plan actions. |
+| `/privacy.html` | Storage and product boundaries. |
 
-The Savings Tracker uses the namespaced `campusbridge.savings-tracker.v1` local-storage key. It stores validated planner inputs, a historical result and dated schedule from the existing finance engine, and student-entered BDT deposits. Opening a roadmap validates the saved result against the finance engine at its original calculation time; recalculating it creates a separate linked revision. JSON backups are versioned and validated before import; importing replaces this browser's tracker data after confirmation. This tracker does not use Supabase tables or MFA, while unrelated authentication and cloud-saved plans continue to use Supabase.
+`js/site.js` supplies the shared navigation and footer. `styles/site.css` contains shared screen and print styles. Page scripts load after their declared DOM elements. The app uses same-origin routes when served through Vercel.
 
-The browser calls the existing Vercel routes `/api/exchange-rates` and `/api/assistant`. The Bangladesh Bank parser and rate metadata remain in `lib/bangladesh-bank-rates.js` and `lib/exchange-rates.js`; the serverless endpoint remains `api/exchange-rates.js`. The assistant endpoint is `api/assistant.js`; its request contract accepts only a question, and the API key remains server-side. No financial profile or quotes are sent to the model.
+## Data and request flows
 
-## Supported currencies and boundaries
+### Financial planning
 
-The finance engine supports BDT and the existing destination currencies USD, EUR, GBP, AUD, JPY, CAD, SEK, SGD, CNH, INR, and LKR. CNH is offshore yuan and stays distinct from CNY. Reference exchange rates are not guaranteed student payment prices. Transfer comparison validates user-entered quotes but does not authenticate them or execute payments. The existing provider handoffs are links, not live provider integrations.
+1. The user enters profile inputs and a sourced rate in the browser.
+2. `lib/finance.js` validates and calculates deterministic results locally.
+3. `lib/plan-state.js` saves only allowlisted inputs and scenario inputs in the current tab's `sessionStorage`.
+4. Dependent pages restore and validate those inputs, then recalculate. Calculation output is not trusted as persisted input.
+5. Reports are generated locally; they are not sent to either API route.
 
-The Bangladesh Bank sheet is fetched and parsed server-side. Successful responses use Vercel's shared CDN response cache for a best-effort 24-hour regional TTL; this is not a globally atomic fetch guarantee. Assistant per-instance rate limiting is also not global. See `docs/production-boundaries.md` before considering a public launch.
+### Exchange rates
+
+1. The browser requests `/api/exchange-rates`.
+2. `api/exchange-rates.js` calls the Bangladesh Bank page through `lib/bangladesh-bank-rates.js`.
+3. The parser validates the publication date, currency rows, bid/ask layout, numeric values, and response type; malformed or failed data returns an error rather than an invented fallback.
+4. The handler marks success responses for Vercel shared CDN caching with a 24-hour TTL. This is a best-effort regional cache, not a global cache guarantee.
+
+### AI and chat history
+
+1. The assistant UI runs selected funding-gap questions locally through `lib/finance.js`.
+2. For general questions, the browser posts only `{ question }` to `/api/assistant`.
+3. `api/assistant.js` validates the request, reads `GROQ_API_KEY` from the server environment, and sends a system instruction plus that one question to Groq. Saved conversation history, planner data, quotes, and account details are not sent as context.
+4. For a signed-in user, `lib/assistant-chat.js` separately saves the question and displayed answer in `assistant_messages`, associated with `assistant_conversations`. The browser lists and filters by the authenticated user ID; intended authorization is enforced by the policies in `docs/supabase-assistant-chat.sql`.
+5. Signed-out chat remains in page memory only. The conversation SQL file is a reviewed migration artifact; this repository cannot confirm it has been applied to any Supabase project.
+
+### Supabase account data
+
+Supabase Auth supports the existing email/password and Google sign-in code, recovery, and optional TOTP MFA. Cloud plans are stored separately in `saved_plans` through `lib/cloud-plans.js`; only validated plan inputs are stored and the planner recomputes results on load. Both chat and cloud-plan operations use the shared Supabase browser client. RLS is the database authorization boundary; live schemas and policies are not available for verification from this repository.
+
+### Savings Tracker
+
+The Savings Tracker is separate from Supabase. It stores versioned records under `campusbridge.savings-tracker.v1` in browser `localStorage`: validated roadmap profile/snapshot pairs and student-entered BDT deposits. JSON imports are validated and replace current tracker data only after an explicit confirmation. Records are not account-synced or bank-verified.
+
+## Technology and deployment shape
+
+- HTML, CSS, browser JavaScript; no bundler/build command in `package.json`.
+- Node.js `>=22`; npm lockfile and `openai` SDK dependency.
+- Vercel function convention for `/api/exchange-rates` and `/api/assistant`; no `vercel.json` was found during repository review.
+- Supabase JS v2 browser CDN for Auth and data operations.
+- Environment variables used by application code: required `GROQ_API_KEY`, optional `GROQ_MODEL` (defaults to `openai/gpt-oss-20b`). The Supabase URL and browser-safe publishable key are in browser configuration; their values are intentionally not repeated here.
+
+The repo does not prove the active Vercel project, production environment-variable configuration, domain, or live Supabase schema/provider settings. See [testing and deployment](test-results.md) and [Supabase setup](supabase-setup.md).

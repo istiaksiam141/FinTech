@@ -1,6 +1,6 @@
-# Supabase accounts and cloud plans
+# Supabase accounts, cloud plans, and assistant chat
 
-The site remains static HTML, CSS, and JavaScript. It uses the official Supabase JavaScript v2 browser CDN, with one shared client in `js/supabase-client.js`. No build step or server secret is needed for browser authentication. `js/supabase-config.js` already contains the Supabase project URL and a browser-safe publishable key. Production authentication redirects, provider settings, and database Row Level Security (RLS) must still be verified; this documentation does not confirm production setup.
+The site remains static HTML, CSS, and JavaScript. It uses the official Supabase JavaScript v2 browser CDN, with one shared client in `js/supabase-client.js`. No build step or server secret is needed for browser authentication. `js/supabase-config.js` already contains the Supabase project URL and a browser-safe publishable key. Production authentication redirects, provider settings, database schemas, and Row Level Security (RLS) must still be verified; this documentation does not confirm production setup.
 
 ## Browser-safe key
 
@@ -63,6 +63,14 @@ Live policies are not available in this repository, and no dashboard changes hav
 
 Only after reviewing and testing it, apply the SQL manually through a reviewed migration or the Supabase SQL Editor. Verify that an opted-in user cannot read or change saved plans in an AAL1 session, can do so after a valid TOTP challenge, and that a user without MFA still follows the current ownership policies. Keep the supplied rollback statement available. Do not apply the policy if the current table schema, RLS configuration, or policy behavior differs from these assumptions.
 
+## Signed-in AI chat history
+
+The AI Assistant saves a signed-in user's questions and displayed answers in `public.assistant_conversations` and `public.assistant_messages`. The browser uses the existing Supabase client, calls `auth.getUser()`, and filters records by that user ID. The database RLS policies, rather than those client filters, must enforce ownership.
+
+The repository includes [`supabase-assistant-chat.sql`](supabase-assistant-chat.sql), an additive migration that creates those two tables, enables RLS, defines owner-only conversation/message policies, and grants authenticated users the operations used by the client. It does not modify `saved_plans` or the local Savings Tracker schema. The migration has not been verified against a live schema and its application status is unknown; the presence of this file is not evidence that it ran.
+
+Before using persistent chat in a deployed environment, inspect the intended Supabase project and check whether both tables already exist. Review and test the migration in a non-production project, especially cross-user SELECT/INSERT/DELETE isolation, before applying it to any project. Do not rerun it if its preflight finds an existing target table; inspect the existing table and policies instead. Chat client code does not perform the cloud-plan module's explicit browser-side AAL2 check, so do not assume the saved-plans MFA policy automatically covers chat. No SQL was applied during repository documentation work.
+
 ## Local Savings Tracker
 
-The Savings Tracker at `/savings.html` stores roadmap snapshots and student-entered deposits in this browser's local storage. It does not use Supabase tables, RLS, MFA, or SQL. Supabase setup in this document still applies to the separate authentication and cloud-saved planner features. Tracker data is not synced to another browser, device, or account; users should export JSON backups regularly. See [`savings-tracker-checklist.md`](savings-tracker-checklist.md) for local testing and backup steps. The tracker does not fetch bank data or add deposits to the planner's separate print-ready report.
+The Savings Tracker at `/savings.html` stores roadmap snapshots and student-entered deposits in this browser's local storage. It does not use Supabase tables, RLS, MFA, or SQL. Supabase setup in this document applies to the separate authentication, cloud-saved plan, and assistant-chat features. Tracker data is not synced to another browser, device, or account; users should export JSON backups regularly. See [`savings-tracker-checklist.md`](savings-tracker-checklist.md) for local testing and backup steps. The tracker does not fetch bank data or add deposits to the planner's separate print-ready report.

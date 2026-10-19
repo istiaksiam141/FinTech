@@ -1,48 +1,82 @@
 # CampusBridge AI
 
-Student accounts and cloud-saved plans are implemented and described in [docs/supabase-setup.md](docs/supabase-setup.md). `js/supabase-config.js` already contains the browser-safe Supabase URL and publishable key. Production authentication redirects, provider settings, and database Row Level Security (RLS) still need verification; production setup has not been confirmed.
+CampusBridge AI is a FinTechathon 2026 project: a student-facing study-abroad finance planning prototype. It helps students organize their own cost, savings, exchange-rate, and payment assumptions. The financial engine performs the calculations and validation locally; the AI assistant provides general explanations and does not provide authoritative financial calculations.
 
-CampusBridge AI is a static multi-page financial-planning prototype for students preparing for study abroad. It reuses one local calculation engine to estimate tuition and other entered costs, savings needs, dated contribution cycles, stress scenarios, and report data. These estimates are not guarantees and do not execute payments.
+The app does not connect to a bank, verify manually entered provider quotes, initiate payments, or guarantee affordability, exchange rates, admission, visas, or funding. See the project documentation for verified behavior and limits.
 
-## Pages
+## What is in the project
 
-- `/` — Home and links to the tools.
-- `/planner.html` — Authoritative plan inputs, both planning modes, results, rates, roadmap, transfer quote entry, assistant, stress tests, and report actions.
-- `/roadmap.html` — Dated contribution schedule from the saved plan.
-- `/savings.html` — Browser-local savings roadmap snapshots, student-entered BDT deposits, history, comparisons, and JSON backup/restore. No account or database setup is required for this tracker.
-- `/stress-tests.html` — Rate, expense, and missed-contribution scenarios on copies of the plan.
-- `/transfers.html` — Compare manually entered, unverified provider quotes.
-- `/assistant.html` — General AI explanations and deterministic local answers for selected plan questions.
-- `/report.html` — Local readiness report with browser printing / Save as PDF.
-- `/account.html` — Email/password and Google authentication, recovery, and cloud-saved plan management.
-- `/privacy.html` — Session storage details and product limitations.
+- **Planner (`/planner.html`)** — all-cost and tuition-only estimates, saved plan state for this tab, contribution schedule, rate lookup, quote comparison, stress scenarios, and report actions.
+- **Roadmap (`/roadmap.html`)** — dated schedule based on full 30-day contribution intervals.
+- **Savings Tracker (`/savings.html`)** — local-only roadmap snapshots and student-entered BDT deposit records, with JSON backup and restore.
+- **Transfers (`/transfers.html`)** — comparison of student-entered provider quotes; quotes are not verified provider offers.
+- **AI Assistant (`/assistant.html`)** — local deterministic answers for selected saved-plan questions, and general educational answers through the AI API. Signed-in chat history is stored in Supabase; signed-out chat is temporary.
+- **Account (`/account.html`)** — Supabase email/password and Google sign-in flows, recovery, optional authenticator MFA, and cloud-saved plans.
+- **Stress Tests and Report** — independent local scenarios and a browser-generated report.
 
-The shared shell is in `js/site.js` and `styles/site.css`. `lib/plan-state.js` stores a versioned, validated minimum plan snapshot in tab-scoped `sessionStorage`; it does not store report names, account labels, credentials, API keys, or tokens. Clearing the plan is available in the navigation. The planner is the only place where the baseline plan is created or updated.
+## Technology and architecture
 
-`lib/finance.js` remains the authoritative deterministic calculation engine. The Bangladesh Bank reference-rate endpoint stays at `/api/exchange-rates`; general AI questions use `/api/assistant`. The browser sends only `{ question }` to the assistant endpoint. No student financial profile or transfer quote is sent to the AI service.
+The frontend is static HTML, CSS, and browser JavaScript. Shared finance, state, quote, rate, and chat logic lives in `lib/`. The `api/` directory contains Vercel serverless functions for the assistant and Bangladesh Bank rate lookup. Supabase JS v2 is loaded from a browser CDN for Auth and account-backed storage. The server-side OpenAI-compatible SDK calls Groq for general assistant answers.
 
-## Run locally
+See [system architecture](docs/architecture.md), [financial methodology and assumptions](docs/financial-algorithms.md), [security and data handling](docs/security-report.md), and [testing and deployment](docs/test-results.md).
 
-Requirements: Node.js 22 or newer. For the full API-backed experience, install the existing server dependency and use the Vercel development server:
+## Requirements
+
+- Node.js 22 or newer.
+- npm (included with Node.js).
+- For local API routes, the Vercel CLI through `npx` and network access.
+- For remote AI answers, a Groq API key configured as the server-side environment variable `GROQ_API_KEY`.
+
+The only application environment variable required by the AI API is `GROQ_API_KEY`. `GROQ_MODEL` is optional; the code defaults to `openai/gpt-oss-20b`. Supabase browser configuration is kept in `js/supabase-config.js` and is intentionally not loaded from server environment variables. Do not put secret or service-role credentials in browser code. No environment values are included here.
+
+## Run locally on Windows
+
+Open PowerShell in the project folder. Check Node:
 
 ```powershell
-npm install
-npx vercel dev
+node --version
 ```
 
-Open the local URL shown by Vercel. To test the AI endpoint locally, create an ignored `.env.local` file with `GROQ_API_KEY=...`; keep the key out of source files and Git. Exchange-rate refresh uses the Bangladesh Bank endpoint through the local serverless route.
+Install the dependency versions recorded by the lockfile:
 
-To serve only static pages without serverless APIs, run `py -m http.server 8000` and open `http://localhost:8000/`. Manual calculations and saved-plan pages work; exchange refresh and remote AI requests will be unavailable on that static-only server.
+```powershell
+npm ci
+```
 
-Run all tests with Node's built-in test runner:
+For the full site with Vercel API routes, create the ignored local environment file from the safe example and edit it to add your own Groq key:
+
+```powershell
+Copy-Item .env.example .env.local
+notepad .env.local
+npx vercel@latest dev --listen 3000
+```
+
+Open `http://localhost:3000`. The `.env.local` file is ignored by Git. Keep its values private. Without `GROQ_API_KEY`, the assistant API returns a configuration error; local deterministic planner answers still work. Supabase sign-in and cloud features also depend on the configured Supabase project, network access, database tables/policies, and allowed redirect URLs. The repository cannot verify the live project setup.
+
+For a static-only preview without serverless APIs:
+
+```powershell
+py -m http.server 8000
+```
+
+Then open `http://localhost:8000`. The static server does not implement `/api`; remote AI and exchange-rate refresh will not work there.
+
+To run automated checks:
 
 ```powershell
 node --test tests/*.test.cjs
 git diff --check
 ```
 
-## Boundaries
+See [testing and deployment](docs/test-results.md) for what these checks cover and what still needs a live review.
 
-The browser stores the minimum current plan in tab session storage to share it across pages. This storage is not encrypted. Rates are references, manual quote entries are not authenticated, there is no connected bank account, and the site does not initiate transfers. See `docs/` for calculation, security, and production boundaries.
+## Data storage at a glance
 
-Savings Tracker data is stored in this browser profile's local storage. It is not synced between devices or accounts and can be lost when browser data is cleared; export JSON backups regularly. Imported backups replace the browser's current tracker data after confirmation. Deposit entries are student-entered, not verified bank transactions or balances. Saved roadmap results are historical snapshots; saving a revised plan creates a separate record. This tracker does not use Supabase tables, RLS policies, or MFA. Supabase remains in use for unrelated account and cloud-saved plan features.
+| Data | Where it is stored | What it means |
+| --- | --- | --- |
+| Current planner profile and stress inputs | This tab's `sessionStorage` | Validated working state shared by pages in the same tab; not encrypted or an account backup. |
+| Signed-in AI chat | Supabase `assistant_conversations` and `assistant_messages` | User questions and displayed answers. The SQL migration is in `docs/supabase-assistant-chat.sql`; whether it is installed in any live project is unverified. |
+| Cloud-saved plan copies | Supabase `saved_plans` | Separate, explicitly saved plan input copies. Live schema and RLS policies require verification. |
+| Savings Tracker data | This browser profile's `localStorage` | Roadmaps and student-entered deposits; not synced to accounts or devices. JSON backup/restore is available. |
+
+The assistant sends only the current general question to Groq. A selected plan question may be calculated locally by the deterministic finance engine. The signed-in chat persistence path separately sends chat messages to Supabase. Do not include sensitive personal or account details in assistant questions.
