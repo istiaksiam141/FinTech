@@ -499,15 +499,17 @@ let visibleProviderCount = 1;
 const quoteDrafts = new Map();
 const exchangeRateState = { lastResponse: null, nextRequestAt: 0, pending: false, mode: "manual", appliedCurrency: null, appliedUpdatedAtMs: null, appliedNextUpdateAtMs: null, selectedCurrency: "CNH", staleTimer: null };
 const FX_MIN_REQUEST_INTERVAL = 30 * 60 * 1000;
+const FX_FAILED_RETRY_DELAY = 30 * 1000;
 const money = (n, cur = "BDT") => `${new Intl.NumberFormat("en", { maximumFractionDigits: cur === "BDT" ? 0 : 2 }).format(n)} ${cur}`;
 function localDateTimeForInput(timestamp) { const d = new Date(timestamp); return `${localDate(d)}T${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
 function setExchangeRateStatus(message, state = "") { const status = byId("exchangeRateStatus"); status.textContent = message; status.dataset.state = state; }
+function isFetchedExchangeRateStale(data, nowMs = Date.now()) { return !data || data.stale === true || !Number.isFinite(data.nextUpdateAtMs) || nowMs >= data.nextUpdateAtMs; }
 function renderFetchedRateStatus(prefix = "") {
   const data = exchangeRateState.lastResponse;
   const currency = corridorMap[byId("corridor").value].currency;
   const useButton = byId("useExchangeRate");
   if (!data) { useButton.hidden = true; useButton.disabled = true; setExchangeRateStatus(prefix || "No official rate loaded. Manual rate entry is available; use Refresh to retrieve Bangladesh Bank data."); return; }
-  const appliedIsStale = exchangeRateState.mode === "api" && exchangeRateState.appliedNextUpdateAtMs && Date.now() >= exchangeRateState.appliedNextUpdateAtMs;
+  const appliedIsStale = exchangeRateState.mode === "api" && (isFetchedExchangeRateStale(data) || exchangeRateState.appliedNextUpdateAtMs && Date.now() >= exchangeRateState.appliedNextUpdateAtMs);
   if (appliedIsStale) {
     latest = null;
     renderContributionRoadmap(null);
@@ -515,14 +517,14 @@ function renderFetchedRateStatus(prefix = "") {
     byId("formError").textContent = message;
     byId("plannerResults").innerHTML = `<p class="error">${message}</p>`;
   }
-  const stale = Date.now() >= data.nextUpdateAtMs;
+  const stale = isFetchedExchangeRateStale(data);
   const rate = data.rates[currency];
   const applied = exchangeRateState.mode === "api" && exchangeRateState.appliedCurrency === currency && exchangeRateState.appliedUpdatedAtMs === data.updatedAtMs;
   useButton.hidden = stale;
   useButton.disabled = stale;
-  useButton.textContent = applied ? "Official rate in use" : `Use Bangladesh Bank ${currency} ask`;
+  useButton.textContent = stale ? "Bangladesh Bank rate is stale" : applied ? "Official rate in use" : `Use Bangladesh Bank ${currency} ask`;
   if (stale) {
-    setExchangeRateStatus(`${prefix ? `${prefix} ` : ""}The Bangladesh Bank data is stale${data.cacheStatus.toUpperCase()==="STALE"?" in Vercel's cache":""}. Sheet date: ${data.publicationDate}; retrieved: ${data.retrievedAt} (UTC). Data is also treated as stale after ${data.staleAfterDays} days without a newer sheet or ${data.retrievalStaleAfterHours} hours without a successful retrieval. It cannot be applied as current; use a manual rate or refresh.`, "stale");
+    setExchangeRateStatus(`${prefix ? `${prefix} ` : ""}The Bangladesh Bank data is stale${String(data.cacheStatus || "").toUpperCase()==="STALE"?" in Vercel's cache":""}. Sheet date: ${data.publicationDate}; retrieved: ${data.retrievedAt} (UTC). Data is also treated as stale after ${data.staleAfterDays} days without a newer sheet or ${data.retrievalStaleAfterHours} hours without a successful retrieval. It cannot be applied as current; use a manual rate or refresh.`, "stale");
   } else if (!Number.isFinite(rate) || !data.rateDetails[currency]) {
     const note = `Bangladesh Bank does not publish a ${Finance.CURRENCY_NAMES[currency] || currency} (${currency}) rate in this feed. Enter a rate manually with its source and timestamp. No rate was invented.`;
     setExchangeRateStatus(`${prefix ? `${prefix} ` : ""}${note}`, "unavailable");
@@ -540,12 +542,15 @@ function renderFetchedRateStatus(prefix = "") {
 async function refreshExchangeRate() {
   if (exchangeRateState.pending) return;
   const now = Date.now();
+  if (ExchangeRates.isWithinCacheWindow(exchangeRateState.lastResponse, now)) {
+    renderFetchedRateStatus("Using the last successful Bangladesh Bank response; its 24-hour cache window has not expired, so no new request was sent.");
+    return;
+  }
   if (now < exchangeRateState.nextRequestAt) {
-    setExchangeRateStatus(`Refresh is limited to once every 30 minutes; try again after ${new Date(exchangeRateState.nextRequestAt).toLocaleTimeString()}. Your manual rate remains available.`, "stale");
+    setExchangeRateStatus(`Refresh is temporarily limited; try again after ${new Date(exchangeRateState.nextRequestAt).toLocaleTimeString()}. Your last valid rate remains available.`, "stale");
     return;
   }
   exchangeRateState.pending = true;
-  exchangeRateState.nextRequestAt = now + FX_MIN_REQUEST_INTERVAL;
   const refreshButton = byId("refreshExchangeRate");
   refreshButton.disabled = true;
   setExchangeRateStatus("Loading Bangladesh Bank's official published rate sheet…");
@@ -554,11 +559,16 @@ async function refreshExchangeRate() {
   try {
     const data = await ExchangeRates.fetchLatestRates({ signal: controller?.signal });
     exchangeRateState.lastResponse = data;
-    renderFetchedRateStatus();
+    const completedAt = Date.now();
+    const responseIsStale = isFetchedExchangeRateStale(data, completedAt);
+    exchangeRateState.nextRequestAt = completedAt + (responseIsStale ? FX_FAILED_RETRY_DELAY : FX_MIN_REQUEST_INTERVAL);
+    renderFetchedRateStatus(responseIsStale ? `The response is stale. Retry after ${new Date(exchangeRateState.nextRequestAt).toLocaleTimeString()}.` : "");
   } catch (error) {
+    exchangeRateState.nextRequestAt = Date.now() + FX_FAILED_RETRY_DELAY;
     const detail = error?.name === "AbortError" ? "The request timed out." : error?.message || "The exchange-rate request failed.";
-    if (exchangeRateState.lastResponse) renderFetchedRateStatus(`Refresh failed (${detail})`);
-    else setExchangeRateStatus(`${detail} Your entered/manual rate has not been changed. You can enter or keep a manual rate.`, "error");
+    const retryNotice = `Retry after ${new Date(exchangeRateState.nextRequestAt).toLocaleTimeString()}.`;
+    if (exchangeRateState.lastResponse) renderFetchedRateStatus(`Refresh failed (${detail}). ${retryNotice}`);
+    else setExchangeRateStatus(`${detail} ${retryNotice} Your entered/manual rate has not been changed. You can enter or keep a manual rate.`, "error");
   } finally {
     clearTimeout(timeout);
     exchangeRateState.pending = false;
@@ -568,7 +578,7 @@ async function refreshExchangeRate() {
 function useFetchedExchangeRate() {
   const data = exchangeRateState.lastResponse;
   const currency = corridorMap[byId("corridor").value].currency;
-  if (!data || Date.now() >= data.nextUpdateAtMs) { renderFetchedRateStatus(); return; }
+  if (isFetchedExchangeRateStale(data)) { renderFetchedRateStatus(); return; }
   const rate = data.rates[currency];
   if (!Number.isFinite(rate) || !data.rateDetails[currency]) { renderFetchedRateStatus(); return; }
   byId("exchangeRate").value = String(rate);

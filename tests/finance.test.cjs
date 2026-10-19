@@ -16,6 +16,16 @@ function isoAfter(days) { const d=new Date(today);d.setDate(d.getDate()+days);re
 function profile(overrides={}) { return {homeCountry:'Bangladesh',destinationCountry:'United Kingdom',homeCur:'BDT',tuitionCur:'GBP',tuition:'8000',exchangeRate:'155',rateSource:'Student-entered bank quote ref 123',rateTimestamp:'2026-10-13T10:00',savings:'500000',income:'60000',expenses:'35000',committed:'10000',emergency:'50000',paymentFee:'0',deadline:isoAfter(60),...overrides}; }
 function quote(overrides={}) { return {name:'Provider A',currency:'GBP',totalCost:'200000',fee:'1000',quotedRate:'155',recipientAmount:'1200',days:'3',timestamp:'2026-10-13T08:00',reference:'A-123',...overrides}; }
 function compare(input,quotes,now=quoteNow) { return Finance.compareEnteredQuotes(input,quotes,now); }
+function functionSource(source,startMarker,endMarker) { const start=source.indexOf(startMarker),end=source.indexOf(endMarker,start); assert.notEqual(start,-1,`missing ${startMarker}`); assert.notEqual(end,-1,`missing ${endMarker}`); return source.slice(start,end); }
+function loadRateUiHarness(overrides={}) {
+  const app=fs.readFileSync(path.join(__dirname,'..','app.js'),'utf8');
+  const controls={corridor:{value:'USD'},useExchangeRate:{hidden:false,disabled:false,textContent:''},exchangeRateStatus:{textContent:'',dataset:{}},refreshExchangeRate:{disabled:false},exchangeRate:{value:'manual-rate'},rateSource:{value:'manual-source'},rateTimestamp:{value:'manual-time'},formError:{textContent:''},plannerResults:{innerHTML:''}};
+  const now=Date.parse('2026-10-13T12:00:00Z');
+  const context={Date:class extends Date { static now(){return now;} },exchangeRateState:{lastResponse:null,nextRequestAt:0,pending:false,mode:'manual',appliedCurrency:null,appliedUpdatedAtMs:null,appliedNextUpdateAtMs:null,selectedCurrency:'USD',staleTimer:null},FX_MIN_REQUEST_INTERVAL:30*60*1000,FX_FAILED_RETRY_DELAY:30*1000,ExchangeRates:{isWithinCacheWindow:()=>false,fetchLatestRates:async()=>({})},corridorMap:{USD:{currency:'USD'}},Finance:{CURRENCY_NAMES:{USD:'US Dollar'}},byId:id=>controls[id],setExchangeRateStatus:(message,state='')=>{controls.exchangeRateStatus.textContent=message;controls.exchangeRateStatus.dataset.state=state;},clearTimeout:()=>{},setTimeout:()=>1,AbortController:class {abort(){}},syncRateTimestampPicker:()=>{},compute:()=>{},renderContributionRoadmap:()=>{},latest:null,...overrides};
+  const functions=[functionSource(app,'function isFetchedExchangeRateStale','function renderFetchedRateStatus'),functionSource(app,'function renderFetchedRateStatus','async function refreshExchangeRate'),functionSource(app,'async function refreshExchangeRate','function useFetchedExchangeRate'),functionSource(app,'function useFetchedExchangeRate','function handleManualRateEdit')].join('\n');
+  vm.runInNewContext(functions,context);
+  return {context,controls,now};
+}
 test('planner results summary reuses the finance result for covered, shortfall, and no-date plans',()=>{
   const calculateSummary=overrides=>{
     const input=profile(overrides),result=Finance.calculateTuition(input,today);
@@ -219,7 +229,7 @@ test('Vercel endpoint returns validated source metadata and a 24-hour shared-cac
   globalThis.fetch=async(_url,options)=>{upstreamOptions=options;return {ok:true,status:200,headers:{get:()=> 'text/html; charset=utf-8'},text:async()=>fs.readFileSync(path.join(__dirname,'fixtures','bangladesh-bank-live-2026-10-13.html'),'utf8')};};
   try { await exchangeRateHandler({},response); } finally { globalThis.fetch=originalFetch; }
   assert.equal(response.statusCode,200);
-  assert.equal(response.headers['Cache-Control'],'public, max-age=0, s-maxage=86400');
+  assert.equal(response.headers['Cache-Control'],'public, max-age=0, s-maxage=86400, stale-if-error=604800');
   assert.equal(response.headers['Content-Type'],'application/json; charset=utf-8');
   assert.equal(response.body.publicationDate,'2026-10-13');
   assert.match(response.body.retrievedAt,/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,'the successful fetch timestamp is part of the cacheable response');
@@ -242,7 +252,7 @@ test('expired Vercel cache requests can refresh the source timestamp, while inva
     globalThis.Date=class extends realNow { constructor(...args){super(...(args.length?args:[currentTime]));} static now(){return currentTime.getTime();} };
     try { await exchangeRateHandler({},second); } finally { globalThis.Date=realNow; }
     assert.notEqual(first.body.retrievedAt,second.body.retrievedAt,'a cache miss after expiry fetches a new source timestamp');
-    assert.equal(second.headers['Cache-Control'],'public, max-age=0, s-maxage=86400');
+    assert.equal(second.headers['Cache-Control'],'public, max-age=0, s-maxage=86400, stale-if-error=604800');
     globalThis.fetch=async()=>({ok:true,status:200,headers:{get:()=> 'text/html'},text:async()=>'<html>invalid source response'.padEnd(150,'x')});
     const invalid=createResponse(); await exchangeRateHandler({},invalid);
     assert.equal(invalid.statusCode,502);
@@ -275,6 +285,34 @@ test('official response validation enforces direction, source, timestamps, stale
   const stale=ExchangeRates.parseOfficialResponse(bbResponse({publicationDate:'2026-10-01'}),Date.UTC(2026,9,13,12));
   assert.equal(stale.stale,true);
   await assert.rejects(ExchangeRates.fetchLatestRates({nowMs:apiNow,fetchImpl:async()=>({ok:false,status:502,json:async()=>({error:'upstream unavailable'})})}),/upstream unavailable/);
+});
+
+test('a successful official-rate response remains reusable for the full 24-hour retrieval window',()=>{
+  const fetched=ExchangeRates.parseOfficialResponse(bbResponse(),apiNow);
+  assert.equal(ExchangeRates.isWithinCacheWindow(fetched,apiNow+23*60*60*1000),true);
+  assert.equal(ExchangeRates.isWithinCacheWindow(fetched,apiNow+24*60*60*1000),false);
+  assert.equal(ExchangeRates.isWithinCacheWindow({},apiNow),false);
+});
+
+test('failed rate refreshes use a bounded retry delay and preserve the last response and manual rate',async()=>{
+  const previous={source:'Bangladesh Bank FX Rate Sheet',sourceUrl:ExchangeRates.OFFICIAL_SOURCE_URL,rates:{USD:120},rateDetails:{USD:{currencyCode:'USD',rateType:'USD/BDT interbank rate',bid:119,ask:120,weightedAverage:null}},publicationDate:'2026-10-12',retrievedAt:'2026-10-12T12:00:00.000Z',updatedAtMs:Date.parse('2026-10-12T12:00:00Z'),nextUpdateAtMs:Date.parse('2026-10-13T12:00:00Z'),stale:true,cacheStatus:'STALE',staleAfterDays:5,retrievalStaleAfterHours:24};
+  let attempts=0; const h=loadRateUiHarness({exchangeRateState:{lastResponse:previous,nextRequestAt:0,pending:false,mode:'manual',appliedCurrency:null,appliedUpdatedAtMs:null,appliedNextUpdateAtMs:null,selectedCurrency:'USD',staleTimer:null},ExchangeRates:{isWithinCacheWindow:()=>false,fetchLatestRates:async()=>{attempts++;throw new Error('upstream unavailable');}}});
+  await h.context.refreshExchangeRate();
+  assert.equal(attempts,1); assert.equal(h.context.exchangeRateState.lastResponse,previous); assert.equal(h.context.exchangeRateState.nextRequestAt,h.now+30_000); assert.equal(h.controls.exchangeRate.value,'manual-rate'); assert.equal(h.controls.rateSource.value,'manual-source'); assert.equal(h.controls.rateTimestamp.value,'manual-time'); assert.equal(h.controls.refreshExchangeRate.disabled,false); assert.match(h.controls.exchangeRateStatus.textContent,/Refresh failed/); assert.match(h.controls.exchangeRateStatus.textContent,/Retry after/);
+  await h.context.refreshExchangeRate();
+  assert.equal(attempts,1,'retry is blocked until the short retry delay expires'); assert.match(h.controls.exchangeRateStatus.textContent,/try again after/);
+});
+
+test('successful rate refresh starts the existing 30-minute cooldown only after success',async()=>{
+  const h=loadRateUiHarness({ExchangeRates:{isWithinCacheWindow:()=>false,fetchLatestRates:async()=>({stale:false,nextUpdateAtMs:Date.parse('2026-10-14T12:00:00Z'),rates:{USD:120},rateDetails:{USD:{currencyCode:'USD',rateType:'USD/BDT interbank rate',bid:119,ask:120,weightedAverage:null}},source:'Bangladesh Bank FX Rate Sheet',sourceUrl:ExchangeRates.OFFICIAL_SOURCE_URL,publicationDate:'2026-10-13',retrievedAt:'2026-10-13T12:00:00.000Z',updatedAtMs:Date.parse('2026-10-13T12:00:00Z'),staleAfterDays:5,retrievalStaleAfterHours:24})}});
+  assert.equal(h.context.exchangeRateState.nextRequestAt,0,'the cooldown is unset before the request succeeds'); await h.context.refreshExchangeRate();
+  assert.equal(h.context.exchangeRateState.nextRequestAt,h.now+30*60*1000); assert.equal(h.controls.exchangeRate.value,'manual-rate','previewing a response does not replace the manually entered rate');
+});
+
+test('a response explicitly marked stale is labeled and cannot be applied over a manual rate',()=>{
+  const h=loadRateUiHarness(); h.context.exchangeRateState.lastResponse={source:'Bangladesh Bank FX Rate Sheet',sourceUrl:ExchangeRates.OFFICIAL_SOURCE_URL,rates:{USD:120},rateDetails:{USD:{currencyCode:'USD',rateType:'USD/BDT interbank rate',bid:119,ask:120,weightedAverage:null}},publicationDate:'2026-10-12',retrievedAt:'2026-10-12T12:00:00.000Z',updatedAtMs:Date.parse('2026-10-12T12:00:00Z'),nextUpdateAtMs:h.now+60_000,stale:true,cacheStatus:'STALE',staleAfterDays:5,retrievalStaleAfterHours:24};
+  h.context.renderFetchedRateStatus(); assert.equal(h.controls.exchangeRateStatus.dataset.state,'stale'); assert.match(h.controls.exchangeRateStatus.textContent,/Sheet date: 2026-10-12/); assert.match(h.controls.exchangeRateStatus.textContent,/retrieved: 2026-10-12T12:00:00.000Z/); assert.equal(h.controls.useExchangeRate.hidden,true); assert.equal(h.controls.useExchangeRate.textContent,'Bangladesh Bank rate is stale'); assert.equal(h.controls.exchangeRate.value,'manual-rate');
+  h.context.useFetchedExchangeRate(); assert.equal(h.controls.exchangeRate.value,'manual-rate'); assert.equal(h.controls.rateSource.value,'manual-source'); assert.equal(h.controls.rateTimestamp.value,'manual-time');
 });
 
 test('tuition planner uses the rate entered with source and timestamp',()=>{
@@ -815,6 +853,7 @@ test('active UI has blank financial inputs and working external quote paths; scr
   assert.ok(fs.readFileSync(path.join(root,'docs','financial-algorithms.md'),'utf8').includes('Bangladesh Bank published rates'));
   const endpoint=fs.readFileSync(path.join(root,'api','exchange-rates.js'),'utf8');
   assert.match(endpoint,/s-maxage=\$\{CACHE_TTL_SECONDS\}/);
+  assert.match(endpoint,/stale-if-error=\$\{STALE_IF_ERROR_SECONDS\}/);
   assert.match(endpoint,/status\(502\)/);
   assert.doesNotMatch(html,/value="(?:12000|450000|80000|52000|200000)"/);
   assert.doesNotMatch(app,/fictional|illustrative/);
@@ -845,6 +884,8 @@ test('active UI has blank financial inputs and working external quote paths; scr
   assert.match(app,/byId\("deadline"\)\.addEventListener\("change"/,'selecting a deadline updates the displayed plan');
   assert.match(app,/manualSavings === "" && bankAccounts\.length === 0 \? "0"/,'empty optional savings are treated as zero');
   const fetchHandler=app.slice(app.indexOf('async function refreshExchangeRate()'),app.indexOf('function useFetchedExchangeRate()'));
+  assert.match(fetchHandler,/ExchangeRates\.isWithinCacheWindow\(exchangeRateState\.lastResponse,\s*now\)/,'a successful response blocks unnecessary requests until its 24-hour window expires');
+  assert.match(fetchHandler,/last valid rate remains available/,'the retry throttle explains that the last valid rate remains available');
   assert.equal(fetchHandler.includes('byId("exchangeRate").value ='),false,'fetching only previews the rate and does not replace the student\'s current value');
   new vm.Script(app,{filename:'app.js'});
   new vm.Script(steps,{filename:'js/planner-steps.js'});
