@@ -761,6 +761,8 @@ test('active UI has blank financial inputs and working external quote paths; scr
   assert.match(html,/id="roadmap"/,'the existing integrated roadmap remains available in the planner');
   assert.match(app,/if\(!roadmap\?\.ok\)\{section\.hidden=false;summary\.textContent=/,'the roadmap navigation target remains visible before a valid plan is calculated');
   assert.match(app,/byId\("printReadinessReport"\)\.addEventListener\("click",\(\)=>window\.print\(\)\)/,'the report uses the native browser print dialog');
+  assert.match(app,/reportAction\.className = "resultsReportAction"[\s\S]*reportButton\.textContent = "Create print-ready report"[\s\S]*reportButton\.addEventListener\("click", generateReadinessReport\)/,'a completed calculation exposes the existing A4 report flow directly in its results');
+  assert.match(css,/\.resultsReportAction\{display:flex/,'the results report action has a responsive, styled container');
   assert.match(html,/id="readinessReportPreview"[^>]*hidden/,'the report preview is hidden until the student generates it');
   assert.ok(app.includes('data-field="currency"'));
   assert.match(app,/input\.min = localDate\(deadlineMinimum\(\)\)/,'past dates are excluded from the native constraint');

@@ -41,6 +41,10 @@ test('shared navigation points to every migrated page and preserves real static 
     assert.ok(fs.existsSync(path.join(root, target)), `route target ${target} should exist`);
   }
   assert.match(site, /aria-current", "page"/);
+  assert.match(site, /assistantLink\.href = "\/assistant\.html"/);
+  assert.match(site, /assistantLink\.append\(createIcon\("sparkle"\)/);
+  assert.match(site, /nav\.append\(home, assistantLink\)/, 'AI Assistant is a first-class top-level navigation link');
+  assert.doesNotMatch(site, /\[\["assistant", "AI assistant", "\/assistant\.html"/, 'AI Assistant is no longer buried in a dropdown');
   assert.match(site, /confirm\(/);
 });
 
@@ -49,7 +53,7 @@ test('every shared dropdown option receives its own decorative outline icon', ()
   const expected = [
     ['Planner', '/planner.html', 'calculator'], ['Savings roadmap', '/roadmap.html', 'route'],
     ['Stress tests', '/stress-tests.html', 'chart'], ['Transfers', '/transfers.html', 'arrowsLeftRight'],
-    ['AI assistant', '/assistant.html', 'messageCircle'], ['Account', '/account.html', 'userRound'],
+    ['Account', '/account.html', 'userRound'],
     ['Financial report', '/report.html', 'fileText'], ['Privacy', '/privacy.html', 'shieldCheck']
   ];
   for (const [label, href, icon] of expected) {
@@ -125,7 +129,9 @@ test('transfer quotes use editable provider names and refresh comparison labels 
 test('homepage keeps its planning actions and tool cards without an Earth animation', () => {
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
-  for (const text of ['Plan your next step', 'Organize study-abroad costs', 'Start planning', 'How your data is handled', 'Savings roadmap', 'Stress tests', 'Transfer quotes', 'AI assistant', 'Financial report', 'Privacy and limits', 'Bring your own estimates']) assert.ok(html.includes(text), `homepage should retain ${text}`);
+  for (const text of ['Plan your next step', 'Organize study-abroad costs', 'Start planning', 'How your data is handled', 'Savings roadmap', 'Stress tests', 'Transfer quotes', 'AI assistant', 'Meet your AI financial assistant', 'Ask CampusBridge AI', 'Print or save your financial plan', 'Build a plan to print', 'Financial report', 'Privacy and limits', 'Bring your own estimates']) assert.ok(html.includes(text), `homepage should retain ${text}`);
+  assert.match(html, /href="\/assistant\.html">Ask CampusBridge AI/);
+  assert.match(html, /href="\/planner\.html#profileForm">Build a plan to print/);
   assert.doesNotMatch(html, /home-earth|earthFallback|<canvas|WebGL/i);
   assert.doesNotMatch(html, /home-earth\.js/);
   assert.match(css, /body\[data-page="home"\] \.hero/);

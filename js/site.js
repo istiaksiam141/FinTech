@@ -2,12 +2,13 @@
   "use strict";
   const groups = [
     { id: "planning", label: "Financial Planning", icon: "chart", pages: [["planner", "Planner", "/planner.html", "calculator"], ["roadmap", "Savings roadmap", "/roadmap.html", "route"], ["stress", "Stress tests", "/stress-tests.html", "chart"]] },
-    { id: "support", label: "Transfers & Support", icon: "transfer", pages: [["transfers", "Transfers", "/transfers.html", "arrowsLeftRight"], ["assistant", "AI assistant", "/assistant.html", "messageCircle"]] },
+    { id: "support", label: "Transfers & Support", icon: "transfer", pages: [["transfers", "Transfers", "/transfers.html", "arrowsLeftRight"]] },
     { id: "account", label: "My Account", icon: "user", pages: [["account", "Account", "/account.html", "userRound"], ["report", "Financial report", "/report.html", "fileText"], ["privacy", "Privacy", "/privacy.html", "shieldCheck"]] }
   ];
   const createIcon = name => {
     const drawings = {
       home: '<path d="m3 10 9-7 9 7"/><path d="M5 9v12h14V9"/><path d="M9 21v-7h6v7"/>',
+      sparkle: '<path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2L12 3Z"/><path d="m19 14 1.1 2.9L23 18l-2.9 1.1L19 22l-1.1-2.9L15 18l2.9-1.1L19 14Z"/>',
       chart: '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
       transfer: '<path d="M17 3l4 4-4 4"/><path d="M3 7h18"/><path d="m7 21-4-4 4-4"/><path d="M21 17H3"/>',
       user: '<circle cx="12" cy="8" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/>',
@@ -50,7 +51,10 @@
     const nav = document.createElement("nav"); nav.id = "navlinks"; nav.className = "navlinks"; nav.setAttribute("aria-label", "Main navigation");
     const home = document.createElement("a"); home.href = "/"; home.className = "navPill"; home.append(createIcon("home"), document.createElement("span")); home.lastChild.textContent = "Home";
     if (page === "home") home.setAttribute("aria-current", "page");
-    nav.append(home);
+    const assistantLink = document.createElement("a"); assistantLink.href = "/assistant.html"; assistantLink.className = "navPill aiNavPill";
+    assistantLink.append(createIcon("sparkle"), document.createElement("span")); assistantLink.lastChild.textContent = "AI Assistant";
+    if (page === "assistant") assistantLink.setAttribute("aria-current", "page");
+    nav.append(home, assistantLink);
     const groupControls = [];
     for (const group of groups) {
       const active = group.pages.some(([id]) => id === page);

@@ -444,6 +444,9 @@ body[data-page="planner"] .planningModeNote{padding:12px 14px;border-radius:11px
 .profileControl{position:relative;display:flex;align-items:center}
 .profileAvatar{display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid rgba(255,255,255,.58);border-radius:50%;background:#d8e9df;color:#145640;font:700 1rem/1 'DM Sans',sans-serif;cursor:pointer;box-shadow:0 2px 10px rgba(10,42,31,.16)}
 .profileAvatar:hover{background:#eef5ef;border-color:#fff}
+.topbar .navlinks>.aiNavPill:not([aria-current=page]){border-color:rgba(166,230,206,.4);background:rgba(166,230,206,.08)}
+.topbar .navlinks>.aiNavPill:not([aria-current=page]) .navIcon{color:#b8ead5}
+.topbar .navlinks>.aiNavPill:not([aria-current=page]):hover{border-color:#d8e9df;background:rgba(216,233,223,.16)}
 .profileDropdown{position:absolute;top:calc(100% + 12px);right:0;z-index:60;display:grid;gap:10px;width:min(300px,calc(100vw - 32px));padding:17px;border:1px solid #e1e8df;border-radius:17px;background:#fffefa;color:#25483b;box-shadow:0 18px 44px rgba(12,40,29,.24)}
 .profileDropdown .profileDisplayName{color:#124c39;font:700 1.02rem/1.3 'Manrope',sans-serif}
 .profileDropdown .profileEmail,.profileDropdown .accountStatus{overflow-wrap:anywhere;color:#61776d;font-size:.82rem;line-height:1.45}
@@ -457,3 +460,21 @@ body[data-page="planner"] .planningModeNote{padding:12px 14px;border-radius:11px
   .profileDropdown{position:static;width:100%;margin-top:8px}
   .navAuthSlot .authLoginLink{width:100%;justify-content:flex-start;padding:11px 14px;border-radius:999px}
 }
+
+/* Prominent routes to the existing AI assistant and print-ready report */
+.homeUspSection{padding-top:44px}
+.homeUspGrid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:18px}
+.homeUspCard{display:flex;flex-direction:column;align-items:flex-start;gap:13px;padding:26px;min-height:100%}
+.homeUspCard h3{font-size:clamp(1.35rem,2.2vw,1.8rem);color:var(--ink)}
+.homeUspCard>p{max-width:64ch;color:var(--muted);font-size:.92rem;line-height:1.75}
+.homeUspCard .homeUspNote{font-size:.8rem;color:var(--quiet)}
+.homeUspCard .button{margin-top:auto}
+.homeAiCard{border-color:rgba(112,219,188,.32);background:linear-gradient(135deg,rgba(23,83,82,.38),rgba(12,32,55,.92) 62%)}
+.homeAiCard .eyebrow{color:var(--mint)}
+.homePrintCard{background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(12,32,55,.9))}
+.resultsReportAction{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:20px;padding:17px 18px;border:1px solid rgba(112,219,188,.3);border-radius:15px;background:rgba(112,219,188,.055)}
+.resultsReportAction strong{display:block;color:var(--ink);font-size:.96rem}
+.resultsReportAction p{margin-top:3px;color:var(--muted);font-size:.82rem;line-height:1.55}
+.resultsReportAction .button{flex:0 0 auto}
+@media(max-width:760px){.homeUspSection{padding-top:25px}.homeUspGrid{grid-template-columns:1fr}.homeUspCard{padding:21px}.resultsReportAction{align-items:flex-start;flex-direction:column}.resultsReportAction .button{width:100%}}
+@media print{.resultsReportAction{display:none!important}}
