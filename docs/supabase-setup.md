@@ -48,3 +48,17 @@ Open `http://localhost:3000`. Vercel's development server serves the static page
 Only the signed-in user can request cloud operations. The browser obtains that user ID from Supabase Auth, validates plan inputs with `CampusBridgePlanState.validateProfile`, and stores only the allowlisted plan inputs in `plan_data`. Cloud load validates the same allowlist and calls the existing `savePlan`; the planner then runs the deterministic finance engine again. Saved calculation outputs are not trusted or restored. Saving creates a new row; rename and delete require explicit actions, with delete confirmation. Logging out leaves the local plan in this browser tab. **Clear Plan** removes local tab state only; deleting cloud copies is a separate account-page action.
 
 The auth session itself is persisted by Supabase JS in browser local storage using the library defaults. Do not use cloud saving on a shared or untrusted device. No passwords or OAuth client secrets are stored by CampusBridge.
+
+## Optional authenticator-app MFA
+
+The account page supports optional TOTP enrollment, QR scanning, first-code verification, login challenges, and factor removal with the Supabase JS v2 `auth.mfa` APIs. Enrollment secrets and verification codes are held only in the active page flow; CampusBridge does not write them to local storage. Supabase persists its own auth session as described above.
+
+Before enabling this flow for users, verify in the Supabase Dashboard's Authentication MFA settings that TOTP enrollment and verification are enabled. In particular, do not use the `Verification Disabled` setting: Supabase documents that it disables both challenge and verification APIs. TOTP availability and settings were not checked against the live project.
+
+After email/password or Google OAuth returns a session, the page checks Supabase's authenticator assurance level. If a verified factor requires AAL2, it presents a TOTP challenge and keeps cloud plans unavailable until the session reaches AAL2. This also runs after session restoration. Cloud plan operations independently check assurance in the browser client, while database RLS remains the actual authorization boundary.
+
+### Manual RLS review and proposed change
+
+Live policies are not available in this repository, and no dashboard changes have been made. Before production use, inspect **Database → Policies → public.saved_plans** and confirm the existing per-user SELECT, INSERT, UPDATE, and DELETE ownership policies remain enabled. In a non-production Supabase project, review and test the additive policy in [`supabase-mfa-rls.sql`](supabase-mfa-rls.sql). It is `AS RESTRICTIVE`, so it narrows access for accounts that have a verified MFA factor to sessions with `aal2`, while allowing accounts that have not opted in to continue at `aal1`. It does not replace the existing `user_id = auth.uid()` policies.
+
+Only after reviewing and testing it, apply the SQL manually through a reviewed migration or the Supabase SQL Editor. Verify that an opted-in user cannot read or change saved plans in an AAL1 session, can do so after a valid TOTP challenge, and that a user without MFA still follows the current ownership policies. Keep the supplied rollback statement available. Do not apply the policy if the current table schema, RLS configuration, or policy behavior differs from these assumptions.

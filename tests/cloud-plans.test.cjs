@@ -15,10 +15,16 @@ function profile(overrides = {}) {
     monthlyTransport: '', monthlyUtilities: '', monthlyOtherLiving: '', deadline: '2026-12-18', ...overrides
   };
 }
-function makeClient({ userId = 'authenticated-student-1', rows = [], authError = null } = {}) {
+function makeClient({ userId = 'authenticated-student-1', rows = [], authError = null, assurance = { currentLevel: 'aal1', nextLevel: 'aal1' }, factors = { totp: [], phone: [] }, assuranceError = null } = {}) {
   const calls = [];
   const client = {
-    auth: { getUser: async () => ({ data: { user: authError ? null : { id: userId } }, error: authError }) },
+    auth: {
+      getUser: async () => ({ data: { user: authError ? null : { id: userId } }, error: authError }),
+      mfa: {
+        getAuthenticatorAssuranceLevel: async () => ({ data: assurance, error: assuranceError }),
+        listFactors: async () => ({ data: factors, error: null })
+      }
+    },
     from(table) {
       const call = { table, filters: [], operation: 'select' }; calls.push(call);
       const builder = {
@@ -102,4 +108,26 @@ test('unauthenticated or expired sessions cannot read or write cloud plans', asy
   assert.equal((await plans.listPlans()).ok, false);
   assert.equal((await plans.createPlan('Plan', profile())).ok, false);
   assert.equal(mock.calls.length, 0);
+});
+
+test('saved-plan operations require AAL2 when a verified MFA factor is enrolled', async () => {
+  const pending = makeClient({ assurance: { currentLevel: 'aal1', nextLevel: 'aal2' }, factors: { totp: [{ status: 'verified' }], phone: [] } });
+  const blocked = createCloudPlans({ client: pending.client, planState: state() });
+  assert.match((await blocked.listPlans()).error, /Complete authenticator verification/);
+  assert.match((await blocked.createPlan('Plan', profile())).error, /Complete authenticator verification/);
+  assert.equal(pending.calls.length, 0, 'no database operation runs before AAL2');
+
+  const verified = makeClient({ assurance: { currentLevel: 'aal2', nextLevel: 'aal2' }, factors: { totp: [{ status: 'verified' }], phone: [] } });
+  const allowed = createCloudPlans({ client: verified.client, planState: state() });
+  assert.deepEqual(await allowed.createPlan('Verified plan', profile()), { ok: true, id: '00000000-0000-4000-8000-000000000001' });
+});
+
+test('cloud plans fail closed for missing or unknown assurance levels before database access', async () => {
+  for (const assurance of [null, {}, { currentLevel: 'mystery', nextLevel: 'aal1' }, { currentLevel: 'aal1', nextLevel: 'unknown' }]) {
+    const mock = makeClient({ assurance });
+    const result = await createCloudPlans({ client: mock.client, planState: state() }).listPlans();
+    assert.equal(result.ok, false);
+    assert.match(result.error, /unknown sign-in assurance/);
+    assert.equal(mock.calls.length, 0);
+  }
 });

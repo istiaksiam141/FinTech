@@ -86,12 +86,16 @@ test('all pages load one shared Supabase client after its official CDN and confi
 
 test('account route exposes email, OAuth, recovery, and explicit cloud-plan actions', () => {
   const html = fs.readFileSync(path.join(root, 'account.html'), 'utf8');
-  for (const id of ['signup-form', 'login-form', 'google-signin', 'reset-request-form', 'recovery-complete-form', 'cloud-save-form', 'cloud-plan-list']) assert.ok(html.includes(`id="${id}"`), `account page is missing #${id}`);
+  for (const id of ['signup-form', 'login-form', 'google-signin', 'reset-request-form', 'recovery-complete-form', 'cloud-save-form', 'cloud-plan-list', 'mfa-challenge-form', 'mfa-enroll-form', 'mfa-disable-form', 'mfa-qr-code']) assert.ok(html.includes(`id="${id}"`), `account page is missing #${id}`);
+  assert.match(html, /\/lib\/mfa-flow\.js/);
   const account = fs.readFileSync(path.join(root, 'js/account-page.js'), 'utf8');
   for (const method of ['signUp(', 'signInWithPassword(', 'signInWithOAuth(', 'resetPasswordForEmail(', 'updateUser({ password']) assert.ok(account.includes(method), `account module is missing ${method}`);
   assert.match(account, /emailRedirectTo:.*location\.origin/);
   assert.match(account, /flow=recovery/);
   assert.match(account, /This cannot be undone/);
+  assert.match(account, /security\.status !== "ready"/);
+  assert.match(account, /mfa\.verifyEnrollment/);
+  assert.match(account, /mfa\.disable/);
 });
 
 test('feature pages reuse the finance engine and assistant remote request contains only question', () => {

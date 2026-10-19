@@ -86,7 +86,7 @@
         if (event.target.closest("a")) closeNavigation();
       });
     }
-    const accountStatus = document.createElement("span"); accountStatus.id = "account-status"; accountStatus.className = "accountStatus"; accountStatus.setAttribute("role", "status"); accountStatus.textContent = "Checking account…";
+    const accountStatus = document.createElement("div"); accountStatus.id = "nav-auth-slot"; accountStatus.className = "navAuthSlot"; accountStatus.hidden = true; accountStatus.setAttribute("aria-busy", "true");
     const clear = document.createElement("button"); clear.type = "button"; clear.className = "button smallbtn clearPlanButton"; clear.textContent = "Clear plan"; clear.dataset.clearPlan = "";
     nav.append(accountStatus, clear);
     const menu = document.createElement("button"); menu.type = "button"; menu.id = "menu"; menu.className = "burger"; menu.append(createIcon("menu"));

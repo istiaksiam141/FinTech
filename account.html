@@ -15,7 +15,13 @@
       <nav class="accountJump" aria-label="Account options"><a href="#signup-form">Create an account</a><a href="#login-form">Sign in</a><a href="#reset-request-form">Reset password</a></nav>
       <p id="account-message" class="pageSummary" role="status" aria-live="polite">Checking account setup…</p>
       <section id="auth-panel" class="surface accountPanel">
-        <div class="accountGrid">
+        <section id="mfa-challenge-panel" class="accountForm mfaPanel" aria-labelledby="mfa-challenge-title" hidden>
+          <h2 id="mfa-challenge-title">Verify your sign-in</h2>
+          <p class="small muted">Enter the current six-digit code from your authenticator app to continue.</p>
+          <form id="mfa-challenge-form" class="mfaCodeForm"><label for="mfa-challenge-code">Authenticator code</label><input id="mfa-challenge-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required><button class="button primary" type="submit">Verify code</button><button id="mfa-challenge-retry" class="button" type="button">Get a new challenge</button></form>
+          <button class="button" type="button" data-auth-logout>Cancel and log out</button>
+        </section>
+        <div class="accountGrid" id="account-auth-options">
           <form id="signup-form" class="surface accountForm">
             <h2>Create an account</h2><label for="signup-email">Email</label><input id="signup-email" type="email" autocomplete="email" required maxlength="254">
             <label for="signup-password">Password</label><input id="signup-password" type="password" autocomplete="new-password" minlength="8" required>
@@ -33,6 +39,13 @@
         <p class="small muted">Email confirmation and password reset are handled by Supabase. Use the same email to sign in after confirming.</p>
       </section>
       <section id="cloud-plans-panel" class="surface accountPanel" hidden>
+        <section id="mfa-settings" class="mfaSettings" aria-labelledby="mfa-settings-title">
+          <h2 id="mfa-settings-title">Authenticator app</h2><p id="mfa-settings-status" class="small muted" aria-live="polite">Checking authenticator status…</p>
+          <button id="mfa-enroll-start" class="button" type="button" hidden>Set up an authenticator app</button>
+          <div id="mfa-enroll-panel" class="mfaPanel" hidden><p class="small">Scan this QR code with an authenticator app, then verify its current code to finish setup.</p><img id="mfa-qr-code" class="mfaQrCode" alt="QR code for CampusBridge AI authenticator setup"><form id="mfa-enroll-form" class="mfaCodeForm"><label for="mfa-enroll-code">First authenticator code</label><input id="mfa-enroll-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required><button class="button primary" type="submit">Verify and enable</button><button id="mfa-enroll-retry" class="button" type="button">Request a fresh code challenge</button><button id="mfa-enroll-cancel" class="button" type="button">Cancel setup</button></form></div>
+          <button id="mfa-disable-start" class="button" type="button" hidden>Disable authenticator</button>
+          <form id="mfa-disable-form" class="mfaCodeForm mfaPanel" hidden><p class="small muted">Verify with your authenticator app before disabling it.</p><label for="mfa-disable-code">Authenticator code</label><input id="mfa-disable-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required><button class="button" type="submit">Verify and disable</button><button id="mfa-disable-cancel" class="button" type="button">Cancel</button></form>
+        </section>
         <h2>Your cloud-saved plans</h2><p class="small muted">Saving is explicit. Each save creates a new copy; it does not replace another plan. Loading validates the saved inputs and recalculates them locally.</p>
         <form id="cloud-save-form" class="featureForm cloudSaveForm"><label for="cloud-plan-name">Name this plan</label><input id="cloud-plan-name" type="text" maxlength="80" required placeholder="For example, Autumn 2027 plan"><button class="button primary" type="submit">Save current planner plan</button></form>
         <p id="cloud-plan-loading" class="small muted" hidden>Loading your plans…</p><div id="cloud-plan-list" class="cloudPlanList" aria-live="polite"></div>
@@ -42,7 +55,7 @@
     </div></section>
   </main>
   <div id="site-footer"></div>
-  <script src="/lib/finance.js"></script><script src="/lib/plan-state.js"></script><script src="/lib/cloud-plans.js"></script>
+  <script src="/lib/finance.js"></script><script src="/lib/plan-state.js"></script><script src="/lib/cloud-plans.js"></script><script src="/lib/mfa-flow.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="/js/supabase-config.js"></script><script src="/js/supabase-client.js"></script>
   <script src="/js/site.js"></script><script src="/js/auth-status.js"></script><script src="/js/account-page.js"></script>
 </body>
