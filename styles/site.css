@@ -618,16 +618,20 @@ body[data-page="planner"] .resultDetails .metric strong{font-size:1rem;color:#34
   .topbar .nav{min-height:72px}
   .topbar .brandLogo{width:44px;height:44px}
 }
-.topbar .navlinks>a.aiNavPill{border-color:#b9ddc8;background:#e2f1e7;color:#145640}
-.topbar .navlinks>a.aiNavPill .navIcon{color:#167656}
-.topbar .navlinks>a.aiNavPill:hover,.topbar .navlinks>a.aiNavPill[aria-current=page]{border-color:#c8e5d2;background:#d6ecdd;color:#104b38}
+.topbar .navlinks>a.aiNavPill{position:relative;border:1px solid transparent;background:linear-gradient(#147d61,#147d61) padding-box,linear-gradient(110deg,#8bcba7,#d2dca9,#78b99a,#8bcba7) border-box;background-size:100% 100%,240% 100%;background-position:0 0,0% 50%;color:#fff;box-shadow:0 3px 12px rgba(11,64,46,.13);animation:ai-nav-border-flow 6s linear infinite}
+.topbar .navlinks>a.aiNavPill .navIcon{color:#d8e9df}
+.topbar .navlinks>a.aiNavPill:hover{background:linear-gradient(rgba(255,255,255,.09),rgba(255,255,255,.09)) padding-box,linear-gradient(110deg,#a0d9b7,#e0e5b5,#8dc8a7,#a0d9b7) border-box;background-size:100% 100%,240% 100%;color:#fff;box-shadow:0 4px 16px rgba(11,64,46,.2)}
+.topbar .navlinks>a.aiNavPill[aria-current=page],.topbar .navlinks>a.aiNavPill[aria-current=page]:hover{background:linear-gradient(#147d61,#147d61) padding-box,linear-gradient(110deg,#8bcba7,#d2dca9,#78b99a,#8bcba7) border-box;background-size:100% 100%,240% 100%;color:#fff;box-shadow:inset 0 -2px #d8e9df,0 3px 12px rgba(11,64,46,.13)}
 .topbar .navlinks>a.aiNavPill:focus-visible{outline:3px solid #d8e9df;outline-offset:3px}
+@keyframes ai-nav-border-flow{to{background-position:0 0,240% 50%}}
 @media(max-width:1200px){
-  .topbar .navlinks>a.aiNavPill{border-color:rgba(216,233,223,.55);background:rgba(216,233,223,.16);color:#fff}
+  .topbar .navlinks>a.aiNavPill{background:linear-gradient(#126f56,#126f56) padding-box,linear-gradient(110deg,#8bcba7,#d2dca9,#78b99a,#8bcba7) border-box;background-size:100% 100%,240% 100%;background-position:0 0,0% 50%}
   .topbar .navlinks>a.aiNavPill .navIcon{color:#d8e9df}
-  .topbar .navlinks>a.aiNavPill:hover,.topbar .navlinks>a.aiNavPill[aria-current=page]{border-color:#d8e9df;background:#d8e9df;color:#145640}
-  .topbar .navlinks>a.aiNavPill:hover .navIcon,.topbar .navlinks>a.aiNavPill[aria-current=page] .navIcon{color:#145640}
+  .topbar .navlinks>a.aiNavPill:hover{background:linear-gradient(rgba(255,255,255,.1),rgba(255,255,255,.1)) padding-box,linear-gradient(110deg,#a0d9b7,#e0e5b5,#8dc8a7,#a0d9b7) border-box;background-size:100% 100%,240% 100%;color:#fff}
+  .topbar .navlinks>a.aiNavPill[aria-current=page],.topbar .navlinks>a.aiNavPill[aria-current=page]:hover{background:linear-gradient(#126f56,#126f56) padding-box,linear-gradient(110deg,#8bcba7,#d2dca9,#78b99a,#8bcba7) border-box;background-size:100% 100%,240% 100%;color:#fff;box-shadow:inset 3px 0 #d8e9df,0 3px 12px rgba(11,64,46,.13)}
+  .topbar .navlinks>a.aiNavPill:hover .navIcon,.topbar .navlinks>a.aiNavPill[aria-current=page] .navIcon{color:#fff}
 }
+@media(prefers-reduced-motion:reduce){.topbar .navlinks>a.aiNavPill{animation:none;background-position:0 0,50% 50%}}
 :root{color-scheme:light}
 body:before{background-image:linear-gradient(rgba(120,139,119,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(120,139,119,.025) 1px,transparent 1px)}
 .pageHero .lead{color:#64655e}
