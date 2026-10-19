@@ -41,25 +41,23 @@ test('shared navigation points to every migrated page and preserves real static 
     assert.ok(fs.existsSync(path.join(root, target)), `route target ${target} should exist`);
   }
   assert.match(site, /aria-current", "page"/);
-  assert.match(site, /assistantLink\.href = "\/assistant\.html"/);
+  assert.match(site, /id: "planning", label: "Plan"/);
+  assert.doesNotMatch(site, /id: "support", label: "Support"/, 'Support and More share a single menu');
+  assert.match(site, /assistantLink\.href = "\/assistant\.html"/, 'AI Assistant is a direct top-level destination');
   assert.match(site, /assistantLink\.append\(createIcon\("sparkle"\)/);
-  assert.match(site, /transfersLink\.href = "\/transfers\.html"/);
-  assert.match(site, /transfersLink\.lastChild\.textContent = "Transfers"/);
-  assert.match(site, /find\(item => item\.id === "planning"\)[\s\S]*find\(item => item\.id === "more"\)[\s\S]*nav\.append\(planningGroup\.container, transfersLink, assistantLink, moreGroup\.container\)/, 'the top-level order is Home, Financial Planning, Transfers, AI Assistant, More');
+  assert.match(site, /if \(page === "assistant"\) assistantLink\.setAttribute\("aria-current", "page"\)/, 'AI Assistant receives the active-page state');
+  assert.match(site, /nav\.append\(planningGroup\.container, assistantLink, moreGroup\.container\)/, 'AI Assistant appears beside Plan and the combined More menu');
   assert.match(site, /id: "more", label: "More"/);
-  assert.match(site, /pages: \[\["report", "Financial Report", "\/report\.html", "fileText"\], \["privacy", "Privacy", "\/privacy\.html", "shieldCheck"\]\]/, 'More contains only the report and privacy destinations');
-  assert.doesNotMatch(site, /label: "Transfers & Support"|label: "Transfer and Supports?"|label: "Transfer & Supports?"/);
-  assert.doesNotMatch(site, /\[\["assistant", "AI assistant", "\/assistant\.html"/, 'AI Assistant is no longer buried in a dropdown');
+  assert.match(site, /pages: \[\["transfers", "Transfers", "\/transfers\.html", "arrowsLeftRight"\], \["report", "Financial Report", "\/report\.html", "fileText"\], \["privacy", "Privacy", "\/privacy\.html", "shieldCheck"\]\]/, 'More combines Transfers, Financial Report, and Privacy');
   const authStatus = fs.readFileSync(path.join(root, 'js/auth-status.js'), 'utf8');
   assert.match(authStatus, /account\.href = "\/account\.html"/);
   assert.match(authStatus, /account\.textContent = "My Account"/, 'Account remains available from the profile menu');
   assert.match(authStatus, /document\.body\.dataset\.page === "account"\) account\.setAttribute\("aria-current", "page"\)/, 'Account keeps its active-page indicator inside the profile menu');
-  assert.match(site, /nav\.append\(accountStatus, clear\)/, 'the existing clear-plan control remains in the shared header');
+  assert.match(site, /group\.id === "planning"[\s\S]*?clear\.dataset\.clearPlan = ""[\s\S]*?submenu\.append\(clear\)/, 'the clear-plan action stays available in Plan without competing with destinations');
   const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
-  assert.match(css, /\.topbar \.navlinks>\.aiNavPill:not\(\[aria-current=page\]\)\{border-color:rgba\(163,177,255,\.42\);background:rgba\(108,125,205,\.14\)/, 'AI Assistant uses a restrained blue-indigo accent');
-  assert.match(css, /\.topbar \.navlinks>\.aiNavPill\[aria-current=page\]\{border-color:#dce3ff;background:#dce3ff;color:#2d3a75/);
-  assert.match(css, /\.topbar \.navlinks>\.aiNavPill:focus-visible\{outline:3px solid #c5d0ff/);
+  assert.match(css, /\.topbar,\.topbar\.scrolled\{height:84px;min-height:84px\}/, 'desktop navigation uses a compact header height');
   assert.match(css, /\.topbar \.navlinks>a\.navPill:focus-visible/);
+  assert.match(css, /\.topbar \.navlinks \.navDropdown>\.clearPlanButton\{width:100%/);
   assert.match(css, /\.navAuthSlot \.profileDropdown a\{border-color:#e7ece5;background:#f5f7f3;color:#245b47\}/, 'profile links have an explicit readable resting state inside the navigation');
   assert.match(css, /\.navAuthSlot \.profileDropdown a:hover,\.navAuthSlot \.profileDropdown a:focus-visible\{border-color:#d4e3d6;background:#edf4ee;color:#104b38\}/, 'profile-link hover and keyboard focus states stay readable');
   assert.match(css, /\.navAuthSlot \.profileDropdown a\[aria-current=page\]\{border-color:#dcebe0;background:#e7f1e9;color:#124f3b\}/, 'the active My Account link keeps its separate pale-sage state');
@@ -76,6 +74,9 @@ test('Clear Plan uses an accessible dialog and only explicit confirmation remove
   assert.match(site, /dialog\.addEventListener\("cancel", event => \{ event\.preventDefault\(\); dialog\.close\("keep"\); \}\)/, 'Escape closes without clearing');
   assert.match(site, /confirmClear\.addEventListener\("click", \(\) => \{[\s\S]*CampusBridgePlanState\?\.clearPlan\(\)[\s\S]*dialog\.close\("clear"\)/, 'only the explicit confirmation button clears the plan');
   assert.match(site, /dialog\.addEventListener\("close", \(\) => clearPlanTrigger\?\.focus/);
+  assert.match(site, /const clearDialog = document\.getElementById\("clear-plan-dialog"\);\s*if \(clearDialog\?\.open\) \{ event\.preventDefault\(\); clearDialog\.close\("keep"\); return; \}/, 'Escape dismisses an open clear-plan dialog without clearing anything');
+  assert.match(site, /document\.addEventListener\("pointerdown", event => \{\s*if \(document\.getElementById\("clear-plan-dialog"\)\?\.open\) return;/, 'dialog interactions do not close the menu behind the modal');
+  assert.match(site, /container\.addEventListener\("focusout", event => \{\s*if \(document\.getElementById\("clear-plan-dialog"\)\?\.open\) return;/, 'opening Clear Plan does not hide its trigger behind the modal');
   assert.doesNotMatch(site, /window\.confirm\(/, 'the browser confirm prompt is replaced by the accessible dialog');
 });
 
@@ -84,6 +85,7 @@ test('every shared dropdown option receives its own decorative outline icon', ()
   const expected = [
     ['Planner', '/planner.html', 'calculator'], ['Savings roadmap', '/roadmap.html', 'route'],
     ['Savings Tracker', '/savings.html', 'chart'], ['Stress tests', '/stress-tests.html', 'chart'],
+    ['Transfers', '/transfers.html', 'arrowsLeftRight'],
     ['Financial Report', '/report.html', 'fileText'], ['Privacy', '/privacy.html', 'shieldCheck']
   ];
   for (const [label, href, icon] of expected) {
@@ -91,7 +93,7 @@ test('every shared dropdown option receives its own decorative outline icon', ()
     assert.ok(site.includes(`${icon}: '`), `${icon} should have an inline SVG drawing`);
   }
   assert.match(site, /for \(const \[id, label, href, iconName\] of group\.pages\)/);
-  assert.match(site, /pages: \[\["report", "Financial Report", "\/report\.html", "fileText"\]/);
+  assert.match(site, /pages: \[\["transfers", "Transfers", "\/transfers\.html", "arrowsLeftRight"\], \["report", "Financial Report", "\/report\.html", "fileText"\]/);
   assert.match(site, /link\.append\(createIcon\(iconName\), linkLabel\)/);
   assert.match(site, /setAttribute\("aria-hidden", "true"\)/, 'SVG icons stay decorative while labels remain text');
   const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
@@ -176,4 +178,3 @@ test('homepage keeps its planning actions and tool cards without an Earth animat
   assert.match(css, /body\[data-page="home"\] \.hero/);
   assert.match(css, /body\[data-page="home"\] \.hero \.homeCard/);
 });
-

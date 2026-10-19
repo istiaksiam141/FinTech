@@ -1,8 +1,8 @@
 (function () {
   "use strict";
   const groups = [
-    { id: "planning", label: "Financial Planning", icon: "chart", pages: [["planner", "Planner", "/planner.html", "calculator"], ["roadmap", "Savings roadmap", "/roadmap.html", "route"], ["savings", "Savings Tracker", "/savings.html", "chart"], ["stress", "Stress tests", "/stress-tests.html", "chart"]] },
-    { id: "more", label: "More", icon: "more", pages: [["report", "Financial Report", "/report.html", "fileText"], ["privacy", "Privacy", "/privacy.html", "shieldCheck"]] }
+    { id: "planning", label: "Plan", icon: "chart", pages: [["planner", "Planner", "/planner.html", "calculator"], ["roadmap", "Savings roadmap", "/roadmap.html", "route"], ["savings", "Savings Tracker", "/savings.html", "chart"], ["stress", "Stress tests", "/stress-tests.html", "chart"]] },
+    { id: "more", label: "More", icon: "more", pages: [["transfers", "Transfers", "/transfers.html", "arrowsLeftRight"], ["report", "Financial Report", "/report.html", "fileText"], ["privacy", "Privacy", "/privacy.html", "shieldCheck"]] }
   ];
   const createIcon = name => {
     const drawings = {
@@ -54,9 +54,6 @@
     const assistantLink = document.createElement("a"); assistantLink.href = "/assistant.html"; assistantLink.className = "navPill aiNavPill";
     assistantLink.append(createIcon("sparkle"), document.createElement("span")); assistantLink.lastChild.textContent = "AI Assistant";
     if (page === "assistant") assistantLink.setAttribute("aria-current", "page");
-    const transfersLink = document.createElement("a"); transfersLink.href = "/transfers.html"; transfersLink.className = "navPill";
-    transfersLink.append(createIcon("arrowsLeftRight"), document.createElement("span")); transfersLink.lastChild.textContent = "Transfers";
-    if (page === "transfers") transfersLink.setAttribute("aria-current", "page");
     nav.append(home);
     const groupControls = [];
     for (const group of groups) {
@@ -76,6 +73,10 @@
         if (id === page) link.setAttribute("aria-current", "page");
         submenu.append(link);
       }
+      if (group.id === "planning") {
+        const clear = document.createElement("button"); clear.type = "button"; clear.className = "clearPlanButton"; clear.textContent = "Clear saved plan"; clear.dataset.clearPlan = "";
+        submenu.append(clear);
+      }
       container.append(toggle, submenu); groupControls.push({ id: group.id, container, toggle, submenu });
       toggle.addEventListener("click", () => {
         const open = toggle.getAttribute("aria-expanded") !== "true";
@@ -85,6 +86,7 @@
         }
       });
       container.addEventListener("focusout", event => {
+        if (document.getElementById("clear-plan-dialog")?.open) return;
         if (event.relatedTarget && !container.contains(event.relatedTarget)) {
           toggle.setAttribute("aria-expanded", "false"); submenu.hidden = true;
         }
@@ -93,11 +95,11 @@
         if (event.target.closest("a")) closeNavigation();
       });
     }
-    const planningGroup = groupControls.find(item => item.id === "planning"), moreGroup = groupControls.find(item => item.id === "more");
-    nav.append(planningGroup.container, transfersLink, assistantLink, moreGroup.container);
+    const planningGroup = groupControls.find(item => item.id === "planning");
+    const moreGroup = groupControls.find(item => item.id === "more");
+    nav.append(planningGroup.container, assistantLink, moreGroup.container);
     const accountStatus = document.createElement("div"); accountStatus.id = "nav-auth-slot"; accountStatus.className = "navAuthSlot"; accountStatus.hidden = true; accountStatus.setAttribute("aria-busy", "true");
-    const clear = document.createElement("button"); clear.type = "button"; clear.className = "button smallbtn clearPlanButton"; clear.textContent = "Clear plan"; clear.dataset.clearPlan = "";
-    nav.append(accountStatus, clear);
+    nav.append(accountStatus);
     const menu = document.createElement("button"); menu.type = "button"; menu.id = "menu"; menu.className = "burger"; menu.append(createIcon("menu"));
     menu.setAttribute("aria-label", "Open navigation menu"); menu.setAttribute("aria-expanded", "false"); menu.setAttribute("aria-controls", "navlinks");
     wrap.append(brand, nav, menu); header.append(wrap); headerTarget.replaceWith(header);
@@ -112,9 +114,14 @@
       if (!open) closeGroups();
       nav.classList.toggle("open", open); menu.setAttribute("aria-expanded", String(open)); menu.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu"); menu.replaceChildren(createIcon(open ? "close" : "menu"));
     });
-    document.addEventListener("pointerdown", event => { if (!header.contains(event.target)) closeNavigation(); });
+    document.addEventListener("pointerdown", event => {
+      if (document.getElementById("clear-plan-dialog")?.open) return;
+      if (!header.contains(event.target)) closeNavigation();
+    });
     document.addEventListener("keydown", event => {
       if (event.key !== "Escape") return;
+      const clearDialog = document.getElementById("clear-plan-dialog");
+      if (clearDialog?.open) { event.preventDefault(); clearDialog.close("keep"); return; }
       const openGroup = groupControls.find(item => item.toggle.getAttribute("aria-expanded") === "true");
       if (openGroup) { closeGroups(); openGroup.toggle.focus(); event.preventDefault(); }
       else if (nav.classList.contains("open")) { closeNavigation(); menu.focus(); event.preventDefault(); }

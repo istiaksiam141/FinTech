@@ -444,12 +444,6 @@ body[data-page="planner"] .planningModeNote{padding:12px 14px;border-radius:11px
 .profileControl{position:relative;display:flex;align-items:center}
 .profileAvatar{display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid rgba(255,255,255,.58);border-radius:50%;background:#d8e9df;color:#145640;font:700 1rem/1 'DM Sans',sans-serif;cursor:pointer;box-shadow:0 2px 10px rgba(10,42,31,.16)}
 .profileAvatar:hover{background:#eef5ef;border-color:#fff}
-.topbar .navlinks>.aiNavPill:not([aria-current=page]){border-color:rgba(163,177,255,.42);background:rgba(108,125,205,.14);color:#f1f3ff}
-.topbar .navlinks>.aiNavPill:not([aria-current=page]) .navIcon{color:#c2ccff}
-.topbar .navlinks>.aiNavPill:not([aria-current=page]):hover{border-color:rgba(190,200,255,.7);background:rgba(119,135,216,.23);color:#fff}
-.topbar .navlinks>.aiNavPill[aria-current=page]{border-color:#dce3ff;background:#dce3ff;color:#2d3a75;box-shadow:0 2px 9px rgba(105,122,204,.2)}
-.topbar .navlinks>.aiNavPill[aria-current=page] .navIcon{color:#394b98}
-.topbar .navlinks>.aiNavPill:focus-visible{outline:3px solid #c5d0ff;outline-offset:3px}
 .profileDropdown{position:absolute;top:calc(100% + 12px);right:0;z-index:60;display:grid;gap:10px;width:min(300px,calc(100vw - 32px));padding:17px;border:1px solid #e1e8df;border-radius:17px;background:#fffefa;color:#25483b;box-shadow:0 18px 44px rgba(12,40,29,.24)}
 .profileDropdown .profileDisplayName{color:#124c39;font:700 1.02rem/1.3 'Manrope',sans-serif}
 .profileDropdown .profileEmail,.profileDropdown .accountStatus{overflow-wrap:anywhere;color:#61776d;font-size:.82rem;line-height:1.45}
@@ -597,3 +591,80 @@ body[data-page="planner"] .resultDetails .metric strong{font-size:1rem;color:#34
 .assistantTurnResponse{margin-top:6px;overflow-wrap:anywhere}
 .assistantTurnResponse[aria-busy=true]{color:var(--muted)}
 @media(prefers-reduced-motion:reduce){.assistantConversation{scroll-behavior:auto}}
+
+/* Compact shared topbar with destination groups and separate account utilities. */
+.topbar,.topbar.scrolled{height:84px;min-height:84px}
+.topbar .nav{min-height:84px;gap:18px}
+.topbar .brand{font-size:1rem}
+.topbar .brandLogo{width:50px;height:50px}
+.topbar .navlinks{gap:8px}
+.topbar .navlinks>a.navPill,.topbar .navlinks>.navGroup>.navGroupToggle{min-height:42px;padding:8px 12px;font-size:.82rem}
+.topbar .navlinks>a.navPill[aria-current=page],.topbar .navlinks>.navGroup>.navGroupToggle[data-active=true]{border-color:#d8e9df;background:#d8e9df;color:#145640;box-shadow:none}
+.topbar .navlinks>a.navPill[aria-current=page]:hover,.topbar .navlinks>.navGroup>.navGroupToggle[data-active=true]:hover{border-color:#d8e9df;background:#d8e9df;color:#145640}
+.topbar .navlinks .navDropdown>.clearPlanButton{width:100%;margin-top:5px;padding:11px 14px;border:0;border-top:1px solid #eee8df;border-radius:0;background:transparent;color:#9b4d3c;font:600 .84rem 'DM Sans',sans-serif;text-align:left;cursor:pointer}
+.topbar .navlinks .navDropdown>.clearPlanButton:hover{background:#fcf2ed;color:#843c30}
+.topbar .navlinks .navDropdown>.clearPlanButton:focus-visible{outline:3px solid #8cbea5;outline-offset:2px}
+@media(max-width:1200px){
+  .topbar,.topbar.scrolled{height:78px;min-height:78px}
+  .topbar .nav{min-height:78px}
+  .topbar .navlinks{gap:6px}
+  .topbar .navlinks>.navGroup>.navGroupToggle[data-active=true]{box-shadow:inset 3px 0 #a6e6ce}
+  .topbar .navlinks>.navGroup>.navDropdown{position:static;top:auto;left:auto;min-width:0;width:auto;margin:0 0 4px 10px;padding:4px 7px;border:0;border-left:1px solid rgba(255,255,255,.3);border-radius:0;background:transparent;box-shadow:none}
+  .topbar .navlinks>.navGroup>.navDropdown a{border-color:transparent;background:transparent;color:#fff}
+  .topbar .navlinks>.navGroup>.navDropdown a:hover,.topbar .navlinks>.navGroup>.navDropdown a[aria-current=page]{border-color:rgba(255,255,255,.16);background:rgba(255,255,255,.14);color:#fff}
+  .topbar .navlinks>.navGroup>.navDropdown .navIcon{opacity:.9}
+  .topbar .navlinks .navDropdown>.clearPlanButton{margin-top:6px;padding:11px 13px;border-top-color:rgba(255,255,255,.2);color:#ffe0d6}
+  .topbar .navlinks .navDropdown>.clearPlanButton:hover{background:rgba(255,255,255,.12);color:#fff}
+}
+@media(max-width:640px){
+  .topbar,.topbar.scrolled{height:72px;min-height:72px}
+  .topbar .nav{min-height:72px}
+  .topbar .brandLogo{width:44px;height:44px}
+}
+.topbar .navlinks>a.aiNavPill{border-color:#b9ddc8;background:#e2f1e7;color:#145640}
+.topbar .navlinks>a.aiNavPill .navIcon{color:#167656}
+.topbar .navlinks>a.aiNavPill:hover,.topbar .navlinks>a.aiNavPill[aria-current=page]{border-color:#c8e5d2;background:#d6ecdd;color:#104b38}
+.topbar .navlinks>a.aiNavPill:focus-visible{outline:3px solid #d8e9df;outline-offset:3px}
+@media(max-width:1200px){
+  .topbar .navlinks>a.aiNavPill{border-color:rgba(216,233,223,.55);background:rgba(216,233,223,.16);color:#fff}
+  .topbar .navlinks>a.aiNavPill .navIcon{color:#d8e9df}
+  .topbar .navlinks>a.aiNavPill:hover,.topbar .navlinks>a.aiNavPill[aria-current=page]{border-color:#d8e9df;background:#d8e9df;color:#145640}
+  .topbar .navlinks>a.aiNavPill:hover .navIcon,.topbar .navlinks>a.aiNavPill[aria-current=page] .navIcon{color:#145640}
+}
+:root{color-scheme:light}
+body:before{background-image:linear-gradient(rgba(120,139,119,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(120,139,119,.025) 1px,transparent 1px)}
+.pageHero .lead{color:#64655e}
+.homeUspCard .eyebrow{color:#23795d}
+.homeUspCard h3{color:#193a32}
+.homeUspCard>p{color:#5c665e}
+.homeUspCard .homeUspNote{color:#77776f}
+.homeAiCard{border-color:#cfe2d2;background:linear-gradient(135deg,#eaf4ec,#f8f4eb 76%)}
+.homePrintCard{background:linear-gradient(145deg,#f7f4eb,#fffefa)}
+.clearPlanDialog{border-color:#e8e5de;background:#fffefa;color:#1a1a18;box-shadow:0 18px 50px rgba(28,43,35,.22)}
+.clearPlanDialog::backdrop{background:rgba(16,28,21,.5);backdrop-filter:blur(3px)}
+.clearPlanDialog h2{color:#193a32}
+.clearPlanDialogContent>p{color:#5c665e}
+.clearPlanDialogContent>.clearPlanDialogNote{border-top-color:#e8e5de;color:#77776f}
+.clearPlanDialogContent>.clearPlanDialogError{color:#a84033}
+.clearPlanDialogActions [data-keep-plan]{border-color:#cfe2d2;background:#edf5ef;color:#245b47}
+.clearPlanDialogActions [data-keep-plan]:hover{border-color:#b7d5c2;background:#e3f0e7}
+.clearPlanConfirm{border-color:#e7b8ad;background:#fdf0ed;color:#923f34}
+.clearPlanConfirm:hover{border-color:#d9998c;background:#f9e3de;color:#7d332b}
+.savingsPage .savingsStatus{border-left-color:#4d9875;background:#edf5ef;color:#52665b}
+.savingsPage .savingsStatus[data-kind=error]{border-color:#d9998c;background:#fdf1ed;color:#a84033}
+.savingsPage .savedRoadmapCard,.savingsPage .depositItem,.savingsPage .comparisonSummary,.savingsPage .savingsMetric,.savingsPage .savingsChart{border-color:#e8e5de;background:#fff}
+.savingsPage .savedRoadmapCard strong,.savingsPage .depositItem strong,.savingsPage .savingsMetric strong,.savingsPage .savingsChart figcaption{color:#193a32}
+.savingsPage .savedRoadmapCard small,.savingsPage .depositItem small,.savingsPage .savingsMetric>span,.savingsPage .savingsMetric small,.savingsPage .comparisonSummary p,.savingsPage .savingsLegend{color:#6b6b66}
+.savingsPage .trackerStatus{background:#f1f2ed;color:#52665b}
+.savingsPage .trackerStatus.goal-covered,.savingsPage .trackerStatus.ahead,.savingsPage .trackerStatus.on-track{background:#eaf4ec;color:#23795d}
+.savingsPage .depositForm input,.savingsPage .clearPlanDialogContent input{border-color:#d9e2da;background:#fff;color:#263b34}
+.savingsPage .savingsCumulativeLine{stroke:#4d9875}
+.savingsPage .chartAxisLabel{fill:#6b6b66}
+.savingsPage .chartBaseline{stroke:rgba(104,118,111,.3)}
+.assistantHistory{border-color:#e8e5de;background:#fff;color:#1a1a18}
+.assistantConversationOpen{border-color:#e1e7df;background:#f7f8f5;color:#31584b}
+.assistantConversationOpen[aria-current=true]{border-color:#9bc9ad;background:#eaf4ec;color:#23795d}
+.assistantTurn{border-color:#e1e7df;background:#f7f8f5}
+.assistantTurnQuestion,.assistantTurnQuestion strong,.assistantTurnLabel{color:#193a32}
+.assistantTurnReply{border-top-color:#e8e5de}
+.assistantTurnResponse[aria-busy=true]{color:#6b6b66}
