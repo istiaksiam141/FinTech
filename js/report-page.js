@@ -3,7 +3,64 @@
   const { Finance, loadPlan, money } = window.CampusBridgePageUtils;
   const status = document.getElementById("report-status"), page = document.getElementById("report-page");
   const plan = loadPlan();
-  if (!plan.ok) { status.textContent = plan.message; document.getElementById("report-actions").hidden = true; return; }
+  if (!plan.ok) {
+    const actions = document.getElementById("report-actions");
+    const printButton = document.getElementById("print-report");
+    const downloadButton = document.getElementById("report-download");
+    const sampleGroups = [
+      ["Example plan", [["Destination", "Canada"], ["Planning mode", "Study abroad"], ["Tuition estimate", "1,980,000 BDT"], ["Planning deadline", "Example only — no date supplied"]]],
+      ["Example funding summary", [["Estimated total costs", "2,250,000 BDT"], ["Example available funds", "650,000 BDT"], ["Example funding gap", "1,600,000 BDT"], ["Illustrative monthly savings target", "200,000 BDT for 8 months"]]],
+      ["Example rate provenance", [["Reference rate", "110 BDT per CAD"], ["Source", "Sample student-entered estimate"], ["Verification", "Not verified — example only"]]]
+    ];
+    const disclaimer = "This is a fictional sample to demonstrate the report format. It is not based on your information, is not a financial recommendation, and must not be used for planning or payment decisions.";
+    const badge = document.createElement("p");
+    badge.className = "sampleReportBadge";
+    badge.textContent = "Illustrative sample · not your data";
+    page.classList.add("isSampleReport");
+    page.append(badge);
+    const heading = document.createElement("h1");
+    heading.textContent = "Financial readiness report";
+    page.append(heading);
+    const subtitle = document.createElement("p");
+    subtitle.className = "reportSubtitle";
+    subtitle.textContent = "CampusBridge AI · Example for Canada · Fictional values";
+    page.append(subtitle);
+    for (const [label, rows] of sampleGroups) {
+      const section = document.createElement("section");
+      const title = document.createElement("h2");
+      const list = document.createElement("dl");
+      title.textContent = label;
+      section.append(title);
+      for (const [key, value] of rows) {
+        const term = document.createElement("dt");
+        const desc = document.createElement("dd");
+        term.textContent = key;
+        desc.textContent = value;
+        list.append(term, desc);
+      }
+      section.append(list);
+      page.append(section);
+    }
+    const sampleDisclaimer = document.createElement("p");
+    sampleDisclaimer.className = "reportDisclaimer sampleReportDisclaimer";
+    sampleDisclaimer.textContent = disclaimer;
+    page.append(sampleDisclaimer);
+    status.textContent = "No valid plan is saved for this browser tab. The fictional sample below demonstrates the report format only.";
+    actions.hidden = false;
+    printButton.textContent = "Print sample / Save as PDF";
+    downloadButton.textContent = "Download sample text report";
+    printButton.addEventListener("click", () => window.print());
+    downloadButton.addEventListener("click", () => {
+      const lines = ["CampusBridge AI", "Financial readiness report — ILLUSTRATIVE SAMPLE", ...sampleGroups.flatMap(([label, rows]) => [label, ...rows.map(([key, value]) => `${key}: ${value}`)]), disclaimer];
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" }));
+      link.href = url;
+      link.download = "campusbridge-sample-financial-readiness-report.txt";
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+    return;
+  }
   const roadmap = plan.roadmap;
   const savedState = window.CampusBridgePlanState.loadPlan();
   const data = Finance.buildReadinessReportData(plan.profile, plan.result, { reportDate: new Date(), roadmap, stressScenarios: savedState.stressScenarios || [] });

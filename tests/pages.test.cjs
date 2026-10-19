@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const root = path.join(__dirname, '..');
 const routes = ['index.html', 'planner.html', 'roadmap.html', 'savings.html', 'stress-tests.html', 'transfers.html', 'assistant.html', 'report.html', 'account.html', 'privacy.html'];
@@ -17,6 +18,51 @@ test('all static routes exist with useful titles, shared shell, and page-specifi
     if (file === 'planner.html') assert.match(html, /\/app\.js/, file);
     else if (file !== 'index.html' && file !== 'privacy.html') assert.match(html, /\/js\/[a-z-]+-page\.js/, file);
   }
+});
+
+test('planner loads its validated guided steps and review stage', () => {
+  const html = fs.readFileSync(path.join(root, 'planner.html'), 'utf8');
+  const steps = fs.readFileSync(path.join(root, 'js/planner-steps.js'), 'utf8');
+  assert.match(html, /<script src="\/js\/planner-steps\.js"><\/script>/);
+  assert.match(html, /Other savings outside listed accounts \(<span data-plan-currency>/, 'savings labels follow the selected planning currency');
+  for (const title of ['Costs', 'Exchange rate', 'Funds', 'Deadline', 'Review']) {
+    assert.ok(steps.includes(`title: "${title}"`), `planner should include the ${title} step`);
+  }
+  assert.match(steps, /function validateStep\(index\)/);
+  assert.match(steps, /Choose the date and time for this exchange rate/);
+  assert.match(steps, /Choose your tuition deadline to continue/);
+  assert.match(steps, /function updateReview\(\)/);
+  assert.match(steps, /Add one-time study costs \(optional\)/);
+  assert.match(steps, /Estimate initial living costs \(optional\)/);
+  assert.match(steps, /button\.dataset\.state = state/);
+  assert.match(steps, /number\.textContent = state === "complete" \? "✓"/);
+  assert.match(steps, /activate to revisit/);
+  new vm.Script(steps, { filename: 'js/planner-steps.js' });
+});
+
+test('planner form uses project fonts without changing its large page headings', () => {
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(css, /body\[data-page="planner"\] #profileForm,[\s\S]*?#profileForm button\{font-family:'DM Sans',sans-serif\}/);
+  assert.match(css, /#profileForm h3,[\s\S]*?#profileForm \.planningModeCard strong\{font-family:Manrope,sans-serif\}/);
+  assert.doesNotMatch(css, /body\[data-page="planner"\] #planner(?: h1| h2)/, 'large planner page headings remain outside the form typography override');
+  assert.match(css, /body\[data-page\]\{font-family:'DM Sans',sans-serif\}/, 'every page uses DM Sans for body text');
+  assert.match(css, /body\[data-page\] :is\(button,input,select,textarea\)\{font-family:'DM Sans',sans-serif\}/, 'interactive controls use DM Sans on every page');
+  assert.match(css, /body\[data-page\] :is\(h3,h4,h5,legend,summary,\.calendarMonth\)\{font-family:Manrope,sans-serif\}/, 'secondary headings use Manrope without changing large h1/h2 display rules');
+  assert.doesNotMatch(css, /Plus Jakarta Sans/, 'the unused font no longer overrides the shared type system');
+  for (const file of routes) {
+    const html = fs.readFileSync(path.join(root, file), 'utf8');
+    assert.doesNotMatch(html, /family=Plus\+Jakarta\+Sans/, `${file} does not download an unused font`);
+    assert.match(html, /family=DM\+Sans/, `${file} loads the shared body font`);
+    assert.match(html, /family=Manrope/, `${file} loads the shared heading font`);
+  }
+});
+
+test('all pages share the account page warm ivory and evergreen theme', () => {
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(css, /:root\{color-scheme:light;--ink:#1a1a18;--muted:#606b63;--quiet:#77776f;--navy:#f5f3ec;--panel:#fffefa;--panel2:#f8f7f2;--line:#e7e5dc;--cyan:#267357;--mint:#8fc6a5;--gold:#c9a969\}/);
+  assert.match(css, /body\[data-page\]\{background-color:#f5f3ec;color:var\(--ink\)\}/);
+  assert.match(css, /body\[data-page\] \.eyebrow\{color:#267357\}/);
+  assert.match(css, /\.accountStory\{[^}]*background:radial-gradient[^}]*linear-gradient\(145deg,#0b514b,#073e3d 72%,#0b4a43\)/, 'the account story panel remains a dark green accent');
 });
 
 test('each dependent page declares every static element its module initializes', () => {
@@ -61,6 +107,9 @@ test('shared navigation points to every migrated page and preserves real static 
   assert.match(css, /\.navAuthSlot \.profileDropdown a\{border-color:#e7ece5;background:#f5f7f3;color:#245b47\}/, 'profile links have an explicit readable resting state inside the navigation');
   assert.match(css, /\.navAuthSlot \.profileDropdown a:hover,\.navAuthSlot \.profileDropdown a:focus-visible\{border-color:#d4e3d6;background:#edf4ee;color:#104b38\}/, 'profile-link hover and keyboard focus states stay readable');
   assert.match(css, /\.navAuthSlot \.profileDropdown a\[aria-current=page\]\{border-color:#dcebe0;background:#e7f1e9;color:#124f3b\}/, 'the active My Account link keeps its separate pale-sage state');
+  assert.match(css, /\.topbar \.navDropdown\{[^}]*backdrop-filter:blur\(18px\) saturate\(145%\)/, 'topbar navigation menus use translucent glass styling');
+  assert.match(css, /\.profileDropdown\{[^}]*backdrop-filter:blur\(18px\) saturate\(145%\)/, 'the account dropdown uses the same glass treatment');
+  assert.match(css, /\.topbar \.navlinks>\.navGroup>\.navDropdown\{[^}]*backdrop-filter:blur\(14px\) saturate\(135%\)/, 'mobile navigation dropdowns retain a translucent glass panel');
 });
 
 test('session storage disclosure appears beside the planner form only', () => {
@@ -188,14 +237,43 @@ test('transfer quotes use editable provider names and refresh comparison labels 
   assert.match(page, /title\.textContent = quote\.quote\.name/, 'custom names are rendered as text in result cards');
 });
 
-test('homepage keeps its planning actions and tool cards without an Earth animation', () => {
+test('homepage keeps its planning actions and tool cards around a decorative animated globe', () => {
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
   for (const text of ['Plan your next step', 'Organize study-abroad costs', 'Start planning', 'How your data is handled', 'Savings roadmap', 'Stress tests', 'Transfer quotes', 'AI assistant', 'Meet your AI financial assistant', 'Ask CampusBridge AI', 'Print or save your financial plan', 'Build a plan to print', 'Financial report', 'Privacy and limits', 'Bring your own estimates']) assert.ok(html.includes(text), `homepage should retain ${text}`);
   assert.match(html, /href="\/assistant\.html">Ask CampusBridge AI/);
   assert.match(html, /href="\/planner\.html#profileForm">Build a plan to print/);
-  assert.doesNotMatch(html, /home-earth|earthFallback|<canvas|WebGL/i);
-  assert.doesNotMatch(html, /home-earth\.js/);
+  assert.match(html, /class="homeGlobe" aria-hidden="true"/, 'the centerpiece stays decorative for assistive technology');
+  assert.match(html, /class="homeGlobeSphere"/);
+  assert.match(html, /class="homeGlobeGrid"/, 'the sphere includes a latitude and longitude grid');
+  assert.match(css, /body\[data-page="home"\] \.homeGlobeMap\{[^}]*animation:homeGlobeRotate 10s linear infinite/);
+  assert.match(css, /@media\(prefers-reduced-motion:reduce\)[^{]*\{[^}]*homeGlobeMap[^}]*animation:none/);
   assert.match(css, /body\[data-page="home"\] \.hero/);
   assert.match(css, /body\[data-page="home"\] \.hero \.homeCard/);
+  assert.match(css, /grid-template-columns:minmax\(0,1fr\) minmax\(190px,250px\) minmax\(0,1fr\)/, 'the center globe has reserved space between the tile columns');
+  assert.match(css, /homeGlobeSphere\{[^}]*width:90%/, 'the globe is sized to fill its reserved center column');
+  assert.match(css, /backdrop-filter:blur\(12px\) saturate\(112%\)/, 'homepage tiles use subtle glass styling');
+});
+
+test('shared navigation uses a subtle translucent glass treatment', () => {
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(css, /\.topbar,\.topbar\.scrolled\{[^}]*background:linear-gradient\(110deg,rgba\(20,125,97,\.88\),rgba\(16,105,81,\.78\)\)/);
+  assert.match(css, /\.topbar,\.topbar\.scrolled\{[^}]*backdrop-filter:blur\(18px\) saturate\(140%\)/);
+  assert.match(css, /\.topbar,\.topbar\.scrolled\{[^}]*-webkit-backdrop-filter:blur\(18px\) saturate\(140%\)/);
+});
+
+test('light feature form labels use readable dark text', () => {
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(css, /\.featureForm label\{color:#4d5751\}/);
+});
+
+test('financial report shows and can print or download a clearly fictional sample without a saved plan', () => {
+  const report = fs.readFileSync(path.join(root, 'js/report-page.js'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(report, /if \(!plan\.ok\) \{[\s\S]*?Illustrative sample · not your data/);
+  assert.match(report, /This is a fictional sample to demonstrate the report format/);
+  assert.match(report, /printButton\.textContent = "Print sample \/ Save as PDF"/);
+  assert.match(report, /downloadButton\.textContent = "Download sample text report"/);
+  assert.match(report, /campusbridge-sample-financial-readiness-report\.txt/);
+  assert.match(css, /\.readinessReportPage\.isSampleReport\{/);
 });
