@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const root = path.join(__dirname, '..');
 const routes = ['index.html', 'planner.html', 'roadmap.html', 'savings.html', 'stress-tests.html', 'transfers.html', 'assistant.html', 'report.html', 'account.html', 'privacy.html'];
@@ -17,6 +18,26 @@ test('all static routes exist with useful titles, shared shell, and page-specifi
     if (file === 'planner.html') assert.match(html, /\/app\.js/, file);
     else if (file !== 'index.html' && file !== 'privacy.html') assert.match(html, /\/js\/[a-z-]+-page\.js/, file);
   }
+});
+
+test('planner loads its validated guided steps and review stage', () => {
+  const html = fs.readFileSync(path.join(root, 'planner.html'), 'utf8');
+  const steps = fs.readFileSync(path.join(root, 'js/planner-steps.js'), 'utf8');
+  assert.match(html, /<script src="\/js\/planner-steps\.js"><\/script>/);
+  assert.match(html, /Other savings outside listed accounts \(BDT, optional\)/);
+  for (const title of ['Costs', 'Exchange rate', 'Funds', 'Deadline', 'Review']) {
+    assert.ok(steps.includes(`title: "${title}"`), `planner should include the ${title} step`);
+  }
+  assert.match(steps, /function validateStep\(index\)/);
+  assert.match(steps, /Choose the date and time for this exchange rate/);
+  assert.match(steps, /Choose your tuition deadline to continue/);
+  assert.match(steps, /function updateReview\(\)/);
+  assert.match(steps, /Add one-time study costs \(optional\)/);
+  assert.match(steps, /Estimate initial living costs \(optional\)/);
+  assert.match(steps, /button\.dataset\.state = state/);
+  assert.match(steps, /number\.textContent = state === "complete" \? "✓"/);
+  assert.match(steps, /activate to revisit/);
+  new vm.Script(steps, { filename: 'js/planner-steps.js' });
 });
 
 test('each dependent page declares every static element its module initializes', () => {

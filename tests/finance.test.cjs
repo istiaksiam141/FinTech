@@ -804,7 +804,7 @@ test('comparison ranking and report export share the same eligible quote list',(
 });
 
 test('active UI has blank financial inputs and working external quote paths; scripts parse',()=>{
-  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'planner.html'),'utf8'),css=fs.readFileSync(path.join(root,'styles','site.css'),'utf8'),ui=html+css,app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'planner.html'),'utf8'),css=fs.readFileSync(path.join(root,'styles','site.css'),'utf8'),ui=html+css,app=fs.readFileSync(path.join(root,'app.js'),'utf8'),steps=fs.readFileSync(path.join(root,'js','planner-steps.js'),'utf8');
   for(const code of ['USD','EUR','GBP','AUD','JPY','CAD','SEK','SGD','CNH','INR','LKR']) assert.ok(html.includes(`BDT → ${code}`),`${code} is selectable as a destination`);
   assert.doesNotMatch(html,/BDT → (?:CNY|KRW|MYR)/,'the corridor selector contains only the requested currency set');
   for(const marker of ['id="exchangeRate"','id="rateSource"','id="rateTimestamp"','id="rateTimestampHint"','id="rateTimestampTrigger"','id="rateTimestampCalendar"','id="rateTimestampTime"','id="useCurrentRateTimestamp"','id="refreshExchangeRate"','id="useExchangeRate"','id="exchangeRateStatus"','id="providerQuoteForms"','id="deadlineHint"','id="deadlineTrigger"','id="deadlineCalendar"','role="grid"','aria-haspopup="dialog"','.formSection .fieldGrid>label{align-self:start;align-content:start}','.timestampControl{display:flex;width:100%;min-width:0}','#providerQuoteForms .quoteTimestampLabel{grid-column:1/-1}','.calendarDay.isToday:not(.isSelected){background:#eaf6f0','.customSelect{position:relative;width:100%;min-width:0}','.customSelectOption[aria-selected=true]::after{content:"✓"','https://www.bb.org.bd/en/index.php/econdata/exchangerate','convera.com/students/faq','pay.flywire.com','id="applyScenario"','id="resetScenario"','id="stressExpenseIncrease"','id="runStressTest"','id="clearStressTest"','id="stressResults"','id="readinessStudentName"','id="generateReadinessReport"','id="readinessReportPreview"','id="printReadinessReport"','id="closeReadinessReport"','aria-live="polite"','@page{size:A4 portrait','@media print','id="exportReport"','src="lib/exchange-rates.js"']) assert.ok(ui.includes(marker),`missing ${marker}`);
@@ -843,9 +843,11 @@ test('active UI has blank financial inputs and working external quote paths; scr
   assert.match(app,/summary\.daysRemaining === 1 \? "day" : "days"/,'deadline results use correct singular and plural labels');
   assert.match(app,/Finance\.calendarDaysBetween\(localDate\(today\), input\.value\)/,'deadline hint uses the same calendar-day calculation as the finance engine');
   assert.match(app,/byId\("deadline"\)\.addEventListener\("change"/,'selecting a deadline updates the displayed plan');
+  assert.match(app,/manualSavings === "" && bankAccounts\.length === 0 \? "0"/,'empty optional savings are treated as zero');
   const fetchHandler=app.slice(app.indexOf('async function refreshExchangeRate()'),app.indexOf('function useFetchedExchangeRate()'));
   assert.equal(fetchHandler.includes('byId("exchangeRate").value ='),false,'fetching only previews the rate and does not replace the student\'s current value');
   new vm.Script(app,{filename:'app.js'});
+  new vm.Script(steps,{filename:'js/planner-steps.js'});
 });
 
 test('student-facing privacy notices, progressive quote entry, and technical disclosures are present',()=>{

@@ -605,7 +605,7 @@ function handleManualRateEdit(event) {
 function profile() {
   const c = corridorMap[byId("corridor").value];
   const manualSavings = byId("savings").value;
-  const savings = manualSavings === "" && bankAccounts.length === 0 ? "" : String(BankAccounts.totalSavings(manualSavings, bankAccounts));
+  const savings = manualSavings === "" && bankAccounts.length === 0 ? "0" : String(BankAccounts.totalSavings(manualSavings, bankAccounts));
   const costFields = ["visaCost", "applicationCost", "flightCost", "insuranceCost", "documentCost", "accommodationDeposit", "initialSetupCost", "otherOneTimeCosts", "initialLivingMonths", "monthlyRent", "monthlyFood", "monthlyTransport", "monthlyUtilities", "monthlyOtherLiving"];
   return { homeCountry: "Bangladesh", destinationCountry: c.country, homeCur: "BDT", tuitionCur: c.currency, tuition: byId("tuition").value, exchangeRate: byId("exchangeRate").value, rateSource: byId("rateSource").value, rateTimestamp: byId("rateTimestamp").value, rateProvenance: exchangeRateState.mode === "api" ? "Bangladesh Bank official reference rate; not a tuition-payment quote" : restoredRateProvenance || "User-provided manual rate; not independently verified", planningMode: document.querySelector('input[name="planningMode"]:checked')?.value || Finance.PLANNING_MODES.ALL_COSTS, savings, otherSavings: manualSavings, accountBalances: bankAccounts.map(account => account.balance), emergency: byId("emergency").value, committed: byId("committed").value || 0, income: byId("income").value, expenses: byId("expenses").value, paymentFee: byId("paymentFee").value || 0, ...Object.fromEntries(costFields.map(id => [id, byId(id).value])), deadline: byId("deadline").value };
 }

@@ -339,8 +339,10 @@ body[data-page="planner"] .sectionHead h2{margin:13px 0 14px;font-size:clamp(3.2
 body[data-page="planner"] .sectionHead p{max-width:930px;font-size:1rem;line-height:1.8}
 body[data-page="planner"] .plannerGrid{grid-template-columns:minmax(0,1.11fr) minmax(0,1fr);gap:20px}
 body[data-page="planner"] .formCard{padding:36px;border-radius:24px}
+body[data-page="planner"] .formCard{padding:30px;border-radius:22px}
 body[data-page="planner"] .resultsCard{min-height:124px;padding:30px;border-radius:24px;background:#fff;color:#64655e;font-size:1rem}
 body[data-page="planner"] .planningModeCard{min-height:150px;padding:16px;border-radius:16px}
+body[data-page="planner"] .planningModeCard{min-height:112px;padding:14px;border-radius:15px}
 body[data-page="planner"] .planningModeNote{padding:12px 14px;border-radius:11px}
 @media(max-width:1200px){
   .wrap{width:min(1476px,calc(100% - 40px))}
@@ -737,3 +739,90 @@ body[data-page=account] .accountHero>.wrap{width:min(1160px,calc(100% - 40px));m
 @media(max-width:900px){body[data-page=account] .accountHero{padding:108px 0 48px}.accountLayout{grid-template-columns:minmax(0,1fr) minmax(0,.85fr);min-height:0}.accountMain{padding:32px}.accountStory{padding:34px 28px}.accountStory h2{font-size:2.1rem}}
 @media(max-width:700px){.accountLayout{grid-template-columns:1fr;border-radius:20px}.accountMain{padding:30px 24px}.accountStory{min-height:390px;padding:34px 28px}.accountStory h2{margin-top:22px}.accountStory ul{margin-top:22px}}
 @media(max-width:480px){body[data-page=account] .accountHero>.wrap{width:calc(100% - 28px)}body[data-page=account] .accountHero{padding-top:94px}.accountMain{padding:26px 20px}.accountHero h1{font-size:2.35rem}.accountJump{gap:6px}.accountJump a{padding:7px 9px;font-size:.72rem}.accountStory{min-height:360px;padding:30px 23px}}
+
+/* Guided planner steps */
+body[data-page="planner"] .formIntro{gap:14px;padding:0 0 18px}
+body[data-page="planner"] .formIntro h3{margin:5px 0 4px}
+body[data-page="planner"] .formIntro p{line-height:1.55}
+body[data-page="planner"] .plannerProgress{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:0 0 8px;padding:0;list-style:none}
+body[data-page="planner"] .plannerProgress li{position:relative;min-width:0}
+body[data-page="planner"] .plannerProgress li:not(:last-child):after{position:absolute;z-index:0;top:50%;right:-9px;left:calc(100% - 1px);height:2px;background:#e4e9e2;content:"";transform:translateY(-50%);transition:background .2s ease}
+body[data-page="planner"] .plannerProgress li:has(button[data-state="complete"]):after{background:linear-gradient(90deg,#208660,#9ecdb0)}
+body[data-page="planner"] .plannerProgress button{position:relative;z-index:1;display:flex;width:100%;min-height:58px;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e1e7df;border-radius:14px;background:linear-gradient(155deg,#fff,#f9fbf8);color:#5e6c62;text-align:left;cursor:pointer;box-shadow:0 2px 5px rgba(34,65,46,.035);transition:transform .18s ease,border-color .18s ease,background .18s ease,color .18s ease,box-shadow .18s ease}
+body[data-page="planner"] .plannerProgress button[data-state="upcoming"]{border-color:#e8ebe6;background:#f8f9f7;color:#929a92;cursor:not-allowed;box-shadow:none}
+body[data-page="planner"] .plannerProgress button[data-state="complete"]{border-color:#c8dfcf;background:linear-gradient(145deg,#f4faf5,#eaf5ed);color:#236447;cursor:pointer}
+body[data-page="planner"] .plannerProgress button[data-state="complete"]:hover{transform:translateY(-2px);border-color:#8fbea0;background:linear-gradient(145deg,#eff9f1,#e0f1e5);box-shadow:0 7px 16px rgba(34,105,67,.12)}
+body[data-page="planner"] .plannerProgress button[data-state="current"]{border-color:#16825c;background:linear-gradient(135deg,#167b59,#23966b);color:#fff;box-shadow:0 5px 13px rgba(24,124,87,.2),inset 0 1px rgba(255,255,255,.22)}
+body[data-page="planner"] .plannerProgress button[data-state="current"]:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(24,124,87,.24),inset 0 1px rgba(255,255,255,.22)}
+body[data-page="planner"] .plannerProgress button:focus-visible{outline:3px solid #76ae8c;outline-offset:3px}
+body[data-page="planner"] .plannerProgressNumber{display:grid;width:30px;height:30px;flex:0 0 30px;place-items:center;border:1px solid #dfe7df;border-radius:50%;background:#f0f3ef;color:#53675a;font-size:.7rem;font-weight:800;transition:transform .2s ease,background .2s ease,color .2s ease,border-color .2s ease}
+body[data-page="planner"] .plannerProgress button[data-state="current"] .plannerProgressNumber{border-color:rgba(255,255,255,.42);background:rgba(255,255,255,.16);color:#fff}
+body[data-page="planner"] .plannerProgress button[data-state="complete"] .plannerProgressNumber{border-color:#b5d5bf;background:#d6ecdc;color:#176140;font-size:.9rem}
+body[data-page="planner"] .plannerProgress button[data-state="complete"]:hover .plannerProgressNumber{transform:scale(1.08)}
+body[data-page="planner"] .plannerProgress button[data-state="upcoming"] .plannerProgressNumber{border-color:#e8ebe6;background:#f1f2ef;color:#9aa099}
+body[data-page="planner"] .plannerProgressLabel{overflow:hidden;font-size:.76rem;font-weight:700;text-overflow:ellipsis}
+body[data-page="planner"] .plannerProgressStatus{margin:0 0 15px;color:#68756b;font-size:.76rem}
+body[data-page="planner"] .plannerStepPanel[hidden]{display:none}
+body[data-page="planner"] .plannerStepPanel{scroll-margin-top:100px}
+body[data-page="planner"] .plannerStepPanel:not([hidden]){animation:plannerStepEnter .22s ease-out both}
+@keyframes plannerStepEnter{from{opacity:.55;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+body[data-page="planner"] .plannerStepHeading{margin:0 0 15px;padding:14px 17px;border:1px solid #e6ebe3;border-radius:15px;background:linear-gradient(120deg,#f7faf6,#f3f8f2)}
+body[data-page="planner"] .plannerStepHeading h3{margin:0 0 4px;color:#14533f;font:700 1.12rem Manrope,sans-serif;letter-spacing:-.02em}
+body[data-page="planner"] .plannerStepHeading p{color:#68756c;font-size:.86rem;line-height:1.55}
+body[data-page="planner"] .plannerStepPanel>.formSection{margin-top:10px;padding:14px 0}
+body[data-page="planner"] .plannerStepPanel>.planningModeSelector{margin-top:0}
+body[data-page="planner"] .plannerStepPanel>.planningModeSelector .planningModeCard{min-height:108px;padding:12px 14px}
+body[data-page="planner"] .plannerStepPanel>.planningModeSelector .planningModeCard small{line-height:1.45}
+body[data-page="planner"] .plannerStepPanel>.requiredHint{margin:0 0 7px;font-size:.78rem}
+body[data-page="planner"] .plannerOptionalGroup{margin-top:9px;padding:11px 14px;border:1px solid #e3e9e1;border-radius:13px;background:#fbfcf9;transition:border-color .18s ease,box-shadow .18s ease}
+body[data-page="planner"] .plannerOptionalGroup[open]{border-color:#c9dccb;box-shadow:0 4px 14px rgba(38,87,55,.055)}
+body[data-page="planner"] .plannerOptionalGroup>summary{display:flex;align-items:center;gap:10px;color:#315b48;font-size:.88rem;font-weight:700;cursor:pointer;list-style:none}
+body[data-page="planner"] .plannerOptionalGroup>summary::-webkit-details-marker{display:none}
+body[data-page="planner"] .plannerOptionalGroup>summary:before{content:"+";display:grid;width:23px;height:23px;flex:0 0 23px;place-items:center;border:1px solid #cddbd0;border-radius:50%;color:#26714f;font-size:1rem;line-height:1}
+body[data-page="planner"] .plannerOptionalGroup[open]>summary:before{content:"−"}
+body[data-page="planner"] .plannerOptionalGroup>summary:focus-visible{outline:3px solid #76ae8c;outline-offset:3px}
+body[data-page="planner"] .plannerOptionalGroup>p{margin:6px 0 0 33px;color:#6b776e;font-size:.78rem;line-height:1.5}
+body[data-page="planner"] .plannerOptionalGroup>.formSection{margin-top:10px;padding:12px 0}
+body[data-page="planner"] .plannerStepActions{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding-top:14px;border-top:1px solid #e9ebe6}
+body[data-page="planner"] .plannerStepError{margin:0;color:#a52b24;font-size:.88rem;font-weight:600}
+body[data-page="planner"] .plannerStepError:empty{display:none}
+body[data-page="planner"] .plannerStepButtons{display:flex;gap:10px;margin-left:auto}
+body[data-page="planner"] .plannerStepButtons .button{min-width:112px;min-height:48px;border-radius:13px;font-weight:700;transition:transform .18s ease,box-shadow .18s ease,background .18s ease,border-color .18s ease}
+body[data-page="planner"] .plannerStepButtons .button:not(.primary){border-color:#d5e2d7;background:linear-gradient(145deg,#fff,#f5f8f4);color:#315b48}
+body[data-page="planner"] .plannerStepButtons .button:not(.primary):hover{transform:translateY(-2px);border-color:#9bbda4;background:#edf5ee;box-shadow:0 5px 14px rgba(38,87,55,.1)}
+body[data-page="planner"] .plannerStepButtons .button:not(.primary):before{content:"←";font-size:1rem;line-height:1}
+body[data-page="planner"] .plannerStepButtons .button.primary:after{content:"→";font-size:1rem;line-height:1;transition:transform .18s ease}
+body[data-page="planner"] .plannerStepButtons .button.primary:hover:after{transform:translateX(3px)}
+body[data-page="planner"] .plannerStepButtons .button.primary{background:linear-gradient(115deg,#167c5a,#22a476);box-shadow:0 6px 15px rgba(27,131,91,.2)}
+body[data-page="planner"] .plannerStepButtons .button.primary:hover{transform:translateY(-2px);background:linear-gradient(115deg,#126f50,#198d66);box-shadow:0 9px 20px rgba(27,131,91,.26)}
+body[data-page="planner"] .plannerStepButtons .button:active{transform:translateY(0) scale(.98)}
+body[data-page="planner"] .plannerStepButtons .button:focus-visible{outline:3px solid #75ad8b;outline-offset:3px}
+body[data-page="planner"] .plannerReview{padding:20px;border:1px solid #dce8dc;border-radius:17px;background:#f8faf6}
+body[data-page="planner"] .plannerReview>h4{margin:0 0 14px;color:#174f3c;font:700 1rem Manrope,sans-serif}
+body[data-page="planner"] .plannerReviewGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+body[data-page="planner"] .plannerReviewGrid article{min-width:0;padding:13px;border:1px solid #e5eae2;border-radius:12px;background:#fff}
+body[data-page="planner"] .plannerReviewGrid h5{margin:0 0 5px;color:#355847;font:700 .79rem Manrope,sans-serif}
+body[data-page="planner"] .plannerReviewGrid p{color:#606b63;font-size:.78rem;line-height:1.55;overflow-wrap:anywhere}
+body[data-page="planner"] .plannerStepPanel>.formFooter{margin-top:16px;padding:18px;border:1px solid #e6ebe3;border-radius:16px;background:#fbfcf9}
+@media(max-width:720px){
+  body[data-page="planner"] .plannerProgress{gap:5px}
+  body[data-page="planner"] .plannerProgress li:not(:last-child):after{right:-6px}
+  body[data-page="planner"] .plannerProgress button{min-height:57px;flex-direction:column;justify-content:center;gap:3px;padding:5px 2px;border-radius:13px}
+  body[data-page="planner"] .plannerProgressNumber{width:24px;height:24px;flex-basis:24px;font-size:.63rem}
+  body[data-page="planner"] .plannerProgressLabel{max-width:100%;font-size:.62rem;line-height:1.15;text-align:center}
+  body[data-page="planner"] .plannerStepButtons .button{min-width:104px}
+}
+@media(max-width:480px){
+  body[data-page="planner"] .plannerProgress{gap:4px}
+  body[data-page="planner"] .plannerProgress li:not(:last-child):after{right:-5px}
+  body[data-page="planner"] .plannerProgress button{min-height:54px}
+  body[data-page="planner"] .plannerProgressLabel{font-size:.59rem}
+  body[data-page="planner"] .plannerStepHeading{margin-bottom:12px;padding:13px 14px}
+  body[data-page="planner"] .plannerStepActions{margin-top:15px;padding-top:12px}
+  body[data-page="planner"] .plannerReviewGrid{grid-template-columns:1fr}
+  body[data-page="planner"] .plannerReview{padding:15px}
+}
+@media(prefers-reduced-motion:reduce){
+  body[data-page="planner"] .plannerProgress li:after,body[data-page="planner"] .plannerProgress button,body[data-page="planner"] .plannerProgressNumber,body[data-page="planner"] .plannerOptionalGroup,body[data-page="planner"] .plannerStepButtons .button{transition:none}
+  body[data-page="planner"] .plannerStepPanel:not([hidden]){animation:none}
+}
