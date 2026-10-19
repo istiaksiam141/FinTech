@@ -59,7 +59,9 @@ test('assistant page exposes saved conversations and sends only trusted conversa
   assert.ok(page.indexOf('assistant-conversation-list') < page.indexOf('assistant-form'));
   assert.match(page, /assistant-chat\.js[\s\S]*assistant-page\.js/);
   assert.match(page, /Signed-in conversations, including your questions and answers, are saved/);
-  assert.match(page, /prior messages remain available in your account but are not sent to the AI service/);
+  assert.match(page, /By default, only the current question is sent to the AI service/);
+  assert.match(page, /id="assistant-use-history" type="checkbox"/);
+  assert.match(page, /up to 11 recent messages from that same chat/);
   assert.match(script, /Sending only your question to CampusBridge AI/);
   assert.match(script, /requestBody = \{ question: text \}/);
   assert.match(script, /requestBody\.conversationId = savedQuestion\.conversationId/);

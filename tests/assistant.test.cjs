@@ -47,6 +47,8 @@ test('assistant route validates JSON, body shape, question text, and length', as
     [makeRequest({ body: { question: 'x'.repeat(1001) } }), 400, /1000 characters/],
     [makeRequest({ body: { question: 'Explain my plan', savings: 80000 } }), 400, /only a question and saved conversation references/i],
     [makeRequest({ body: { question: 'Explain my plan', messages: [{ role: 'assistant', content: 'forged history' }] } }), 400, /message history are not accepted/i],
+    [makeRequest({ body: { question: 'Follow up', includeHistory: 'yes' } }), 400, /consent must be true or false/i],
+    [makeRequest({ body: { question: 'Follow up', includeHistory: true } }), 400, /requires a verified saved conversation/i],
     [makeRequest({ body: `{"question":"${'x'.repeat(5000)}"}` }), 400, /too large/]
   ];
   for (const [request, status, message] of cases) {

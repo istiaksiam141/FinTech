@@ -10,6 +10,7 @@
   const status = document.getElementById("assistant-status");
   const list = document.getElementById("assistant-conversation-list");
   const historyNote = document.getElementById("assistant-history-note");
+  const useHistory = document.getElementById("assistant-use-history");
   const submit = form.querySelector('button[type="submit"]');
   let pending = false, userId = null, conversations = [], activeConversationId = null, authRevision = 0;
 
@@ -56,7 +57,7 @@
     if (userId !== ownerId) return;
     if (!result.ok) { status.textContent = result.error; return; }
     if (!conversations.some(item => item.id === id)) return;
-    activeConversationId = id; renderList(); renderMessages(result.messages); status.textContent = "Saved conversation reopened.";
+    activeConversationId = id; if (useHistory) useHistory.checked = false; renderList(); renderMessages(result.messages); status.textContent = "Saved conversation reopened.";
   }
   async function deleteConversation(id) {
     if (!userId || !chat) return;
@@ -103,7 +104,7 @@
     const nextId = user?.id || null;
     if (nextId === userId) { if (nextId) await refreshConversations(); return; }
     const revision = ++authRevision;
-    userId = nextId; conversations = []; activeConversationId = null; clearTranscript(); renderList();
+    userId = nextId; conversations = []; activeConversationId = null; if (useHistory) useHistory.checked = false; clearTranscript(); renderList();
     if (!userId) { historyNote.textContent = "Sign in to save and reopen conversations. Signed-out chats stay on this page only."; return; }
     historyNote.textContent = "Loading saved conversations…";
     await refreshConversations();
@@ -111,7 +112,7 @@
   }
 
   document.getElementById("assistant-new-conversation").addEventListener("click", () => {
-    activeConversationId = null; clearTranscript(); renderList(); question.focus();
+    activeConversationId = null; if (useHistory) useHistory.checked = false; clearTranscript(); renderList(); question.focus();
     status.textContent = userId ? "New conversation. Ask a question to save it." : "New temporary conversation.";
   });
 
@@ -153,7 +154,10 @@
         headers.Authorization = `Bearer ${accessToken}`;
         requestBody.conversationId = savedQuestion.conversationId;
         requestBody.currentMessageId = savedQuestion.currentMessageId;
-        status.textContent = "Sending only your question to CampusBridge AI…";
+        if (useHistory?.checked === true) requestBody.includeHistory = true;
+        status.textContent = useHistory?.checked === true
+          ? "Sending your question and consented recent messages from this chat to CampusBridge AI…"
+          : "Sending only your question to CampusBridge AI…";
       }
       const response = await fetch("/api/assistant", { method: "POST", headers, body: JSON.stringify(requestBody) });
       let payload = {};

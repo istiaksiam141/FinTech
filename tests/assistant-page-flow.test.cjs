@@ -36,7 +36,7 @@ function makeElement(id = '') {
   };
 }
 
-async function runAssistantPage({ signedIn, conversationResult = { ok: true, conversation: { id: CONVERSATION_ID, title: 'Question', created_at: '2026-10-19T00:00:00Z' } }, userMessageResult = { ok: true, message: { id: MESSAGE_ID } }, questionText = 'What is my funding gap?', responseBody = { answer: 'Remote answer.' } }) {
+async function runAssistantPage({ signedIn, useHistory = false, conversationResult = { ok: true, conversation: { id: CONVERSATION_ID, title: 'Question', created_at: '2026-10-19T00:00:00Z' } }, userMessageResult = { ok: true, message: { id: MESSAGE_ID } }, questionText = 'What is my funding gap?', responseBody = { answer: 'Remote answer.' } }) {
   const elements = new Map();
   const getElement = id => {
     if (!elements.has(id)) elements.set(id, makeElement(id));
@@ -82,6 +82,7 @@ async function runAssistantPage({ signedIn, conversationResult = { ok: true, con
   const document = { getElementById: getElement, createElement: tag => makeElement(tag) };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'js', 'assistant-page.js'), 'utf8'), { window, document, fetch });
   await new Promise(resolve => setImmediate(resolve));
+  getElement('assistant-use-history').checked = useHistory;
   const submit = form.listeners.submit;
   const result = submit({ preventDefault() {} });
   await result;
@@ -101,6 +102,13 @@ test('signed-in deterministic funding answers still persist when the saved-messa
   assert.equal(page.requestCalls.length, 0);
   assert.equal(page.writes, 2, 'save the user question and deterministic assistant answer');
   assert.match(page.elements.get('assistant-answer').textContent, new RegExp(`${Math.round(page.plan.result.gap)} BDT`));
+});
+
+test('a plain tuition statement is sent for explanation instead of triggering a saved-plan calculation', async () => {
+  const page = await runAssistantPage({ signedIn: true, questionText: 'My university tuition is 5000 USD.' });
+  assert.equal(page.requestCalls.length, 1);
+  assert.deepEqual(JSON.parse(page.requestCalls[0].options.body), { question: 'My university tuition is 5000 USD.', conversationId: CONVERSATION_ID, currentMessageId: MESSAGE_ID });
+  assert.ok(page.elements.get('assistant-answer').textContent.endsWith('Remote answer.'));
 });
 
 test('funding-gap task remains available if conversation creation returns no ID', async () => {
@@ -128,4 +136,15 @@ test('signed-in remote chat sends real persisted IDs with the current Supabase s
   assert.equal(page.requestCalls.length, 1);
   assert.deepEqual(JSON.parse(page.requestCalls[0].options.body), { question: 'What is a waiver?', conversationId: CONVERSATION_ID, currentMessageId: MESSAGE_ID });
   assert.equal(page.requestCalls[0].options.headers.Authorization, 'Bearer test-access-token');
+});
+
+test('signed-in remote chat sends only an explicit consent flag when recent history is selected', async () => {
+  const page = await runAssistantPage({ signedIn: true, useHistory: true, questionText: 'What amount did I just tell you?' });
+  assert.equal(page.requestCalls.length, 1);
+  assert.deepEqual(JSON.parse(page.requestCalls[0].options.body), { question: 'What amount did I just tell you?', conversationId: CONVERSATION_ID, currentMessageId: MESSAGE_ID, includeHistory: true });
+});
+
+test('signed-out chat never sends saved-history consent or references', async () => {
+  const page = await runAssistantPage({ signedIn: false, useHistory: true, questionText: 'What amount did I just tell you?' });
+  assert.deepEqual(JSON.parse(page.requestCalls[0].options.body), { question: 'What amount did I just tell you?' });
 });
