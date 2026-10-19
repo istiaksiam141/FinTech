@@ -226,14 +226,20 @@ test('transfer quotes use editable provider names and refresh comparison labels 
   assert.match(page, /title\.textContent = quote\.quote\.name/, 'custom names are rendered as text in result cards');
 });
 
-test('homepage keeps its planning actions and tool cards without an Earth animation', () => {
+test('homepage keeps its planning actions and tool cards around a decorative animated globe', () => {
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
   for (const text of ['Plan your next step', 'Organize study-abroad costs', 'Start planning', 'How your data is handled', 'Savings roadmap', 'Stress tests', 'Transfer quotes', 'AI assistant', 'Meet your AI financial assistant', 'Ask CampusBridge AI', 'Print or save your financial plan', 'Build a plan to print', 'Financial report', 'Privacy and limits', 'Bring your own estimates']) assert.ok(html.includes(text), `homepage should retain ${text}`);
   assert.match(html, /href="\/assistant\.html">Ask CampusBridge AI/);
   assert.match(html, /href="\/planner\.html#profileForm">Build a plan to print/);
-  assert.doesNotMatch(html, /home-earth|earthFallback|<canvas|WebGL/i);
-  assert.doesNotMatch(html, /home-earth\.js/);
+  assert.match(html, /class="homeGlobe" aria-hidden="true"/, 'the centerpiece stays decorative for assistive technology');
+  assert.match(html, /class="homeGlobeSphere"/);
+  assert.match(html, /class="homeGlobeGrid"/, 'the sphere includes a latitude and longitude grid');
+  assert.match(css, /body\[data-page="home"\] \.homeGlobeMap\{[^}]*animation:homeGlobeRotate 10s linear infinite/);
+  assert.match(css, /@media\(prefers-reduced-motion:reduce\)[^{]*\{[^}]*homeGlobeMap[^}]*animation:none/);
   assert.match(css, /body\[data-page="home"\] \.hero/);
   assert.match(css, /body\[data-page="home"\] \.hero \.homeCard/);
+  assert.match(css, /grid-template-columns:minmax\(0,1fr\) minmax\(190px,250px\) minmax\(0,1fr\)/, 'the center globe has reserved space between the tile columns');
+  assert.match(css, /homeGlobeSphere\{[^}]*width:90%/, 'the globe is sized to fill its reserved center column');
+  assert.match(css, /backdrop-filter:blur\(12px\) saturate\(112%\)/, 'homepage tiles use subtle glass styling');
 });
