@@ -499,3 +499,4 @@ body[data-page="planner"] .planningModeNote{padding:12px 14px;border-radius:11px
 .clearPlanConfirm:hover{border-color:rgba(240,152,142,.68);background:rgba(137,49,51,.34)}
 .clearPlanDialog button:focus-visible{outline:3px solid #b8ead5;outline-offset:3px}
 @media(max-width:520px){.clearPlanDialogContent{padding:22px}.clearPlanDialogActions{flex-direction:column}.clearPlanDialogActions button{width:100%}}
+.accountForm[id]{scroll-margin-top:110px}

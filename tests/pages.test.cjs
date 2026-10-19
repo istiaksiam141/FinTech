@@ -45,7 +45,7 @@ test('shared navigation points to every migrated page and preserves real static 
   assert.match(site, /assistantLink\.append\(createIcon\("sparkle"\)/);
   assert.match(site, /transfersLink\.href = "\/transfers\.html"/);
   assert.match(site, /transfersLink\.lastChild\.textContent = "Transfers"/);
-  assert.match(site, /find\(item => item\.id === "planning"\)[\s\S]*find\(item => item\.id === "more"\)[\s\S]*nav\.append\(planningGroup\.container, assistantLink, transfersLink, moreGroup\.container\)/, 'the top-level order is Home, Financial Planning, AI Assistant, Transfers, More');
+  assert.match(site, /find\(item => item\.id === "planning"\)[\s\S]*find\(item => item\.id === "more"\)[\s\S]*nav\.append\(planningGroup\.container, transfersLink, assistantLink, moreGroup\.container\)/, 'the top-level order is Home, Financial Planning, Transfers, AI Assistant, More');
   assert.match(site, /id: "more", label: "More"/);
   assert.match(site, /pages: \[\["report", "Financial Report", "\/report\.html", "fileText"\], \["privacy", "Privacy", "\/privacy\.html", "shieldCheck"\]\]/, 'More contains only the report and privacy destinations');
   assert.doesNotMatch(site, /label: "Transfers & Support"|label: "Transfer and Supports?"|label: "Transfer & Supports?"/);
@@ -55,6 +55,9 @@ test('shared navigation points to every migrated page and preserves real static 
   assert.match(authStatus, /account\.textContent = "My Account"/, 'Account remains available from the profile menu');
   assert.match(authStatus, /document\.body\.dataset\.page === "account"\) account\.setAttribute\("aria-current", "page"\)/, 'Account keeps its active-page indicator inside the profile menu');
   assert.match(site, /nav\.append\(accountStatus, clear\)/, 'the existing clear-plan control remains in the shared header');
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(css, /\.topbar \.navlinks>\.aiNavPill:not\(\[aria-current=page\]\)\{border-color:rgba\(166,230,206,\.4\);background:rgba\(166,230,206,\.08\)\}/, 'AI Assistant retains its restrained brand-accent treatment');
+  assert.match(css, /\.topbar \.navlinks>a\.navPill:focus-visible/);
 });
 
 test('Clear Plan uses an accessible dialog and only explicit confirmation removes the current plan', () => {

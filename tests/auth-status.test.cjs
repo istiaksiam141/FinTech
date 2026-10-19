@@ -82,6 +82,21 @@ test('a pending session restore cannot undo a completed sign-out', async () => {
   assert.deepEqual(states, [null]);
 });
 
+test('logout confirmation cancellation keeps the session and confirmed logout runs once', async () => {
+  let signedOut = 0, confirm;
+  const canceled = AuthNavigation.createLogoutController(async () => false);
+  assert.equal(await canceled({}, async () => { signedOut += 1; }), false);
+  assert.equal(signedOut, 0, 'Cancel must not run the sign-out action');
+
+  let resolveConfirmation;
+  confirm = AuthNavigation.createLogoutController(() => new Promise(resolve => { resolveConfirmation = resolve; }));
+  const first = confirm({}, async () => { signedOut += 1; });
+  assert.equal(await confirm({}, async () => { signedOut += 1; }), false, 'a second request is ignored while confirmation is open');
+  resolveConfirmation(true);
+  assert.equal(await first, true);
+  assert.equal(signedOut, 1, 'confirmed logout runs exactly once');
+});
+
 test('profile menu exposes accessible dismissal and uses the existing Supabase sign-out API', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'auth-status.js'), 'utf8');
   assert.match(source, /aria-haspopup", "true"/);
@@ -90,4 +105,22 @@ test('profile menu exposes accessible dismissal and uses the existing Supabase s
   assert.match(source, /document\.addEventListener\("pointerdown"/);
   assert.match(source, /href = "\/account\.html"/);
   assert.match(source, /client\.auth\.signOut\(\)/);
+  assert.match(source, /Log out of CampusBridge AI\?/);
+  assert.match(source, /Are you sure you want to log out of your account\?/);
+  assert.match(source, /data-cancel-logout/);
+  assert.match(source, /data-confirm-logout/);
+  assert.match(source, /root\.location\.href = "\/account\.html#login-form"/);
+});
+
+test('account form links remain available after login and direct hashes are restored after auth checks', () => {
+  const page = fs.readFileSync(path.join(__dirname, '..', 'js', 'account-page.js'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'account.html'), 'utf8');
+  for (const [label, id] of [['Create an account', 'signup-form'], ['Sign in', 'login-form'], ['Reset password', 'reset-request-form']]) {
+    assert.ok(html.includes(`href="#${id}"`), `${label} should link to #${id}`);
+    assert.ok(html.includes(`id="${id}"`), `${label} target should exist`);
+  }
+  assert.match(page, /authPanel\.hidden = false/);
+  assert.match(page, /window\.addEventListener\("hashchange", scrollToAccountHash\)/);
+  assert.match(page, /target\.scrollIntoView\(\{ block: "start" \}\)/);
+  assert.match(page, /If the email belongs to an account, Supabase will send a password-reset link\./, 'reset requests do not reveal whether an address is registered');
 });

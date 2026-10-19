@@ -8,6 +8,15 @@
   const authForms = ["signup-form", "login-form", "reset-request-form", "recovery-complete-form", "cloud-save-form", "mfa-challenge-form", "mfa-enroll-form", "mfa-disable-form"].map(byId).filter(Boolean);
   const say = (message, kind = "info") => { status.textContent = message; status.dataset.kind = kind; };
   const setBusy = (form, busy) => { form.querySelectorAll("button[type=submit]").forEach(button => { button.disabled = busy; button.dataset.originalText ||= button.textContent; button.textContent = busy ? "Please wait…" : button.dataset.originalText; }); };
+  const accountFormHashes = new Set(["#signup-form", "#login-form", "#reset-request-form"]);
+  function scrollToAccountHash() {
+    if (!accountFormHashes.has(location.hash)) return;
+    requestAnimationFrame(() => {
+      const target = byId(location.hash.slice(1));
+      if (target && !target.closest("[hidden]")) target.scrollIntoView({ block: "start" });
+    });
+  }
+  window.addEventListener("hashchange", scrollToAccountHash);
   const errorText = error => {
     const message = typeof error?.message === "string" ? error.message : "The request could not be completed.";
     const lower = message.toLowerCase();
@@ -26,13 +35,16 @@
     const signedIn = Boolean(session?.user), verified = security.status === "ready";
     const requiringFactor = security.status === "challenge-required";
     const unavailable = security.status === "error" || security.status === "unsupported-factor";
-    authPanel.hidden = signedIn && verified && !recoveryActive;
+    // Keep the account forms available after sign-in so the account-page jump links
+    // and direct #signup-form / #login-form / #reset-request-form URLs remain usable.
+    authPanel.hidden = false;
     cloudPanel.hidden = !signedIn || !verified;
     authOptions.hidden = signedIn && (requiringFactor || unavailable || security.status === "checking");
     challengePanel.hidden = !requiringFactor;
     recoveryForm.hidden = !recoveryActive;
     document.querySelectorAll("[data-auth-logout]").forEach(button => { button.hidden = !signedIn; });
     updateMfaSettings();
+    scrollToAccountHash();
   }
   function updateMfaSettings() {
     const ready = security.status === "ready", factors = security.factors || [];
@@ -237,12 +249,16 @@
   });
   document.querySelectorAll("[data-auth-logout]").forEach(button => button.addEventListener("click", async () => {
     if (!client) return;
-    button.disabled = true;
-    try {
-      const { error } = await client.auth.signOut();
-      if (error) say(errorText(error), "error"); else say("You are signed out. Your local plan remains in this tab; cloud plans are unchanged.", "success");
-    } catch { say("Could not sign out because the connection failed.", "error"); }
-    finally { button.disabled = false; }
+    if (typeof window.CampusBridgeLogoutRequest !== "function") { say("Logout confirmation is unavailable. Refresh the page and try again.", "error"); return; }
+    await window.CampusBridgeLogoutRequest(button, async () => {
+      button.disabled = true;
+      try {
+        const { error } = await client.auth.signOut();
+        if (error) say(errorText(error), "error");
+        else { say("You are signed out. Your local plan remains in this tab; cloud plans are unchanged.", "success"); location.href = "/account.html#login-form"; }
+      } catch { say("Could not sign out because the connection failed.", "error"); }
+      finally { button.disabled = false; }
+    });
   }));
   client?.auth.onAuthStateChange((event, nextSession) => {
     if (event === "PASSWORD_RECOVERY") recoveryActive = true;

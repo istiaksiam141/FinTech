@@ -94,7 +94,7 @@
       });
     }
     const planningGroup = groupControls.find(item => item.id === "planning"), moreGroup = groupControls.find(item => item.id === "more");
-    nav.append(planningGroup.container, assistantLink, transfersLink, moreGroup.container);
+    nav.append(planningGroup.container, transfersLink, assistantLink, moreGroup.container);
     const accountStatus = document.createElement("div"); accountStatus.id = "nav-auth-slot"; accountStatus.className = "navAuthSlot"; accountStatus.hidden = true; accountStatus.setAttribute("aria-busy", "true");
     const clear = document.createElement("button"); clear.type = "button"; clear.className = "button smallbtn clearPlanButton"; clear.textContent = "Clear plan"; clear.dataset.clearPlan = "";
     nav.append(accountStatus, clear);

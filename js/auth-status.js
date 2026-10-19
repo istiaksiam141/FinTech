@@ -62,11 +62,52 @@
     });
   }
 
+  function createLogoutController(confirmLogout) {
+    let busy = false;
+    return async function requestLogout(trigger, action) {
+      if (busy) return false;
+      busy = true;
+      try {
+        if (!(await confirmLogout(trigger))) return false;
+        await action();
+        return true;
+      } finally { busy = false; }
+    };
+  }
+
+  function createLogoutConfirmation(root) {
+    const document = root.document;
+    const dialog = document.createElement("dialog"); dialog.id = "logout-confirm-dialog"; dialog.className = "clearPlanDialog logoutConfirmDialog";
+    dialog.setAttribute("aria-labelledby", "logout-confirm-title"); dialog.setAttribute("aria-describedby", "logout-confirm-message");
+    dialog.innerHTML = '<div class="clearPlanDialogContent"><h2 id="logout-confirm-title">Log out of CampusBridge AI?</h2><p id="logout-confirm-message">Are you sure you want to log out of your account?</p><div class="clearPlanDialogActions"><button type="button" class="button" data-cancel-logout>Cancel</button><button type="button" class="button clearPlanConfirm" data-confirm-logout>Yes, log out</button></div></div>';
+    document.body.append(dialog);
+    const cancel = dialog.querySelector("[data-cancel-logout]"), confirm = dialog.querySelector("[data-confirm-logout]");
+    let resolveDecision = null, invoker = null;
+    cancel.addEventListener("click", () => dialog.close("cancel"));
+    confirm.addEventListener("click", () => dialog.close("logout"));
+    dialog.addEventListener("cancel", event => { event.preventDefault(); dialog.close("cancel"); });
+    dialog.addEventListener("close", () => {
+      const resolve = resolveDecision; resolveDecision = null;
+      if (resolve) resolve(dialog.returnValue === "logout");
+      const returnTo = invoker; invoker = null;
+      if (returnTo?.isConnected) returnTo.focus({ preventScroll: true });
+    });
+    return trigger => {
+      if (dialog.open || resolveDecision) return Promise.resolve(false);
+      return new Promise(resolve => {
+        resolveDecision = resolve; invoker = trigger || document.activeElement;
+        try { dialog.returnValue = ""; dialog.showModal(); cancel.focus(); }
+        catch { resolveDecision = null; invoker = null; resolve(false); }
+      });
+    };
+  }
+
   function initialize(root) {
     if (root.__campusBridgeAuthNavigationInitialized) return;
     const document = root.document, slot = document.getElementById("nav-auth-slot");
     if (!slot) return;
     root.__campusBridgeAuthNavigationInitialized = true;
+    root.CampusBridgeLogoutRequest = createLogoutController(createLogoutConfirmation(root));
 
     const neutral = document.createElement("span"); neutral.className = "authNeutral"; neutral.textContent = "Checking account…"; neutral.hidden = true;
     const login = document.createElement("a");
@@ -146,14 +187,18 @@
       login.hidden = true; profile.hidden = true; status.textContent = "Sign-in status unavailable";
     });
     logout.addEventListener("click", async () => {
-      logout.disabled = true; status.textContent = "Signing out…";
-      try { await controller.signOut(); }
-      catch { status.textContent = "Could not sign out. Please try again."; }
-      finally { logout.disabled = false; }
+      await root.CampusBridgeLogoutRequest(logout, async () => {
+        logout.disabled = true; status.textContent = "Signing out…";
+        try {
+          await controller.signOut();
+          root.location.href = "/account.html#login-form";
+        } catch { status.textContent = "Could not sign out. Please try again."; }
+        finally { logout.disabled = false; }
+      });
     });
     if (client) controller.start();
     else renderUser(null);
   }
 
-  return Object.freeze({ getDisplayName, getNavigationState, createSessionController, initialize });
+  return Object.freeze({ getDisplayName, getNavigationState, createSessionController, createLogoutController, initialize });
 });
