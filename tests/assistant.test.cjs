@@ -4,6 +4,16 @@ const fs = require('node:fs');
 const path = require('node:path');
 const assistant = require('../api/assistant.js');
 const Finance = require('../lib/finance.js');
+const AssistantConversation = require('../lib/assistant-conversation.js');
+
+class FakeElement {
+  constructor(tagName, ownerDocument) { this.tagName = tagName; this.ownerDocument = ownerDocument; this.children = []; this.dataset = {}; this._text = ''; }
+  append(...elements) { this.children.push(...elements); }
+  appendChild(element) { this.children.push(element); return element; }
+  replaceChildren(...elements) { this.children = [...elements]; this._text = ''; }
+  set textContent(value) { this._text = String(value); this.children = []; }
+  get textContent() { return this._text + this.children.map(child => child.textContent).join(''); }
+}
 
 function makeResponse() {
   return { headers: {}, statusCode: null, body: null,
@@ -157,6 +167,23 @@ test('assistant applies per-instance request limits and returns Retry-After', as
   assert.equal((await invoke(handler, makeRequest())).statusCode, 200);
 });
 
+test('assistant conversation appends two questions and answers in chronological order', () => {
+  const document = { createElement: tag => new FakeElement(tag, document) };
+  const conversation = new FakeElement('div', document);
+  conversation.appendChild(new FakeElement('p', document));
+  conversation.children[0].textContent = 'Try asking a question.';
+
+  const first = AssistantConversation.createTurn(conversation, 'How do I estimate tuition?');
+  first.response.textContent = 'Start with the university fee schedule.';
+  const second = AssistantConversation.createTurn(conversation, 'What should I check next?');
+  second.response.textContent = 'Confirm the payment deadline with the university.';
+
+  assert.equal(conversation.children.length, 2);
+  assert.match(conversation.children[0].textContent, /How do I estimate tuition\?[\s\S]*Start with the university fee schedule\./);
+  assert.match(conversation.children[1].textContent, /What should I check next\?[\s\S]*Confirm the payment deadline with the university\./);
+  assert.ok(conversation.textContent.indexOf('How do I estimate tuition?') < conversation.textContent.indexOf('What should I check next?'));
+});
+
 test('assistant frontend sends only the prompt while local deterministic finance and quote validation remain wired', () => {
   const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
   assert.match(app, /fetch\("\/api\/assistant"/);
@@ -166,14 +193,23 @@ test('assistant frontend sends only the prompt while local deterministic finance
   assert.match(app, /AI assistant unavailable\. \$\{safeFailure\}\\nHere is local guidance instead/);
   assert.match(app, /typeof payload\.error==="string"\?payload\.error/);
   assert.match(app, /prompt and response omitted/);
-  assert.match(app, /AssistantRenderer\.render\(answer/);
+  assert.match(app, /AssistantRenderer\.render\(reply/);
+  assert.match(app, /CampusBridgeAssistantConversation\.createTurn\(answer,rawQuestion\)/);
+  assert.match(app, /if\(assistantRequestPending\)return/);
   assert.match(app, /payload\.incomplete===true/);
   assert.match(app, /This answer may be incomplete because it reached the response limit/);
   const renderer = require('../lib/assistant-renderer.js');
   assert.equal(typeof renderer.render, 'function');
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'api', 'assistant.js'), 'utf8'), /Only a question is accepted/);
-  const questionSubmission = app.slice(app.indexOf('fetch("/api/assistant"'), app.indexOf('finally{button.disabled=false', app.indexOf('fetch("/api/assistant"')));
+  const questionSubmission = app.slice(app.indexOf('status.textContent="Sending only your question'), app.indexOf('catch{reply.textContent=', app.indexOf('status.textContent="Sending only your question')));
   assert.doesNotMatch(questionSubmission, /latest\.input|enteredQuotes\(|transferResults|profile\(\)/);
+  const assistantPage = fs.readFileSync(path.join(__dirname, '..', 'js', 'assistant-page.js'), 'utf8');
+  assert.match(assistantPage, /Conversation\.createTurn\(answer, text\)/);
+  assert.match(assistantPage, /if \(pending\) return/);
+  assert.doesNotMatch(assistantPage, /answer\.textContent\s*=\s*""/);
+  const assistantHtml = fs.readFileSync(path.join(__dirname, '..', 'assistant.html'), 'utf8');
+  assert.match(assistantHtml, /assistant-conversation\.js[\s\S]*assistant-page\.js/);
+  assert.match(assistantHtml, /id="assistant-answer"[^>]*role="log"[^>]*aria-relevant="additions text"/);
   const packageInfo = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
   assert.equal(packageInfo.dependencies.openai, '7.28.0');
   assert.doesNotMatch(`${app}\n${fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8')}`, /GROQ_API_KEY/);
