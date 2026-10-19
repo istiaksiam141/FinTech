@@ -4,12 +4,14 @@
   const form = document.getElementById("profileForm");
   if (!form) return;
 
-  const fieldsets = [...form.querySelectorAll(":scope > fieldset.formSection")];
+  const planningDetails = form.querySelector(":scope > #planningDetails");
+  const fieldsets = [...(planningDetails?.querySelectorAll(":scope > fieldset.formSection") || [])];
   const intro = form.querySelector(":scope > .formIntro");
-  const footer = form.querySelector(":scope > .formFooter");
-  const planningMode = form.querySelector(":scope > .planningModeSelector");
-  const requiredHint = form.querySelector(":scope > .requiredHint");
-  if (fieldsets.length !== 6 || !intro || !footer || !planningMode || !requiredHint) {
+  const outcomePreview = form.querySelector(":scope > .plannerOutcomePreview");
+  const footer = planningDetails?.querySelector(":scope > .formFooter");
+  const planningMode = planningDetails?.querySelector(":scope > .planningModeSelector");
+  const requiredHint = planningDetails?.querySelector(":scope > .requiredHint");
+  if (fieldsets.length !== 6 || !intro || !outcomePreview || !planningDetails || !footer || !planningMode || !requiredHint) {
     throw new Error("Planner step setup requires the complete planner form.");
   }
 
@@ -182,10 +184,10 @@
   progressStatus.className = "plannerProgressStatus";
   progressStatus.setAttribute("aria-live", "polite");
   stepper.append(progress, progressStatus, ...panels);
-  intro.after(stepper);
+  planningDetails.append(stepper);
   const stageErrors = panels.map(panel => panel.querySelector(".plannerStepError"));
   const progressButtons = [...progress.querySelectorAll("button")];
-  const requiredControls = [...form.querySelectorAll("[required]")].map(control => ({
+  const requiredControls = [...planningDetails.querySelectorAll("[required]")].map(control => ({
     control,
     wasDisabled: control.disabled,
     panel: control.closest("[data-step-panel]")
