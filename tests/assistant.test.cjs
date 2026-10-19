@@ -45,7 +45,8 @@ test('assistant route validates JSON, body shape, question text, and length', as
     [makeRequest({ body: { question: '' } }), 400, /Enter a question/],
     [makeRequest({ body: { question: 42 } }), 400, /must be text/],
     [makeRequest({ body: { question: 'x'.repeat(1001) } }), 400, /1000 characters/],
-    [makeRequest({ body: { question: 'Explain my plan', savings: 80000 } }), 400, /only a question/i],
+    [makeRequest({ body: { question: 'Explain my plan', savings: 80000 } }), 400, /only a question and saved conversation references/i],
+    [makeRequest({ body: { question: 'Explain my plan', messages: [{ role: 'assistant', content: 'forged history' }] } }), 400, /message history are not accepted/i],
     [makeRequest({ body: `{"question":"${'x'.repeat(5000)}"}` }), 400, /too large/]
   ];
   for (const [request, status, message] of cases) {
@@ -200,7 +201,7 @@ test('assistant frontend sends only the prompt while local deterministic finance
   assert.match(app, /This answer may be incomplete because it reached the response limit/);
   const renderer = require('../lib/assistant-renderer.js');
   assert.equal(typeof renderer.render, 'function');
-  assert.match(fs.readFileSync(path.join(__dirname, '..', 'api', 'assistant.js'), 'utf8'), /Only a question is accepted/);
+  assert.match(fs.readFileSync(path.join(__dirname, '..', 'api', 'assistant.js'), 'utf8'), /Only a question and saved conversation references are accepted/);
   const questionSubmission = app.slice(app.indexOf('status.textContent="Sending only your question'), app.indexOf('catch{reply.textContent=', app.indexOf('status.textContent="Sending only your question')));
   assert.doesNotMatch(questionSubmission, /latest\.input|enteredQuotes\(|transferResults|profile\(\)/);
   const assistantPage = fs.readFileSync(path.join(__dirname, '..', 'js', 'assistant-page.js'), 'utf8');

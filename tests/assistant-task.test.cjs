@@ -85,6 +85,9 @@ test('shared task module is loaded before both assistant entry points; Groq rema
   assert.ok(plannerHtml.indexOf('assistant-task.js') < plannerHtml.indexOf('/app.js'));
   assert.match(app, /CampusBridgeAssistantTask\.run/);
   assert.match(page, /CampusBridgeAssistantTask\.run/);
-  assert.match(page, /JSON\.stringify\(\{ question: text \}\)/);
-  assert.match(fs.readFileSync(path.join(root, 'api', 'assistant.js'), 'utf8'), /Only a question is accepted/);
+  assert.match(page, /requestBody = \{ question: text \}/);
+  assert.match(page, /requestBody\.conversationId = savedQuestion\.conversationId/);
+  assert.match(page, /requestBody\.currentMessageId = savedQuestion\.currentMessageId/);
+  assert.doesNotMatch(page, /requestBody\.messages\s*=/);
+  assert.match(fs.readFileSync(path.join(root, 'api', 'assistant.js'), 'utf8'), /Only a question and saved conversation references are accepted/);
 });
