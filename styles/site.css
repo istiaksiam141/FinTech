@@ -340,7 +340,7 @@ body[data-page="home"] .homeNotice p{margin-top:6px;color:#64655e}
 
 /* Planner layout follows the roomy, green-and-ivory reference while retaining the existing form and result behavior. */
 .wrap{width:min(1476px,calc(100% - 48px))}
-.topbar,.topbar.scrolled{height:100px;min-height:100px;background:#147d61;border-color:transparent;box-shadow:0 5px 18px rgba(31,76,57,.12);backdrop-filter:none}
+.topbar,.topbar.scrolled{height:100px;min-height:100px;background:linear-gradient(110deg,rgba(20,125,97,.88),rgba(16,105,81,.78));border-color:rgba(255,255,255,.2);box-shadow:0 8px 24px rgba(23,74,57,.14),inset 0 1px 0 rgba(255,255,255,.18);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%)}
 .topbar .nav{min-height:100px;gap:14px}
 .brand{flex:none;color:#fff;font-size:1.08rem}
 .brandmark{width:44px;height:44px;border-color:rgba(255,255,255,.36);border-radius:15px;background:rgba(255,255,255,.1);color:#fff}
@@ -426,7 +426,7 @@ body[data-page="planner"] .planningModeNote{padding:12px 14px;border-radius:11px
 .topbar .navlinks>a.navPill:focus-visible,.topbar .navlinks>.navGroup>.navGroupToggle:focus-visible,.topbar .burger:focus-visible{outline:3px solid #d8e9df;outline-offset:3px}
 .navChevron{width:15px;height:15px;margin-left:1px;transition:transform .16s ease}
 .navGroupToggle[aria-expanded=true] .navChevron{transform:rotate(180deg)}
-.topbar .navDropdown{top:calc(100% + 10px);min-width:260px;gap:5px;padding:12px;border-color:#e4e9e2;border-radius:17px;background:#fffefa;box-shadow:0 18px 40px rgba(20,50,38,.18)}
+.topbar .navDropdown{top:calc(100% + 10px);min-width:260px;gap:5px;padding:12px;border-color:rgba(255,255,255,.72);border-radius:17px;background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(248,250,246,.82));box-shadow:0 18px 40px rgba(20,50,38,.18),inset 0 1px 0 rgba(255,255,255,.86);backdrop-filter:blur(18px) saturate(145%);-webkit-backdrop-filter:blur(18px) saturate(145%)}
 .topbar .navlinks .navDropdown a{padding:12px 14px;border:1px solid transparent;border-radius:11px;color:#31584b;font-size:.9rem;line-height:1.35;transition:background .16s ease,border-color .16s ease,color .16s ease}
 .topbar .navlinks .navDropdown a:hover{border-color:#e1ebe3;background:#f0f6f1;color:#104b38}
 .topbar .navlinks .navDropdown a[aria-current=page]{border-color:#dcebe0;background:#e7f1e9;color:#124f3b;box-shadow:inset 3px 0 #41846b}
@@ -462,7 +462,7 @@ body[data-page="planner"] .planningModeNote{padding:12px 14px;border-radius:11px
 .profileControl{position:relative;display:flex;align-items:center}
 .profileAvatar{display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid rgba(255,255,255,.58);border-radius:50%;background:#d8e9df;color:#145640;font:700 1rem/1 'DM Sans',sans-serif;cursor:pointer;box-shadow:0 2px 10px rgba(10,42,31,.16)}
 .profileAvatar:hover{background:#eef5ef;border-color:#fff}
-.profileDropdown{position:absolute;top:calc(100% + 12px);right:0;z-index:60;display:grid;gap:10px;width:min(300px,calc(100vw - 32px));padding:17px;border:1px solid #e1e8df;border-radius:17px;background:#fffefa;color:#25483b;box-shadow:0 18px 44px rgba(12,40,29,.24)}
+.profileDropdown{position:absolute;top:calc(100% + 12px);right:0;z-index:60;display:grid;gap:10px;width:min(300px,calc(100vw - 32px));padding:17px;border:1px solid rgba(255,255,255,.74);border-radius:17px;background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(248,250,246,.82));color:#25483b;box-shadow:0 18px 44px rgba(12,40,29,.24),inset 0 1px 0 rgba(255,255,255,.86);backdrop-filter:blur(18px) saturate(145%);-webkit-backdrop-filter:blur(18px) saturate(145%)}
 .profileDropdown .profileDisplayName{color:#124c39;font:700 1.02rem/1.3 'Manrope',sans-serif}
 .profileDropdown .profileEmail,.profileDropdown .accountStatus{overflow-wrap:anywhere;color:#61776d;font-size:.82rem;line-height:1.45}
 .profileDropdown .accountStatus{padding-bottom:10px;border-bottom:1px solid #e7ebe5}
@@ -627,7 +627,7 @@ body[data-page="planner"] .resultDetails .metric strong{font-size:1rem;color:#34
   .topbar .nav{min-height:78px}
   .topbar .navlinks{gap:6px}
   .topbar .navlinks>.navGroup>.navGroupToggle[data-active=true]{box-shadow:inset 3px 0 #a6e6ce}
-  .topbar .navlinks>.navGroup>.navDropdown{position:static;top:auto;left:auto;min-width:0;width:auto;margin:0 0 4px 10px;padding:4px 7px;border:0;border-left:1px solid rgba(255,255,255,.3);border-radius:0;background:transparent;box-shadow:none}
+  .topbar .navlinks>.navGroup>.navDropdown{position:static;top:auto;left:auto;min-width:0;width:auto;margin:0 0 7px 10px;padding:7px;border:1px solid rgba(255,255,255,.2);border-radius:13px;background:rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.1);backdrop-filter:blur(14px) saturate(135%);-webkit-backdrop-filter:blur(14px) saturate(135%)}
   .topbar .navlinks>.navGroup>.navDropdown a{border-color:transparent;background:transparent;color:#fff}
   .topbar .navlinks>.navGroup>.navDropdown a:hover,.topbar .navlinks>.navGroup>.navDropdown a[aria-current=page]{border-color:rgba(255,255,255,.16);background:rgba(255,255,255,.14);color:#fff}
   .topbar .navlinks>.navGroup>.navDropdown .navIcon{opacity:.9}

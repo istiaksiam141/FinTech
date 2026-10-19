@@ -99,6 +99,9 @@ test('shared navigation points to every migrated page and preserves real static 
   assert.match(css, /\.navAuthSlot \.profileDropdown a\{border-color:#e7ece5;background:#f5f7f3;color:#245b47\}/, 'profile links have an explicit readable resting state inside the navigation');
   assert.match(css, /\.navAuthSlot \.profileDropdown a:hover,\.navAuthSlot \.profileDropdown a:focus-visible\{border-color:#d4e3d6;background:#edf4ee;color:#104b38\}/, 'profile-link hover and keyboard focus states stay readable');
   assert.match(css, /\.navAuthSlot \.profileDropdown a\[aria-current=page\]\{border-color:#dcebe0;background:#e7f1e9;color:#124f3b\}/, 'the active My Account link keeps its separate pale-sage state');
+  assert.match(css, /\.topbar \.navDropdown\{[^}]*backdrop-filter:blur\(18px\) saturate\(145%\)/, 'topbar navigation menus use translucent glass styling');
+  assert.match(css, /\.profileDropdown\{[^}]*backdrop-filter:blur\(18px\) saturate\(145%\)/, 'the account dropdown uses the same glass treatment');
+  assert.match(css, /\.topbar \.navlinks>\.navGroup>\.navDropdown\{[^}]*backdrop-filter:blur\(14px\) saturate\(135%\)/, 'mobile navigation dropdowns retain a translucent glass panel');
 });
 
 test('session storage disclosure appears beside the planner form only', () => {
@@ -242,4 +245,11 @@ test('homepage keeps its planning actions and tool cards around a decorative ani
   assert.match(css, /grid-template-columns:minmax\(0,1fr\) minmax\(190px,250px\) minmax\(0,1fr\)/, 'the center globe has reserved space between the tile columns');
   assert.match(css, /homeGlobeSphere\{[^}]*width:90%/, 'the globe is sized to fill its reserved center column');
   assert.match(css, /backdrop-filter:blur\(12px\) saturate\(112%\)/, 'homepage tiles use subtle glass styling');
+});
+
+test('shared navigation uses a subtle translucent glass treatment', () => {
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(css, /\.topbar,\.topbar\.scrolled\{[^}]*background:linear-gradient\(110deg,rgba\(20,125,97,\.88\),rgba\(16,105,81,\.78\)\)/);
+  assert.match(css, /\.topbar,\.topbar\.scrolled\{[^}]*backdrop-filter:blur\(18px\) saturate\(140%\)/);
+  assert.match(css, /\.topbar,\.topbar\.scrolled\{[^}]*-webkit-backdrop-filter:blur\(18px\) saturate\(140%\)/);
 });
