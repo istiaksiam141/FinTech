@@ -49,14 +49,15 @@ test('every shared dropdown option receives its own decorative outline icon', ()
   const expected = [
     ['Planner', '/planner.html', 'calculator'], ['Savings roadmap', '/roadmap.html', 'route'],
     ['Stress tests', '/stress-tests.html', 'chart'], ['Transfers', '/transfers.html', 'arrowsLeftRight'],
-    ['AI assistant', '/assistant.html', 'messageCircle'], ['Financial report', '/report.html', 'fileText'],
-    ['Account', '/account.html', 'userRound'], ['Privacy', '/privacy.html', 'shieldCheck']
+    ['AI assistant', '/assistant.html', 'messageCircle'], ['Account', '/account.html', 'userRound'],
+    ['Financial report', '/report.html', 'fileText'], ['Privacy', '/privacy.html', 'shieldCheck']
   ];
   for (const [label, href, icon] of expected) {
     assert.ok(site.includes(`"${label}", "${href}", "${icon}"`), `${label} should retain its route and use its matching icon`);
     assert.ok(site.includes(`${icon}: '`), `${icon} should have an inline SVG drawing`);
   }
   assert.match(site, /for \(const \[id, label, href, iconName\] of group\.pages\)/);
+  assert.match(site, /pages: \[\["account", "Account", "\/account\.html", "userRound"\], \["report", "Financial report", "\/report\.html", "fileText"\]/);
   assert.match(site, /link\.append\(createIcon\(iconName\), linkLabel\)/);
   assert.match(site, /setAttribute\("aria-hidden", "true"\)/, 'SVG icons stay decorative while labels remain text');
   const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');

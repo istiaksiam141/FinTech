@@ -3,7 +3,7 @@
   const groups = [
     { id: "planning", label: "Financial Planning", icon: "chart", pages: [["planner", "Planner", "/planner.html", "calculator"], ["roadmap", "Savings roadmap", "/roadmap.html", "route"], ["stress", "Stress tests", "/stress-tests.html", "chart"]] },
     { id: "support", label: "Transfers & Support", icon: "transfer", pages: [["transfers", "Transfers", "/transfers.html", "arrowsLeftRight"], ["assistant", "AI assistant", "/assistant.html", "messageCircle"]] },
-    { id: "account", label: "My Account", icon: "user", pages: [["report", "Financial report", "/report.html", "fileText"], ["account", "Account", "/account.html", "userRound"], ["privacy", "Privacy", "/privacy.html", "shieldCheck"]] }
+    { id: "account", label: "My Account", icon: "user", pages: [["account", "Account", "/account.html", "userRound"], ["report", "Financial report", "/report.html", "fileText"], ["privacy", "Privacy", "/privacy.html", "shieldCheck"]] }
   ];
   const createIcon = name => {
     const drawings = {
