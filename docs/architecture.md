@@ -1,5 +1,7 @@
 # System architecture
 
+For the complete, source-audited technical reference, see [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md).
+
 ## Verified project shape
 
 CampusBridge AI is a static multi-page HTML/CSS/JavaScript application with shared browser modules. There is no frontend build step declared in `package.json`. The `api/` directory contains Vercel serverless functions. The package manifest pins the `openai` SDK dependency; the browser loads Supabase JS v2 from jsDelivr.
@@ -59,9 +61,9 @@ The repository identifies CampusBridge AI as a FinTechathon 2026 project for stu
 ### AI and chat history
 
 1. The shared assistant task router uses validated current planner state and `lib/finance.js` for supported funding, savings, budget, rate-provenance, and quote-comparison tasks. Missing inputs are not guessed.
-2. For general questions, the browser sends the current question and, for a saved signed-in chat, its conversation ID and current user-message ID. It does not send earlier messages.
+2. For general questions, the browser sends the current question and, for a saved signed-in chat, its conversation ID and current user-message ID. A separate unchecked-by-default consent flag lets the user opt in to recent same-chat context.
 3. `api/assistant.js` verifies the access token through Supabase Auth and confirms conversation ownership under the user's JWT and existing RLS policies. It checks that the referenced message is the latest user message in that conversation and matches the submitted question.
-4. Raw prior conversation text is not sent to Groq. Arbitrary natural-language messages cannot be reliably classified as free of financial or identifying details, so the endpoint sends only the current question after verifying its saved references. No saved plans, balances, quotes, or other database records are loaded as model context.
+4. Without consent, prior conversation text is not sent to Groq. After consent, the server loads bounded prior messages from only that selected, owner-verified conversation. Such free-form history may contain sensitive information; consent is not a guarantee that text is nonsensitive. No saved plans, balances, quotes, or other database records are loaded as model context.
 5. For a signed-in user, `lib/assistant-chat.js` separately saves the question and displayed answer in `assistant_messages`, associated with `assistant_conversations`. The browser lists and filters by the authenticated user ID; intended authorization is enforced by the policies in `docs/supabase-assistant-chat.sql`.
 6. Signed-out chat remains in page memory only and sends the current question without saved-history context. The conversation SQL file is a reviewed migration artifact; this repository cannot confirm it has been applied to any Supabase project.
 

@@ -1,5 +1,7 @@
 # Security and data handling
 
+See [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) for the full architecture and API reference. This page focuses on privacy boundaries and security limitations.
+
 This document describes repository behavior, not a live security certification. Live Supabase settings, deployed Vercel configuration, and real-user isolation were not inspected as part of this documentation update.
 
 ## Data locations

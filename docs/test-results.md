@@ -12,12 +12,12 @@ npm ci
 For the site and its Vercel serverless API routes, make a local environment file from the placeholder example, edit it privately, then start Vercel's development server:
 
 ```powershell
-Copy-Item .env.example .env.local
+if (-not (Test-Path .env.local)) { Copy-Item .env.example .env.local }
 notepad .env.local
 npx vercel@latest dev --listen 3000
 ```
 
-The required application environment variable is `GROQ_API_KEY`; `GROQ_MODEL` is optional and defaults in code to `openai/gpt-oss-20b`. Do not paste key values into source code, documentation, chat, screenshots, or Git. `.env.local` is ignored by Git. Supabase's URL and browser-safe publishable key are configured in `js/supabase-config.js`; no Supabase environment variables are read by the static browser code.
+The server-side assistant uses `GROQ_API_KEY`; signed-in saved-chat ownership verification additionally uses `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`. `GROQ_MODEL` is optional and defaults in code to `openai/gpt-oss-20b`. Do not paste values into source code, documentation, chat, screenshots, or Git. `.env.local` is ignored by Git. The static browser client reads its Supabase URL and publishable key from `js/supabase-config.js`; these browser values do not replace server-side authorization or database RLS.
 
 Open `http://localhost:3000`. Local sign-in and account-backed data still depend on the configured Supabase project and its schema, policies, provider settings, and redirect allowlist. The SQL files are review artifacts, not evidence that SQL has been applied.
 
@@ -46,16 +46,16 @@ The Bangladesh Bank fixture under `tests/fixtures/` is saved sample HTML, not a 
 
 This section records the latest run performed during the current documentation audit. It must be refreshed after later code changes; do not treat it as a permanent quality or deployment claim.
 
-Run date: **19 October 2026**. Runtime: **Node.js v24.21.0**, npm v11.19.0.
+Run date: **20 October 2026**. Runtime: **Node.js v24.21.0**, npm v11.19.0.
 
-- `node --test tests/*.test.cjs` — **126 passed, 0 failed**.
-- `git diff --check` — passed. Git printed LF-to-CRLF working-copy notices for edited Markdown files; no whitespace errors were reported.
+- `node --test "tests/*.test.cjs"` — **175 passed, 0 failed, 0 skipped, 0 cancelled**.
+- `git diff --check` — passed. Git printed LF-to-CRLF working-copy notices for some edited Markdown files; no whitespace errors were reported.
 
 The run passed repository tests only. It did not apply SQL, inspect live Supabase/Vercel settings, contact live AI or bank services, or verify a browser/deployment.
 
 ## Deployment review checklist
 
-The repository uses Vercel's `api/` serverless-function convention but has no checked-in `vercel.json`. No active Vercel project, build settings, deployment, domain, or production environment configuration was inspected. Treat these as items to verify, not known-good settings.
+The repository uses Vercel's `api/` serverless-function convention but has no checked-in `vercel.json`. On 20 October 2026, the supplied public site loaded and `/api/exchange-rates` returned a structured response. The Vercel dashboard required sign-in, so active project linkage, deployment commit/build settings, and production environment configuration were not inspected. Treat those settings as items to verify, not known-good values.
 
 1. Confirm the intended Vercel project and repository root with the project owner. Review a preview deployment first. Check that static pages and both `/api` routes are included; do not invent build/output overrides if the project's current settings are unknown.
 2. Set `GROQ_API_KEY` as a private Vercel server environment variable for the environments that should offer remote AI. `GROQ_MODEL` is optional. Never put a Groq key in browser code. Without the key, `/api/assistant` returns a configuration error.

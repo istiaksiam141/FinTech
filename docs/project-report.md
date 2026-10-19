@@ -11,7 +11,7 @@ CampusBridge AI helps students organize their own study-abroad costs and savings
 
 The planner and feature pages call the same deterministic engine in `lib/finance.js`. Numeric financial planning is performed locally. A versioned `sessionStorage` module shares validated plan inputs between same-origin pages in the current browser tab; it is not encrypted or an account backup. Users can explicitly save a copy of plan inputs to Supabase. Signed-in assistant questions and displayed answers are stored separately in Supabase chat tables. The optional report name and manual account labels are not stored in the tab plan state.
 
-The site uses `/api/exchange-rates` and `/api/assistant`. Bangladesh Bank values are reference rates, not payment quotes. Remote assistant requests contain only the submitted question; the Groq key remains server-side. The AI explains but does not produce authoritative financial calculations. No bank account is connected, provider quote is fetched or authenticated, or transfer is initiated.
+The site uses `/api/exchange-rates` and `/api/assistant`. Bangladesh Bank values are reference rates, not payment quotes. Remote assistant requests contain the submitted question; a signed-in user may explicitly opt in to bounded recent messages from the same saved conversation. The Groq key remains server-side. The AI explains but does not produce authoritative financial calculations. No bank account is connected, provider quote is fetched or authenticated, or transfer is initiated.
 
 ## Static pages
 
@@ -31,13 +31,13 @@ The site uses `/api/exchange-rates` and `/api/assistant`. Bangladesh Bank values
 
 ## Calculation and currency scope
 
-All-cost and tuition-only modes, optional BDT study-abroad costs, rate conversions, contribution schedules, roadmap, stress scenarios, and quote ranking are calculated locally by `lib/finance.js`. Only complete 30-day intervals count. The whole-BDT schedule uses the existing final-cycle adjustment. Outputs above the documented BDT limit or invalid calendar inputs are rejected. Scenario calculations use copies of the baseline.
+All-cost and tuition-only modes, optional costs entered in the selected planning currency and converted into the BDT calculation base, contribution schedules, roadmap, stress scenarios, and quote ranking use deterministic local code in `lib/finance.js` and `app.js`. Only complete 30-day intervals count. The whole-BDT schedule uses the existing final-cycle adjustment. Outputs above the documented BDT limit or invalid calendar inputs are rejected. Scenario calculations use copies of the baseline.
 
 Supported destination currencies are USD, EUR, GBP, AUD, JPY, CAD, SEK, SGD, CNH, INR, and LKR. CNH means offshore yuan and is not relabeled as CNY. Bangladesh Bank data is parsed from its dated rate sheet on the server and preserves the official publication date, source, rate units, and retrieval timestamp. The Vercel CDN cache is a best-effort shared regional 24-hour cache, not a global single-fetch guarantee.
 
 ## Security and operational boundaries
 
-The browser stores a validated plan and optional stress-test inputs in tab session storage. Signed-in cloud plans use `saved_plans`; signed-in chats use `assistant_conversations` and `assistant_messages`; the Savings Tracker uses local storage and is not account-synced. Same-origin scripts can access browser storage, so it is not a secure vault. The report is generated locally; report-only student name is not saved. The assistant accepts only a question for Groq, is educational, and is not a personalized financial adviser. Its in-memory rate limiter is per serverless instance, not global.
+The browser stores a validated plan and optional stress-test inputs in tab session storage. Signed-in cloud plans use `saved_plans`; signed-in chats use `assistant_conversations` and `assistant_messages`; the Savings Tracker uses local storage and is not account-synced. Same-origin scripts can access browser storage, so it is not a secure vault. The report is generated locally; report-only student name is not saved. The assistant is educational, not a personalized financial adviser. By default it receives only the current question; a user can consent to recent messages from the same saved chat. Its in-memory rate limiter is per serverless instance, not global.
 
 Manual quotes are validated for fields and freshness, but their source is not authenticated. Although Supabase account features are implemented in source, production Auth settings, schemas, and RLS policies are unverified. The chat migration in `docs/supabase-assistant-chat.sql` is not evidence it has been applied. No provider API, bank connection, or payment execution is implemented. Exchange-rate and savings projections depend on entered data and are not guarantees of funding, admission, visa approval, or payment terms.
 

@@ -1,5 +1,7 @@
 # Financial algorithms
 
+For the complete project architecture, storage, API, and security overview, see [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md).
+
 ## Purpose, scope, and limits
 
 `lib/finance.js` is the source of truth for numeric calculations and financial-input validation. It runs in the browser and returns deterministic results for the same validated inputs and calculation date. The AI assistant supplies general explanations; it is not the calculation engine, does not set authoritative rates, and must not invent a user's financial figures. Selected funding-gap questions are answered locally from the finance engine. Model output is educational text, not financial advice.
@@ -10,9 +12,9 @@ Planning offers two modes. **All Study-Abroad Costs** adds entered tuition, paym
 
 ## Exchange rate
 
-The planner expects `1 unit of destination currency = rate BDT` (for example, BDT per GBP). The rate can be entered manually with a source and timestamp, or fetched on request as an indicative reference. BDT planning uses a fixed same-currency rate of 1 and does not need a foreign rate. Tuition cost in BDT is:
+The planner expects `1 unit of selected planning currency = rate BDT` (for example, BDT per USD). Planning currency is selected separately from destination country and transfer quote currency. The rate can be entered manually with a source and timestamp, or fetched on request as an indicative reference. BDT planning uses a fixed same-currency rate of 1 and does not need a foreign rate. Tuition cost in BDT is:
 
-`tuition × BDT-per-destination-currency rate`
+`tuition × BDT-per-selected-planning-currency rate`
 
 Manually entered rate timestamps must be valid local `YYYY-MM-DDTHH:mm` values and cannot be in the future. Manual rates remain user-provided and unverified. There is no age-based rejection policy for manual rates; students should confirm that the entered quote is still current. Fetched-rate freshness rules are described separately below.
 
@@ -22,7 +24,7 @@ The Vercel function `GET /api/exchange-rates` fetches the [Bangladesh Bank excha
 
 The parser and response validator support the currencies shown in the sheet: USD, EUR, GBP, AUD, JPY, CAD, SEK, SGD, CNH, INR, and LKR. The sheet labels USD/BDT directly and presents the other currencies under “Cross Rates” against taka; each parsed row is therefore recorded as BDT per one unit of its exact `baseCurrency`. This includes LKR, whose value is parsed directly and is never inverted. The planner uses the published **ask** consistently as an estimate of the BDT amount needed to obtain one unit of foreign currency; this is an estimate convention, not a promise of a student's executable exchange price. Bid and ask are both retained in metadata, and USD retains its distinct direct USD/BDT interbank rate type and weighted-average rate (WAR); the other currencies are labeled Bangladesh Bank cross rates. The UI and rate metadata preserve the currency code and rate type. The source provides CNH (offshore yuan); CNY, KRW, and MYR are not part of the supported currency list or represented as official rates. The source explains USD bid/ask represent previous Dhaka-close interbank rates and cross rates use New York and Dhaka closing rates. Bangladesh Bank says the schedule applies to its purchase/sale transactions with the Government and international organizations, so it is not a student's guaranteed bank or payment-provider rate.
 
-The endpoint returns source name and URL, official publication date, server retrieval timestamp, exact base/quote currency codes, rate type, bid, ask, and USD WAR. It returns a 502 error on upstream failures or malformed data, with no invented fallback. Successful `GET` responses use `Cache-Control: public, max-age=0, s-maxage=86400, stale-if-error=604800`: Vercel's CDN keeps a successful rate response unchanged for 24 hours, then may serve that last successful response for up to seven more days if refreshing the upstream source fails. A stale fallback retains its original publication and retrieval dates; the client marks it stale from those dates and/or `x-vercel-cache: STALE`, and stale rates cannot be applied as current. The browser also reuses a just-fetched response without sending another request during its 24-hour retrieval window. After the fresh TTL, Vercel revalidates on a request. The client marks data stale after either five days without a newer official sheet (an application assumption allowing weekends/holidays) or 24 hours without a successful server retrieval. Errors use `no-store`, so failed upstream responses are not cached in place of valid rate data. Students can always enter a sourced manual rate; fetching never overwrites it automatically. Static local previews without Vercel's `/api` route will show an API error and retain manual entry.
+The endpoint returns source name and URL, official publication date, server retrieval timestamp, exact base/quote currency codes, rate type, bid, ask, and USD WAR. It returns a 502 error on upstream failures or malformed data, with no invented fallback. Successful `GET` responses use `Cache-Control: public, max-age=0, s-maxage=86400`: Vercel's shared cache TTL is 24 hours, best-effort and potentially regional. The endpoint does not set `stale-if-error` and does not provide a durable last-good store. The browser also reuses a successful response during its 24-hour retrieval window. The client marks data stale after either five days without a newer official sheet or 24 hours without a successful retrieval, and also respects an explicit stale flag or `x-vercel-cache: STALE`. Stale official rates cannot be applied as current. Errors use `no-store`; a failed refresh leaves the browser-held prior response and separately entered manual rate unchanged. Static local previews without Vercel's `/api` route will show an API error and retain manual entry.
 
 This uses Vercel's built-in CDN response cache and adds no storage service or package. Vercel caches Function responses by region and may evict them before their TTL; therefore, the 24-hour TTL is a best-effort shared cache per region, not a globally atomic single-fetch guarantee. If a single global cache entry across all regions is required, add a shared remote store such as managed Redis or a Vercel Edge Config write path after approving that infrastructure and its credentials/costs.
 
@@ -31,7 +33,7 @@ The rate is used at full numeric precision and formatted for display only. The B
 ## Tuition gap and usable funds
 
 - `tuitionBdt = tuition × enteredRate`
-- Optional student-entered one-time estimates (visa, applications, flights, insurance, document preparation, accommodation deposit, initial setup, and other one-time costs) are entered in BDT and summed once.
+- Optional student-entered one-time estimates (visa, applications, flights, insurance, document preparation, accommodation deposit, initial setup, and other one-time costs) are entered in the selected planning currency, converted to BDT using the same selected rate in `app.js`, and summed once.
 - Optional initial living costs = (`monthlyRent + monthlyFood + monthlyTransport + monthlyUtilities + monthlyOtherLiving`) × the explicitly entered whole-month planning period. If any monthly category is positive, a period is required. Blank fields contribute zero; no cost estimate or period is assumed.
 - `requiredFunds = tuitionBdt + payment/transferFees + categorizedOneTimeCosts + initialLivingCosts`
 - `usableFunds = max(0, savings − protectedEmergencyFund − committedFunds)`
@@ -44,7 +46,7 @@ The rate is used at full numeric precision and formatted for display only. The B
 - `projectedSavingsCapacity = max(0, monthlySurplus) × contributionDates`
 - `projectedShortfall = max(0, fundingGap − projectedSavingsCapacity)`
 
-The expanded study-cost fields are optional BDT estimates entered by the student. The planner shows the BDT totals and, only from the already validated current exchange rate, their destination-currency equivalents (`BDT amount ÷ BDT-per-destination-currency rate`). These equivalents are planning conversions, not provider or university quotes. Blank optional amounts are omitted from the calculation; no cost or living-cost period is invented. A positive monthly living-cost category requires an explicitly entered whole-month period. Existing payment/transfer fees remain distinct from the categorized cost fields to avoid adding one field's total twice.
+The expanded study-cost fields are optional costs entered by the student in the selected planning currency. The planner converts them to BDT using the validated rate for that planning currency before including them in financial calculations. Destination country and planning currency are separate selections, so these calculations do not assume that the planning currency is the destination country's currency. Blank optional amounts are omitted; no cost or living-cost period is invented. A positive monthly living-cost category requires an explicitly entered whole-month period. Existing payment/transfer fees remain distinct from the categorized cost fields to avoid adding one field's total twice.
 
 Deadlines must be real calendar dates in `YYYY-MM-DD` form; impossible dates such as February 30 are rejected. The planner compares local calendar dates, so daylight-saving transitions do not add or remove a deadline day. Today and past dates are rejected. Only complete 30-day intervals count, using `floor(calendarDaysToDeadline ÷ 30)`.
 
@@ -72,7 +74,7 @@ These checks validate the fields the student typed. They do **not** authenticate
 
 ## Validation
 
-Currency and destination must match one of the supported destinations: USD, EUR, GBP, AUD, JPY, CAD, SEK, SGD, CNH, INR, or LKR, with BDT as the home currency. CNH is kept distinct from CNY. Monetary inputs must be finite, non-negative, within the application safety limit, and tuition/payment principal greater than zero. The rate must be positive and timestamped. Deadlines in the past or today are rejected.
+The planning currency must be one of BDT, USD, EUR, GBP, AUD, JPY, CAD, SEK, SGD, CNH, INR, or LKR. Destination corridors and quote recipient currencies are selected separately; CNH is kept distinct from CNY. The finance calculation normalizes financial amounts to BDT and does not add incompatible currencies without conversion. Monetary inputs must be finite, non-negative, within the application safety limit, and tuition/payment principal greater than zero. The rate must be positive and timestamped. Deadlines in the past or today are rejected.
 
 ## Multi-page plan state
 
