@@ -354,7 +354,7 @@ body[data-page="home"] .homeNotice p{margin-top:6px;color:#64655e}
 body[data-page="planner"]{background:#f8f4eb}
 body[data-page="planner"] #planner.section{padding-top:130px}
 body[data-page="planner"] .sectionHead{max-width:930px;margin-bottom:44px}
-body[data-page="planner"] .sectionHead h2{margin:13px 0 14px;font-size:clamp(3.2rem,4.2vw,4.1rem)}
+body[data-page="planner"] #planner>.wrap>.sectionHead h2{margin:13px 0 14px;font-family:Fraunces,Georgia,serif;font-size:clamp(2rem,4vw,3.3rem)}
 body[data-page="planner"] .sectionHead p{max-width:930px;font-size:1rem;line-height:1.8}
 body[data-page="planner"] .plannerGrid{grid-template-columns:minmax(0,1.11fr) minmax(0,1fr);gap:20px}
 body[data-page="planner"] .formCard{padding:36px;border-radius:24px}
@@ -869,7 +869,8 @@ body[data-page="planner"] #profileForm .planningModeCard strong{font-family:Manr
 /* Shared type system: keep large heading sizes and treatments intact */
 body[data-page]{font-family:'DM Sans',sans-serif}
 body[data-page] :is(button,input,select,textarea){font-family:'DM Sans',sans-serif}
-body[data-page] :is(h1,h2,h3,h4,h5,legend,summary,.calendarMonth){font-family:Manrope,sans-serif}
+body[data-page] :is(h1,.sectionHead h2,.requirementsAside h2){font-family:Fraunces,Georgia,serif}
+body[data-page] :is(h2,h3,h4,h5,legend,summary,.calendarMonth){font-family:Manrope,sans-serif}
 body[data-page] .brand{font-family:Manrope,sans-serif}
 body[data-page] .transferPageQuotes .providerNameLabel input{font-family:'DM Sans',sans-serif}
 
@@ -895,3 +896,8 @@ body[data-page="planner"] .plannerOutcomeNote{margin-top:10px;color:#687168;font
 :root{color-scheme:light;--ink:#1a1a18;--muted:#606b63;--quiet:#77776f;--navy:#f5f3ec;--panel:#fffefa;--panel2:#f8f7f2;--line:#e7e5dc;--cyan:#267357;--mint:#8fc6a5;--gold:#c9a969}
 body[data-page]{background-color:#f5f3ec;color:var(--ink)}
 body[data-page] .eyebrow{color:#267357}
+body[data-page]{display:flex;min-height:100vh;flex-direction:column}
+body[data-page] main{flex:1 0 auto}
+body[data-page] .footer{flex-shrink:0}
+body[data-page="roadmap"] .pageHero,
+body[data-page="stress"] .pageHero{min-height:0}

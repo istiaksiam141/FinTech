@@ -74,16 +74,24 @@ test('planner form uses project fonts without changing its large page headings',
   assert.doesNotMatch(css, /body\[data-page="planner"\] #planner(?: h1| h2)/, 'large planner page headings remain outside the form typography override');
   assert.match(css, /body\[data-page\]\{font-family:'DM Sans',sans-serif\}/, 'every page uses DM Sans for body text');
   assert.match(css, /body\[data-page\] :is\(button,input,select,textarea\)\{font-family:'DM Sans',sans-serif\}/, 'interactive controls use DM Sans on every page');
-  assert.match(css, /body\[data-page\] :is\(h1,h2,h3,h4,h5,legend,summary,\.calendarMonth\)\{font-family:Manrope,sans-serif\}/, 'all headings use Manrope while the existing size and display rules remain untouched');
-  assert.doesNotMatch(css, /Fraunces/, 'the former display font no longer overrides shared heading styles');
+  assert.match(css, /body\[data-page\] :is\(h1,\.sectionHead h2,\.requirementsAside h2\)\{font-family:Fraunces,Georgia,serif\}/, 'all large page and section titles use the display font');
+  assert.match(css, /body\[data-page\] :is\(h2,h3,h4,h5,legend,summary,\.calendarMonth\)\{font-family:Manrope,sans-serif\}/, 'supporting headings retain the project heading font');
+  assert.equal((css.match(/Fraunces/g) || []).length, 2, 'Fraunces is used only for the shared display titles and planner title override');
   assert.doesNotMatch(css, /Plus Jakarta Sans/, 'the unused font no longer overrides the shared type system');
   for (const file of routes) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.doesNotMatch(html, /family=Plus\+Jakarta\+Sans/, `${file} does not download an unused font`);
-    assert.doesNotMatch(html, /family=Fraunces/, `${file} does not download the unused display font`);
+    assert.match(html, /family=Fraunces:/, `${file} loads the display font used by large titles`);
     assert.match(html, /family=DM\+Sans/, `${file} loads the shared body font`);
     assert.match(html, /family=Manrope/, `${file} loads the shared heading font`);
   }
+});
+
+test('planner section heading uses the display font at the shared section-heading scale', () => {
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  const planner = fs.readFileSync(path.join(root, 'planner.html'), 'utf8');
+  assert.match(css, /body\[data-page="planner"\] #planner>\.wrap>\.sectionHead h2\{margin:13px 0 14px;font-family:Fraunces,Georgia,serif;font-size:clamp\(2rem,4vw,3\.3rem\)\}/);
+  assert.match(planner, /family=Fraunces:/, 'the planner loads the display font used by the reference title');
 });
 
 test('all pages share the account page warm ivory and evergreen theme', () => {
@@ -92,6 +100,15 @@ test('all pages share the account page warm ivory and evergreen theme', () => {
   assert.match(css, /body\[data-page\]\{background-color:#f5f3ec;color:var\(--ink\)\}/);
   assert.match(css, /body\[data-page\] \.eyebrow\{color:#267357\}/);
   assert.match(css, /\.accountStory\{[^}]*background:radial-gradient[^}]*linear-gradient\(145deg,#0b514b,#073e3d 72%,#0b4a43\)/, 'the account story panel remains a dark green accent');
+});
+
+test('every page keeps the footer at the viewport bottom when content is short', () => {
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(css, /body\[data-page\]\{display:flex;min-height:100vh;flex-direction:column\}/);
+  assert.match(css, /body\[data-page\] main\{flex:1 0 auto\}/);
+  assert.match(css, /body\[data-page\] \.footer\{flex-shrink:0\}/);
+  assert.match(css, /body\[data-page="roadmap"\] \.pageHero,\s*body\[data-page="stress"\] \.pageHero\{min-height:0\}/);
+  assert.match(css, /\.pageHero\{min-height:75vh;padding:140px 0 72px\}/, 'other feature pages retain their shared hero spacing');
 });
 
 test('each dependent page declares every static element its module initializes', () => {
