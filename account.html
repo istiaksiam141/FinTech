@@ -4,6 +4,9 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Create or access your CampusBridge student account and manage cloud-saved plans.">
   <title>Student Account — CampusBridge AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles/site.css">
 </head>
 <body data-page="account">
@@ -14,7 +17,6 @@
         <div class="accountMain">
           <span class="eyebrow">Student account</span><h1>Welcome <em>back.</em></h1>
           <p class="lead">Sign in to access your cloud-saved plans. You can keep planning without an account.</p>
-          <nav class="accountJump" aria-label="Account options"><a href="#login-form">Sign in</a><a href="#signup-form">Create an account</a><a href="#reset-request-form">Reset password</a></nav>
           <p id="account-message" class="pageSummary" role="status" aria-live="polite" hidden></p>
           <section id="auth-panel" class="surface accountPanel">
             <section id="mfa-challenge-panel" class="accountForm mfaPanel" aria-labelledby="mfa-challenge-title" hidden>
@@ -25,26 +27,25 @@
             </section>
             <div class="accountGrid" id="account-auth-options">
               <form id="login-form" class="surface accountForm">
-                <h2>Sign in</h2><label for="login-email">Email</label><input id="login-email" type="email" autocomplete="username" required maxlength="254">
-                <label for="login-password">Password</label><input id="login-password" type="password" autocomplete="current-password" required>
-                <button class="button primary" type="submit">Log in</button><button id="google-signin" class="button" type="button">Continue with Google</button>
+                <h2>Sign in</h2><label for="login-email">Email</label><input id="login-email" type="email" autocomplete="username" placeholder="Enter your email" required maxlength="254">
+                <div class="accountPasswordField"><label for="login-password">Password</label><input id="login-password" type="password" autocomplete="current-password" placeholder="Enter your password" required><a href="#reset-request-form">Forgot your password?</a></div>
+                <button class="button primary" type="submit">Log in</button>
+                <div class="accountFormDivider" aria-hidden="true"><span>or</span></div>
+                <button id="google-signin" class="button" type="button"><span class="googleMark" aria-hidden="true">G</span>Continue with Google</button>
+                <p class="accountFormSwitch">New to CampusBridge? <a href="#signup-form">Create an account</a></p>
               </form>
-              <details class="accountSecondary" id="signup-options">
-                <summary>Create an account</summary>
-                <form id="signup-form" class="surface accountForm">
-                  <h2>Create an account</h2><label for="signup-email">Email</label><input id="signup-email" type="email" autocomplete="email" required maxlength="254">
-                  <label for="signup-password">Password</label><input id="signup-password" type="password" autocomplete="new-password" minlength="8" required>
-                  <label for="signup-confirm-password">Confirm password</label><input id="signup-confirm-password" type="password" autocomplete="new-password" minlength="8" required>
-                  <button class="button primary" type="submit">Sign up</button>
-                </form>
-              </details>
+              <form id="signup-form" class="surface accountForm" hidden>
+                <h2>Create your account</h2><p class="accountFormIntro">Save your plans and return to them whenever you need.</p>
+                <label for="signup-email">Email</label><input id="signup-email" type="email" autocomplete="email" required maxlength="254">
+                <label for="signup-password">Password</label><input id="signup-password" type="password" autocomplete="new-password" minlength="8" required>
+                <label for="signup-confirm-password">Confirm password</label><input id="signup-confirm-password" type="password" autocomplete="new-password" minlength="8" required>
+                <button class="button primary" type="submit">Create account</button>
+                <p class="accountFormSwitch">Already have an account? <a href="#login-form">Sign in</a></p>
+              </form>
             </div>
-            <details class="accountSecondary resetRequestDetails">
-              <summary>Forgot your password?</summary>
-              <form id="reset-request-form" class="surface accountForm resetForm"><h2>Reset your password</h2><label for="reset-email">Account email</label><input id="reset-email" type="email" autocomplete="email" required maxlength="254"><button class="button" type="submit">Email me a reset link</button></form>
-            </details>
+            <form id="reset-request-form" class="surface accountForm resetForm" hidden><h2>Reset your password</h2><p class="accountFormIntro">Enter the email linked to your account and we’ll send a secure reset link.</p><label for="reset-email">Account email</label><input id="reset-email" type="email" autocomplete="email" required maxlength="254"><button class="button primary" type="submit">Send reset link</button><p class="accountFormSwitch">Remembered your password? <a href="#login-form">Back to sign in</a></p></form>
             <form id="recovery-complete-form" class="surface accountForm resetForm" hidden><h2>Choose a new password</h2><label for="new-password">New password</label><input id="new-password" type="password" autocomplete="new-password" minlength="8" required><label for="new-password-confirm">Confirm new password</label><input id="new-password-confirm" type="password" autocomplete="new-password" minlength="8" required><button class="button primary" type="submit">Update password</button></form>
-            <p class="small muted accountConfirmNote">Email confirmation and password reset are handled by Supabase. Use the same email to sign in after confirming.</p>
+            <p class="small muted accountConfirmNote">Email verification and password recovery are handled securely.</p>
           </section>
           <p class="small muted accountPrivacyLink">Cloud saving stores selected plan inputs in Supabase. <a href="/privacy.html">Read the privacy details.</a> Clearing local plan data does not delete cloud copies.</p>
         </div>

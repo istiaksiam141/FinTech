@@ -142,8 +142,11 @@ test('account route exposes email, OAuth, recovery, and explicit cloud-plan acti
   const html = fs.readFileSync(path.join(root, 'account.html'), 'utf8');
   for (const id of ['signup-form', 'login-form', 'google-signin', 'reset-request-form', 'recovery-complete-form', 'cloud-save-form', 'cloud-plan-list', 'mfa-challenge-form', 'mfa-enroll-form', 'mfa-disable-form', 'mfa-qr-code']) assert.ok(html.includes(`id="${id}"`), `account page is missing #${id}`);
   assert.match(html, /class="accountLayout"[\s\S]*class="accountMain"[\s\S]*class="accountStory"/, 'account access uses a split-panel layout');
-  assert.match(html, /<details class="accountSecondary" id="signup-options">[\s\S]*id="signup-form"/, 'sign-up remains available without crowding the primary sign-in form');
-  assert.match(html, /<details class="accountSecondary resetRequestDetails">[\s\S]*id="reset-request-form"/, 'password recovery remains directly accessible from its disclosure');
+  assert.match(html, /fonts\.googleapis\.com\/css2\?family=DM\+Sans:[^"]*Manrope:/, 'the account page loads its body and heading font families');
+  assert.doesNotMatch(html, /<details\b/, 'account forms do not use expand/collapse disclosures');
+  assert.match(html, /id="login-form"[\s\S]*href="#reset-request-form"[\s\S]*href="#signup-form"/, 'sign-in offers password recovery and account creation below the form controls');
+  assert.match(html, /id="signup-form"[^>]*hidden/, 'the account-creation view starts hidden and can be switched into without expanding a disclosure');
+  assert.match(html, /id="reset-request-form"[^>]*hidden/, 'the password-recovery view starts hidden and can be switched into without expanding a disclosure');
   assert.match(html, /\/lib\/mfa-flow\.js/);
   const account = fs.readFileSync(path.join(root, 'js/account-page.js'), 'utf8');
   for (const method of ['signUp(', 'signInWithPassword(', 'signInWithOAuth(', 'resetPasswordForEmail(', 'updateUser({ password']) assert.ok(account.includes(method), `account module is missing ${method}`);
@@ -153,6 +156,11 @@ test('account route exposes email, OAuth, recovery, and explicit cloud-plan acti
   assert.match(account, /security\.status !== "ready"/);
   assert.match(account, /mfa\.verifyEnrollment/);
   assert.match(account, /mfa\.disable/);
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(css, /\.accountLayout\{font-family:'DM Sans',sans-serif\}/, 'account copy uses the project body font');
+  assert.match(css, /\.accountMain \.accountForm h2\{[^}]*font-family:Manrope,sans-serif/, 'account form headings use the project heading font');
+  assert.match(css, /\.accountStory h2\{[^}]*font-family:Manrope,sans-serif/, 'the account story heading uses the project heading font');
+  assert.match(css, /\.accountHero h1\{/, 'the Welcome back heading keeps its existing display typography');
 });
 
 test('feature pages reuse the finance engine and assistant remote request contains only question', () => {

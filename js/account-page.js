@@ -9,12 +9,34 @@
   const say = (message, kind = "info") => { status.hidden = false; status.textContent = message; status.dataset.kind = kind; };
   const setBusy = (form, busy) => { form.querySelectorAll("button[type=submit]").forEach(button => { button.disabled = busy; button.dataset.originalText ||= button.textContent; button.textContent = busy ? "Please wait…" : button.dataset.originalText; }); };
   const accountFormHashes = new Set(["#signup-form", "#login-form", "#reset-request-form"]);
+  const accountFormIds = [...accountFormHashes].map(hash => hash.slice(1));
+  let activeAccountForm = accountFormIds.includes(location.hash.slice(1)) ? location.hash.slice(1) : "login-form";
+  const accountIntros = {
+    "login-form": ["Welcome ", "back.", "Sign in to access your cloud-saved plans. You can keep planning without an account."],
+    "signup-form": ["Create ", "your account.", "Save your plans and return to them whenever you need."],
+    "reset-request-form": ["Reset ", "your password.", "We’ll email you a secure link to choose a new password."],
+    recovery: ["Choose ", "a new password.", "Set a new password to finish recovering your account."]
+  };
+  function setAccountIntro(view) {
+    const [prefix, emphasis, description] = accountIntros[view] || accountIntros["login-form"];
+    const heading = document.querySelector(".accountHero h1");
+    heading.firstChild.textContent = prefix;
+    heading.querySelector("em").textContent = emphasis;
+    document.querySelector(".accountHero .lead").textContent = description;
+  }
+  function showAccountForm(formId) {
+    activeAccountForm = accountFormIds.includes(formId) ? formId : "login-form";
+    for (const id of accountFormIds) byId(id).hidden = id !== activeAccountForm;
+    setAccountIntro(activeAccountForm);
+  }
   function scrollToAccountHash() {
-    if (!accountFormHashes.has(location.hash)) return;
+    if (!accountFormHashes.has(location.hash)) {
+      if (!recoveryActive) showAccountForm(activeAccountForm);
+      return;
+    }
     requestAnimationFrame(() => {
       const target = byId(location.hash.slice(1));
-      const disclosure = target?.closest("details");
-      if (disclosure) disclosure.open = true;
+      showAccountForm(target?.id);
       if (target && !target.closest("[hidden]")) target.scrollIntoView({ block: "start" });
     });
   }
@@ -37,13 +59,13 @@
     const signedIn = Boolean(session?.user), verified = security.status === "ready";
     const requiringFactor = security.status === "challenge-required";
     const unavailable = security.status === "error" || security.status === "unsupported-factor";
-    // Keep the account forms available after sign-in so the account-page jump links
-    // and direct #signup-form / #login-form / #reset-request-form URLs remain usable.
     authPanel.hidden = false;
     cloudPanel.hidden = !signedIn || !verified;
-    authOptions.hidden = signedIn && (requiringFactor || unavailable || security.status === "checking");
+    authOptions.hidden = recoveryActive || (signedIn && (requiringFactor || unavailable || security.status === "checking"));
     challengePanel.hidden = !requiringFactor;
     recoveryForm.hidden = !recoveryActive;
+    if (recoveryActive) setAccountIntro("recovery");
+    else showAccountForm(activeAccountForm);
     document.querySelectorAll("[data-auth-logout]").forEach(button => { button.hidden = !signedIn; });
     updateMfaSettings();
     scrollToAccountHash();
