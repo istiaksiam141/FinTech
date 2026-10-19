@@ -56,7 +56,9 @@ test('shared navigation points to every migrated page and preserves real static 
   assert.match(authStatus, /document\.body\.dataset\.page === "account"\) account\.setAttribute\("aria-current", "page"\)/, 'Account keeps its active-page indicator inside the profile menu');
   assert.match(site, /nav\.append\(accountStatus, clear\)/, 'the existing clear-plan control remains in the shared header');
   const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
-  assert.match(css, /\.topbar \.navlinks>\.aiNavPill:not\(\[aria-current=page\]\)\{border-color:rgba\(166,230,206,\.4\);background:rgba\(166,230,206,\.08\)\}/, 'AI Assistant retains its restrained brand-accent treatment');
+  assert.match(css, /\.topbar \.navlinks>\.aiNavPill:not\(\[aria-current=page\]\)\{border-color:rgba\(163,177,255,\.42\);background:rgba\(108,125,205,\.14\)/, 'AI Assistant uses a restrained blue-indigo accent');
+  assert.match(css, /\.topbar \.navlinks>\.aiNavPill\[aria-current=page\]\{border-color:#dce3ff;background:#dce3ff;color:#2d3a75/);
+  assert.match(css, /\.topbar \.navlinks>\.aiNavPill:focus-visible\{outline:3px solid #c5d0ff/);
   assert.match(css, /\.topbar \.navlinks>a\.navPill:focus-visible/);
 });
 
