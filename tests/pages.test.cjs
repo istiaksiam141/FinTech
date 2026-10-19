@@ -63,6 +63,15 @@ test('shared navigation points to every migrated page and preserves real static 
   assert.match(css, /\.navAuthSlot \.profileDropdown a\[aria-current=page\]\{border-color:#dcebe0;background:#e7f1e9;color:#124f3b\}/, 'the active My Account link keeps its separate pale-sage state');
 });
 
+test('session storage disclosure appears beside the planner form only', () => {
+  const site = fs.readFileSync(path.join(root, 'js/site.js'), 'utf8');
+  assert.match(site, /if \(page === "planner"\) \{\s*const plannerGrid = document\.querySelector\("#planner \.plannerGrid"\)/);
+  assert.match(site, /plannerGrid\.before\(disclosure\)/);
+  assert.doesNotMatch(site, /main\.prepend\(disclosure\)/, 'the disclosure is no longer prepended to every page');
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(css, /\.storageDisclosure\{margin:0 0 18px;padding:12px 15px/);
+});
+
 test('Clear Plan uses an accessible dialog and only explicit confirmation removes the current plan', () => {
   const site = fs.readFileSync(path.join(root, 'js/site.js'), 'utf8');
   assert.match(site, /createElement\("dialog"\); dialog\.id = "clear-plan-dialog"; dialog\.className = "clearPlanDialog"/);

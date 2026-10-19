@@ -281,7 +281,7 @@ h1,h2,h3,.hero h1,.hero h2,.hero h3{font-family:Manrope,sans-serif}
   .topbar .navlinks a{padding:12px}
   .topbar .burger{display:block}
 }
-.storageDisclosure{margin-top:100px;border-color:#d9e5de;background:#edf4ef;color:#4d5751;line-height:1.45}
+.storageDisclosure{margin:0 0 18px;padding:12px 15px;border:1px solid #d9e5de;border-radius:12px;background:#edf4ef;color:#4d5751;font-size:.82rem;line-height:1.5;text-align:left}
 .storageDisclosure a{color:#167656}
 .pageHero{padding:62px 0 72px}
 .hero{padding:0 0 70px}
@@ -333,7 +333,6 @@ body[data-page="home"] .homeNotice p{margin-top:6px;color:#64655e}
 .navlinks>.clearPlanButton:hover{border-color:#e8f5ef;background:#e8f5ef}
 .burger{border-color:rgba(255,255,255,.38);color:#fff}
 body[data-page="planner"]{background:#f8f4eb}
-body[data-page="planner"] .storageDisclosure{display:none}
 body[data-page="planner"] #planner.section{padding-top:130px}
 body[data-page="planner"] .sectionHead{max-width:930px;margin-bottom:44px}
 body[data-page="planner"] .sectionHead h2{margin:13px 0 14px;font-size:clamp(3.2rem,4.2vw,4.1rem)}
@@ -368,8 +367,6 @@ body[data-page="planner"] .planningModeNote{padding:12px 14px;border-radius:11px
   body[data-page="planner"] .resultsCard{padding:21px}
   body[data-page="planner"] .planningModeCard{min-height:0}
 }
-@media(max-width:1200px){.storageDisclosure{margin-top:78px}}
-@media(max-width:640px){.storageDisclosure{margin-top:72px}}
 
 /* Shared grouped navigation */
 .navlinks>.navGroup{position:relative;flex:none}

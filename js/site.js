@@ -134,11 +134,14 @@
     footer.querySelector(".footerBrandSlot").replaceWith(createBrand());
     footerTarget.replaceWith(footer);
   }
-  const main = document.getElementById("main-content") || document.querySelector("main");
-  if (main) {
-    const disclosure = document.createElement("aside"); disclosure.className = "storageDisclosure"; disclosure.setAttribute("role", "note");
-    disclosure.append(document.createTextNode("A valid plan is stored in this browser tab's session storage so your tools share the same inputs. It is not an account backup. "));
-    const link = document.createElement("a"); link.href = "/privacy.html"; link.textContent = "Storage details"; disclosure.append(link); main.prepend(disclosure);
+  if (page === "planner") {
+    const plannerGrid = document.querySelector("#planner .plannerGrid");
+    if (plannerGrid) {
+      const disclosure = document.createElement("aside"); disclosure.className = "storageDisclosure"; disclosure.setAttribute("role", "note");
+      disclosure.append(document.createTextNode("A valid plan is stored in this browser tab's session storage so your tools share the same inputs. It is not an account backup. "));
+      const link = document.createElement("a"); link.href = "/privacy.html"; link.textContent = "Storage details"; disclosure.append(link);
+      plannerGrid.before(disclosure);
+    }
   }
   const updateHeader = () => document.getElementById("topbar")?.classList.toggle("scrolled", window.scrollY > 12);
   window.addEventListener("scroll", updateHeader, { passive: true }); updateHeader();
