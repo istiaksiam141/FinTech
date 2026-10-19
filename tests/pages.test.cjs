@@ -141,6 +141,9 @@ test('shared authentication controls load after the Supabase client on every pag
 test('account route exposes email, OAuth, recovery, and explicit cloud-plan actions', () => {
   const html = fs.readFileSync(path.join(root, 'account.html'), 'utf8');
   for (const id of ['signup-form', 'login-form', 'google-signin', 'reset-request-form', 'recovery-complete-form', 'cloud-save-form', 'cloud-plan-list', 'mfa-challenge-form', 'mfa-enroll-form', 'mfa-disable-form', 'mfa-qr-code']) assert.ok(html.includes(`id="${id}"`), `account page is missing #${id}`);
+  assert.match(html, /class="accountLayout"[\s\S]*class="accountMain"[\s\S]*class="accountStory"/, 'account access uses a split-panel layout');
+  assert.match(html, /<details class="accountSecondary" id="signup-options">[\s\S]*id="signup-form"/, 'sign-up remains available without crowding the primary sign-in form');
+  assert.match(html, /<details class="accountSecondary resetRequestDetails">[\s\S]*id="reset-request-form"/, 'password recovery remains directly accessible from its disclosure');
   assert.match(html, /\/lib\/mfa-flow\.js/);
   const account = fs.readFileSync(path.join(root, 'js/account-page.js'), 'utf8');
   for (const method of ['signUp(', 'signInWithPassword(', 'signInWithOAuth(', 'resetPasswordForEmail(', 'updateUser({ password']) assert.ok(account.includes(method), `account module is missing ${method}`);

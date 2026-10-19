@@ -121,6 +121,7 @@ test('account form links remain available after login and direct hashes are rest
   }
   assert.match(page, /authPanel\.hidden = false/);
   assert.match(page, /window\.addEventListener\("hashchange", scrollToAccountHash\)/);
+  assert.match(page, /const disclosure = target\?\.closest\("details"\);\s*if \(disclosure\) disclosure\.open = true;/, 'direct links open their collapsed account form');
   assert.match(page, /target\.scrollIntoView\(\{ block: "start" \}\)/);
   assert.match(page, /If the email belongs to an account, Supabase will send a password-reset link\./, 'reset requests do not reveal whether an address is registered');
 });
