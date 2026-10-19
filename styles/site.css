@@ -657,6 +657,10 @@ body[data-page="planner"] .resultDetails .metric strong{font-size:1rem;color:#34
 body:before{background-image:linear-gradient(rgba(120,139,119,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(120,139,119,.025) 1px,transparent 1px)}
 .pageHero .lead{color:#64655e}
 .featureForm label{color:#4d5751}
+.assistantPrivacyNotice .assistantPrivacySummary{margin:0;color:#514b3d;font-size:.82rem;line-height:1.55}
+.assistantPrivacyDetails{padding-top:2px}
+.assistantPrivacyDetails summary{color:#73551e;font-size:.78rem;font-weight:700;cursor:pointer}
+.assistantPrivacyDetails p{margin:8px 0 0;font-size:.78rem;line-height:1.6}
 .readinessReportPage.isSampleReport{border-top:4px solid #8fc6a5}
 .sampleReportBadge{display:inline-flex;margin:0 0 10px;padding:5px 10px;border:1px solid #d3e8d9;border-radius:999px;background:#edf6ef;color:#256548;font-size:.76rem;font-weight:700}
 .sampleReportDisclaimer{padding:12px 14px;border:1px solid #eadfbe;border-radius:10px;background:#fbf7eb;color:#695729}
@@ -868,3 +872,8 @@ body[data-page] :is(button,input,select,textarea){font-family:'DM Sans',sans-ser
 body[data-page] :is(h3,h4,h5,legend,summary,.calendarMonth){font-family:Manrope,sans-serif}
 body[data-page] .brand{font-family:Manrope,sans-serif}
 body[data-page] .transferPageQuotes .providerNameLabel input{font-family:'DM Sans',sans-serif}
+
+/* Shared warm ivory and evergreen theme */
+:root{color-scheme:light;--ink:#1a1a18;--muted:#606b63;--quiet:#77776f;--navy:#f5f3ec;--panel:#fffefa;--panel2:#f8f7f2;--line:#e7e5dc;--cyan:#267357;--mint:#8fc6a5;--gold:#c9a969}
+body[data-page]{background-color:#f5f3ec;color:var(--ink)}
+body[data-page] .eyebrow{color:#267357}

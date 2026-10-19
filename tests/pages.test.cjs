@@ -57,6 +57,14 @@ test('planner form uses project fonts without changing its large page headings',
   }
 });
 
+test('all pages share the account page warm ivory and evergreen theme', () => {
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(css, /:root\{color-scheme:light;--ink:#1a1a18;--muted:#606b63;--quiet:#77776f;--navy:#f5f3ec;--panel:#fffefa;--panel2:#f8f7f2;--line:#e7e5dc;--cyan:#267357;--mint:#8fc6a5;--gold:#c9a969\}/);
+  assert.match(css, /body\[data-page\]\{background-color:#f5f3ec;color:var\(--ink\)\}/);
+  assert.match(css, /body\[data-page\] \.eyebrow\{color:#267357\}/);
+  assert.match(css, /\.accountStory\{[^}]*background:radial-gradient[^}]*linear-gradient\(145deg,#0b514b,#073e3d 72%,#0b4a43\)/, 'the account story panel remains a dark green accent');
+});
+
 test('each dependent page declares every static element its module initializes', () => {
   const modules = [
     ['roadmap.html', 'js/roadmap-page.js'], ['stress-tests.html', 'js/stress-tests-page.js'],
