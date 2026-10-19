@@ -75,7 +75,7 @@ test('saved conversation consent is off by default and queries only the current 
 });
 
 test('consented history is loaded server-side in chronological order and current question appears once', async () => {
-  const followUp = 'What amount did I just tell you?';
+  const followUp = 'Can you explain the second point?';
   const priorMessages = [
     { id: '00000001-23ef-43b8-9a31-2c60c1eb9a88', role: 'user', content: 'My university tuition is 5000 USD.', created_at: '2026-10-18T00:00:00Z' },
     { id: '00000002-23ef-43b8-9a31-2c60c1eb9a88', role: 'assistant', content: 'Thanks. Is that the full annual tuition or one semester?', created_at: '2026-10-18T00:00:01Z' },
@@ -93,6 +93,53 @@ test('consented history is loaded server-side in chronological order and current
   ]);
   assert.equal(capture.request.messages.filter(message => message.role === 'user' && message.content === followUp).length, 1);
   assert.equal(mock.calls.length, 4);
+});
+
+test('consented tuition follow-ups use the latest authorized user fact despite intervening assistant messages', async () => {
+  const priorMessages = [
+    { id: '00000001-23ef-43b8-9a31-2c60c1eb9a88', role: 'user', content: 'My university tuition is 5000 USD.', created_at: '2026-10-18T00:00:00Z' },
+    { id: '00000002-23ef-43b8-9a31-2c60c1eb9a88', role: 'assistant', content: 'I think your tuition was 700 USD. Open the planner to review your funding gap.', created_at: '2026-10-18T00:00:01Z' }
+  ];
+  for (const followUp of ['How much is my tuition fee?', 'What amount did I just tell you?']) {
+    const mock = makeFetch({ priorMessages, latestContent: followUp });
+    let groqCalls = 0;
+    const handler = Assistant.createAssistantHandler({ env: ENV, fetchImpl: mock.fetchImpl, createClient: () => ({ chat: { completions: { create: async () => { groqCalls += 1; return { choices: [{ message: { content: 'incorrect model result' } }] }; } } } }) });
+    const result = await invoke(handler, chatRequest({ includeHistory: true, question: followUp }));
+    assert.deepEqual(result.body, { answer: 'Your university tuition fee is $5,000 USD.', incomplete: false });
+    assert.equal(groqCalls, 0, 'the verified saved fact should not depend on a probabilistic model response');
+  }
+});
+
+test('tuition recall without consent or without retrieved history does not use earlier facts', async () => {
+  const question = 'How much is my tuition fee?';
+  const priorMessages = [{ id: STALE_ID, role: 'user', content: 'My university tuition is 5000 USD.', created_at: '2026-10-18T00:00:00Z' }];
+  for (const { includeHistory, messages } of [
+    { includeHistory: false, messages: [{ role: 'user', content: question }] },
+    { includeHistory: true, messages: [{ role: 'user', content: question }] }
+  ]) {
+    const mock = makeFetch({ priorMessages: includeHistory ? [] : priorMessages, latestContent: question });
+    let sentMessages;
+    const handler = Assistant.createAssistantHandler({ env: ENV, fetchImpl: mock.fetchImpl, createClient: () => ({ chat: { completions: { create: async request => { sentMessages = request.messages; return { choices: [{ message: { content: 'I do not have that earlier detail in this request. Please repeat it.' } }] }; } } } }) });
+    const result = await invoke(handler, chatRequest({ includeHistory, question }));
+    assert.equal(result.statusCode, 200);
+    assert.deepEqual(sentMessages.slice(1), messages);
+    assert.match(sentMessages[0].content, /Do not claim to remember or know what the user said earlier/);
+  }
+});
+
+test('a consented history retrieval error fails closed before Groq', async () => {
+  const mock = makeFetch({ priorMessages: [{ id: STALE_ID, role: 'user', content: 'My university tuition is 5000 USD.', created_at: '2026-10-18T00:00:00Z' }], latestContent: 'How much is my tuition fee?' });
+  let messageRequests = 0;
+  const fetchImpl = async (input, options) => {
+    const url = new URL(input);
+    if (url.pathname === '/rest/v1/assistant_messages' && ++messageRequests === 2) return response(503, {});
+    return mock.fetchImpl(input, options);
+  };
+  let groqCalls = 0;
+  const handler = Assistant.createAssistantHandler({ env: ENV, fetchImpl, createClient: () => ({ chat: { completions: { create: async () => { groqCalls += 1; return { choices: [{ message: { content: 'must not be sent' } }] }; } } } }) });
+  const result = await invoke(handler, chatRequest({ includeHistory: true, question: 'How much is my tuition fee?' }));
+  assert.equal(result.statusCode, 502);
+  assert.equal(groqCalls, 0);
 });
 
 test('model prompt explicitly forbids recall claims without history and permits recall from consented history', async () => {

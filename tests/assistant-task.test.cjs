@@ -36,6 +36,8 @@ test('a plain tuition statement is not routed to saved-plan calculations, while 
   const statement = 'My university tuition is 5000 USD.';
   assert.equal(Finance.assistantIntent(statement), 'general');
   assert.deepEqual(run(statement), { handled: false });
+  assert.equal(Finance.assistantIntent('How much is my tuition fee?'), 'general');
+  assert.deepEqual(run('How much is my tuition fee?'), { handled: false });
   for (const question of ['What is my funding gap?', 'Calculate my tuition funding gap.', 'Can I afford my tuition?']) {
     const response = run(question);
     assert.equal(response.handled, true);
