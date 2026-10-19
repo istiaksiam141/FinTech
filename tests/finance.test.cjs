@@ -5,6 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { execFileSync } = require('node:child_process');
 const Finance = require('../lib/finance.js');
+const PlannerResults = require('../lib/planner-results.js');
 const ExchangeRates = require('../lib/exchange-rates.js');
 const BangladeshBankRates = require('../lib/bangladesh-bank-rates.js');
 const exchangeRateHandler = require('../api/exchange-rates.js');
@@ -15,6 +16,71 @@ function isoAfter(days) { const d=new Date(today);d.setDate(d.getDate()+days);re
 function profile(overrides={}) { return {homeCountry:'Bangladesh',destinationCountry:'United Kingdom',homeCur:'BDT',tuitionCur:'GBP',tuition:'8000',exchangeRate:'155',rateSource:'Student-entered bank quote ref 123',rateTimestamp:'2026-10-13T10:00',savings:'500000',income:'60000',expenses:'35000',committed:'10000',emergency:'50000',paymentFee:'0',deadline:isoAfter(60),...overrides}; }
 function quote(overrides={}) { return {name:'Provider A',currency:'GBP',totalCost:'200000',fee:'1000',quotedRate:'155',recipientAmount:'1200',days:'3',timestamp:'2026-10-13T08:00',reference:'A-123',...overrides}; }
 function compare(input,quotes,now=quoteNow) { return Finance.compareEnteredQuotes(input,quotes,now); }
+test('planner results summary reuses the finance result for covered, shortfall, and no-date plans',()=>{
+  const calculateSummary=overrides=>{
+    const input=profile(overrides),result=Finance.calculateTuition(input,today);
+    assert.equal(result.ok,true);
+    const roadmap=Finance.buildContributionRoadmap(input,result,today);
+    return {input,result,roadmap,summary:PlannerResults.summarize(result,roadmap,input.deadline)};
+  };
+  const covered=calculateSummary({savings:'1300000'});
+  assert.equal(covered.summary.state,'covered');
+  assert.equal(covered.summary.fundingGoalBdt,covered.result.requiredFunds);
+  assert.equal(covered.summary.availableSavingsBdt,covered.result.usable);
+  assert.equal(covered.summary.fundingGapBdt,0);
+  assert.equal(covered.summary.scheduleAvailable,false);
+  assert.match(covered.summary.message,/cover the estimated goal/);
+
+  const shortfall=calculateSummary({});
+  assert.ok(shortfall.summary.fundingGapBdt>0);
+  assert.equal(shortfall.summary.state,'shortfall');
+  assert.equal(shortfall.summary.shortfallBdt,shortfall.result.shortfall);
+  assert.equal(shortfall.summary.scheduleAvailable,true);
+  assert.deepEqual(shortfall.summary.contributionDates.map(item=>item.date),shortfall.roadmap.contributions.map(item=>item.dueDate));
+
+  const noDates=calculateSummary({deadline:isoAfter(10)});
+  assert.equal(noDates.roadmap.state,'no-contribution-dates');
+  assert.equal(noDates.summary.state,'no-dates');
+  assert.ok(noDates.summary.fundingGapBdt>0);
+  assert.equal(noDates.summary.scheduleAvailable,false);
+  assert.deepEqual(noDates.summary.contributionDates,[]);
+  assert.match(noDates.summary.message,/No complete 30-day contribution date remains/);
+
+  const shortfallCharts=PlannerResults.charts(shortfall.result,shortfall.roadmap);
+  assert.equal(shortfallCharts.ok,true);
+  assert.deepEqual(shortfallCharts.columns.map(item=>item.amountBdt),[shortfall.result.requiredFunds,shortfall.result.usable,shortfall.result.gap]);
+  assert.equal(shortfallCharts.projectionConfirmed,true);
+  assert.equal(shortfallCharts.coveredPercent+shortfallCharts.remainingPercent,100);
+  assert.ok(shortfallCharts.remainingPercent>0);
+  const coveredCharts=PlannerResults.charts(covered.result,covered.roadmap);
+  assert.equal(coveredCharts.ok,true);
+  assert.equal(coveredCharts.coveredPercent,100);
+  assert.equal(coveredCharts.remainingPercent,0);
+  assert.equal(coveredCharts.fundingGapBdt,0);
+  assert.equal(PlannerResults.charts(noDates.result,noDates.roadmap).ok,true);
+  const unconfirmedCharts=PlannerResults.charts(shortfall.result,null);
+  assert.equal(unconfirmedCharts.ok,true);
+  assert.equal(unconfirmedCharts.projectionConfirmed,false);
+  assert.equal('projectedSavings' in unconfirmedCharts,false);
+  assert.equal(PlannerResults.charts({...shortfall.result,requiredFunds:0,gap:0,fundedRatio:0},shortfall.roadmap).ok,false);
+  assert.equal(PlannerResults.charts({...shortfall.result,rate:0},shortfall.roadmap).ok,false);
+  assert.equal(PlannerResults.charts({...shortfall.result,usable:undefined},shortfall.roadmap).ok,false);
+  assert.equal(PlannerResults.charts({...shortfall.result,ok:false},shortfall.roadmap).ok,false);
+
+  const unconfirmed=PlannerResults.summarize(shortfall.result,null,shortfall.input.deadline);
+  assert.equal(unconfirmed.state,'informational');
+  assert.equal(unconfirmed.scheduleAvailable,false);
+  assert.match(unconfirmed.message,/do not confirm whether the goal can be reached/);
+
+  const app=fs.readFileSync(path.join(__dirname,'..','app.js'),'utf8');
+  for(const marker of ['Education Funding Goal','Available Savings','Funding Gap','resultSavingsPlanTitle','resultContributionDates','renderPlannerResultsSummary(input, result, roadmap']) assert.ok(app.includes(marker),`missing results UI marker ${marker}`);
+  assert.match(app,/function renderPlannerResultsSummary\(input, result, roadmap, options\)[\s\S]*CampusBridgePlannerResults\.summarize\(result, roadmap, input\.deadline\)/);
+  assert.match(app,/summary\.state === "informational" \? "Projection needs review"/);
+  assert.match(app,/function renderFinancialCharts\(chartData, idPrefix\)/);
+  assert.match(app,/renderFinancialCharts\(window\.CampusBridgePlannerResults\.charts\(result, roadmap\), "planner-results"\)/);
+  assert.match(app,/page\.append\(summary,renderFinancialCharts\(chartData,"readiness-report"\)\)/);
+  assert.match(app,/renderReadinessReport\(data,window\.CampusBridgePlannerResults\.charts\(result,latest\.roadmap\)\)/);
+});
 const apiNow = Date.UTC(2026,9,13,12,0,0);
 function officialHtml(overrides={}) {
   const { date='13/10/2026', gbp='162.8300', gbpAsk='163.0484', usd='123.3000', usdAsk='123.4000', war='123.3600', cad='86.3264', cadAsk='86.4025' }=overrides;
@@ -774,7 +840,7 @@ test('active UI has blank financial inputs and working external quote paths; scr
   assert.match(app,/trigger\.setAttribute\("aria-controls", menu\.id\)/,'dropdown triggers identify their listbox');
   assert.match(app,/event\.key === "Enter" \|\| event\.key === " "/,'dropdowns support keyboard activation');
   assert.match(app,/ArrowRight/,'the custom calendar supports keyboard navigation');
-  assert.match(app,/result\.daysRemaining === 1 \? "day" : "days"/,'deadline results use correct singular and plural labels');
+  assert.match(app,/summary\.daysRemaining === 1 \? "day" : "days"/,'deadline results use correct singular and plural labels');
   assert.match(app,/Finance\.calendarDaysBetween\(localDate\(today\), input\.value\)/,'deadline hint uses the same calendar-day calculation as the finance engine');
   assert.match(app,/byId\("deadline"\)\.addEventListener\("change"/,'selecting a deadline updates the displayed plan');
   const fetchHandler=app.slice(app.indexOf('async function refreshExchangeRate()'),app.indexOf('function useFetchedExchangeRate()'));
@@ -791,17 +857,19 @@ test('student-facing privacy notices, progressive quote entry, and technical dis
 });
 
 test('study-cost inputs are optional, connected to the profile, and represented in the plan summary',()=>{
-  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'planner.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'planner.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8'),summary=fs.readFileSync(path.join(root,'lib','planner-results.js'),'utf8');
   for(const id of ['visaCost','applicationCost','flightCost','insuranceCost','documentCost','accommodationDeposit','initialSetupCost','otherOneTimeCosts','initialLivingMonths','monthlyRent','monthlyFood','monthlyTransport','monthlyUtilities','monthlyOtherLiving']){
     assert.ok(html.includes(`id="${id}"`),`missing optional study-cost input ${id}`);
     assert.ok(app.includes(`"${id}"`),`profile does not read study-cost input ${id}`);
   }
-  assert.match(app,/Estimated study-abroad costs entered/);
+  assert.match(app,/Education Funding Goal/);
+  assert.match(app,/All Study-Abroad Costs includes only additional estimates entered/);
   assert.match(app,/Tuition Only/);
   assert.match(app,/Dated contribution roadmap/);
   assert.match(app,/buildContributionRoadmap/);
   assert.match(app,/destinationTotal/);
-  assert.match(app,/Total available savings/);
+  assert.match(app,/Available Savings/);
+  assert.match(summary,/fundingGoalBdt: result\.requiredFunds/);
   assert.match(app,/Rate verification/);
 });
 

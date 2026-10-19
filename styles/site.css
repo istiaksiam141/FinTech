@@ -483,6 +483,68 @@ body[data-page="planner"] .planningModeNote{padding:12px 14px;border-radius:11px
 @media(max-width:760px){.homeUspSection{padding-top:25px}.homeUspGrid{grid-template-columns:1fr}.homeUspCard{padding:21px}.resultsReportAction{align-items:flex-start;flex-direction:column}.resultsReportAction .button{width:100%}}
 @media print{.resultsReportAction{display:none!important}}
 
+/* Financial planner result hierarchy */
+body[data-page="planner"] .plannerResultSummary{color:#263b34}
+body[data-page="planner"] .resultGoal{padding:22px 24px;border:1px solid #dfe9e3;border-radius:18px;background:linear-gradient(135deg,#f5faf6,#fff);}
+body[data-page="planner"] .resultEyebrow{display:block;color:#23795d;font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+body[data-page="planner"] .resultGoal>strong{display:block;margin-top:5px;color:#0c4e3e;font:700 clamp(2rem,4vw,2.8rem) Manrope,sans-serif;line-height:1.2}
+body[data-page="planner"] .goalCurrencyNote{margin:5px 0 0;color:#68766f;font-size:.85rem}
+body[data-page="planner"] .resultGoal .progressTrack{background:#e5ece7}
+body[data-page="planner"] .resultGoal .progressTrack i{background:#168564}
+body[data-page="planner"] .resultGoal .small{margin:0;color:#66756d}
+body[data-page="planner"] .resultStatus{margin:18px 0 7px;background:#edf5ef;color:#315c47}
+body[data-page="planner"] .resultStatus.shortfall,body[data-page="planner"] .resultStatus.no-dates{background:#fff1e8;color:#8c4b22}
+body[data-page="planner"] .resultRealism{margin:0 0 15px;color:#56655e;font-size:.92rem;line-height:1.6}
+body[data-page="planner"] .resultRealism.shortfall,body[data-page="planner"] .resultRealism.no-dates{padding:12px 14px;border-left:3px solid #ca8451;border-radius:8px;background:#fff8f2}
+body[data-page="planner"] .resultKeyMetrics{margin:0 0 15px}
+body[data-page="planner"] .resultKeyMetrics .metric{border-color:#e1e8e3;background:#fbfcfa}
+body[data-page="planner"] .resultKeyMetrics .metric strong{color:#174f40}
+body[data-page="planner"] .resultKeyMetrics .metric small{display:block;margin-top:5px;color:#6d7872;font-size:.73rem;line-height:1.45}
+body[data-page="planner"] .resultKeyMetrics .metric.hasGap{border-color:#edcfb8;background:#fff9f4}
+body[data-page="planner"] .resultKeyMetrics .metric.hasGap strong{color:#99542d}
+body[data-page="planner"] .resultKeyMetrics .metric.covered{border-color:#cfe4d7;background:#f5faf6}
+body[data-page="planner"] .resultDeadline{display:grid;grid-template-columns:1fr auto;gap:3px 12px;padding:13px 15px;border:1px solid #e5e9e6;border-radius:12px;background:#fafbf9}
+body[data-page="planner"] .resultDeadline span{color:#68766f;font-size:.82rem}
+body[data-page="planner"] .resultDeadline strong{color:#34483e;text-align:right}
+body[data-page="planner"] .resultDeadline small{grid-column:1/-1;color:#748078}
+body[data-page="planner"] .resultSavingsPlan{margin:15px 0;padding:16px;border:1px solid #dfe9e3;border-radius:14px;background:#f9fbf9}
+body[data-page="planner"] .resultSavingsPlan h3{margin:0 0 7px;color:#174f40;font-size:1rem}
+body[data-page="planner"] .resultSavingsPlan p{margin:5px 0;color:#56655e;line-height:1.55}
+body[data-page="planner"] .resultContributionDates{display:grid;gap:6px;margin:11px 0 0;padding:0;list-style:none}
+body[data-page="planner"] .resultContributionDates li{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;border-radius:8px;background:#fff;font-size:.82rem}
+body[data-page="planner"] .resultContributionDates time{color:#537064}
+body[data-page="planner"] .resultContributionDates span{font-weight:600;color:#34483e;text-align:right}
+body[data-page="planner"] .resultDetails{margin:14px 0;color:#53645b}
+body[data-page="planner"] .resultDetails summary{padding:10px 0;color:#315b49;font-size:.87rem;font-weight:700;cursor:pointer}
+body[data-page="planner"] .resultDetails .metricGrid{margin:8px 0}
+body[data-page="planner"] .resultDetails .metric{border-color:#e5e9e6;background:#fafbf9}
+body[data-page="planner"] .resultDetails .metric strong{font-size:1rem;color:#34483e}
+@media(max-width:640px){body[data-page="planner"] .resultGoal{padding:18px}body[data-page="planner"] .resultContributionDates li{align-items:flex-start;flex-direction:column;gap:3px}body[data-page="planner"] .resultContributionDates span{text-align:left}}
+@media print{body[data-page="planner"] .plannerResultSummary{color:#111!important}body[data-page="planner"] .resultGoal,body[data-page="planner"] .resultSavingsPlan,body[data-page="planner"] .resultDeadline,body[data-page="planner"] .metric{break-inside:avoid;page-break-inside:avoid;background:#fff!important;color:#111!important;box-shadow:none!important}body[data-page="planner"] .plannerResultSummary h3,body[data-page="planner"] .plannerResultSummary strong,body[data-page="planner"] .plannerResultSummary p,body[data-page="planner"] .plannerResultSummary span,body[data-page="planner"] .plannerResultSummary small,body[data-page="planner"] .plannerResultSummary time{color:#111!important}body[data-page="planner"] .resultDetails summary{display:none}body[data-page="planner"] .resultDetails:not([open])>*:not(summary){display:block!important}body[data-page="planner"] .resultDetails{break-inside:avoid;page-break-inside:avoid}}
+
+.financialCharts{margin:18px 0;padding:18px;border:1px solid #dfe8e2;border-radius:16px;background:#fbfcfa;color:#263b34}
+.financialChartsTitle{margin:0 0 12px;color:#174f40;font-size:1.05rem}
+.financialChartsGrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(210px,.85fr);gap:14px;align-items:stretch}
+.financialChart{min-width:0;margin:0;padding:13px;border:1px solid #e4e9e5;border-radius:12px;background:#fff}
+.financialChart figcaption{margin-bottom:7px;color:#34483e;font-size:.88rem;font-weight:700}
+.financialChart svg{display:block;width:100%;height:auto;max-height:230px;overflow:visible}
+.chartBaseline{stroke:#d5ded8;stroke-width:1.5}
+.financialBar.goal{fill:#176c51}.financialBar.savings{fill:#539b7e}.financialBar.gap{fill:#c98752}
+.chartAxisLabel{fill:#586a60;font:600 12px 'DM Sans',sans-serif}
+.coverageRingRemaining{fill:none;stroke:#c98752;stroke-width:19}
+.coverageRingCovered{fill:none;stroke:#176c51;stroke-width:19;stroke-linecap:butt}
+.coveragePercent{fill:#174f40;font:700 24px Manrope,sans-serif}
+.coverageCenterLabel{fill:#65756b;font:500 12px 'DM Sans',sans-serif}
+.financialChartLegend{display:grid;gap:6px;margin:6px 0 0;padding:0;list-style:none}
+.financialChartLegend li{display:grid;grid-template-columns:11px minmax(0,1fr) auto;gap:7px;align-items:center;color:#53645b;font-size:.75rem;line-height:1.35}
+.financialChartLegend strong{color:#263b34;text-align:right;overflow-wrap:anywhere}
+.chartSwatch{width:10px;height:10px;border-radius:3px;background:#176c51}
+.chartSwatch.savings{background:#539b7e}.chartSwatch.gap{background:#c98752}
+.financialChartNote,.financialChartUnavailable{margin:11px 0 0;color:#64736a;font-size:.77rem;line-height:1.5}
+.financialChartUnavailable{padding:11px 13px;border-radius:9px;background:#f4f2ec}
+@media(max-width:720px){.financialChartsGrid{grid-template-columns:1fr}.financialChart{padding:11px}.financialChart svg{max-height:210px}}
+@media print{.financialCharts,.financialChart{break-inside:avoid;page-break-inside:avoid;background:#fff!important;box-shadow:none!important}.financialCharts{margin:8pt 0;padding:8pt;border:1px solid #bfc9c2}.financialChartsTitle{font-size:10pt}.financialChartsGrid{grid-template-columns:1.15fr .85fr;gap:7pt}.financialChart{padding:6pt}.financialChart figcaption{font-size:8pt}.financialChart svg{max-height:135pt}.financialChartLegend{gap:3pt}.financialChartLegend li{font-size:6.5pt}.financialChartLegend strong{font-size:6.5pt}.financialChartNote{font-size:6.5pt;margin-top:5pt}}
+
 /* Cautionary clear-plan confirmation */
 .clearPlanButton{white-space:nowrap;border-color:rgba(226,130,120,.34);background:rgba(125,44,48,.14);color:#ffe5e1}
 .clearPlanButton:hover{border-color:rgba(240,152,142,.66);background:rgba(137,49,51,.27);color:#fff1ee}
