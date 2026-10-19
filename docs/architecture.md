@@ -1,6 +1,6 @@
 # Architecture
 
-CampusBridge is a static multi-page site with shared CSS and small page-specific browser scripts. No frontend framework, database, authentication system, or persistent account store is used.
+CampusBridge is a static multi-page site with shared CSS and small page-specific browser scripts. It uses Supabase Auth and RLS-protected browser access for account-backed cloud plans; financial calculations remain local and deterministic.
 
 ## Routes and responsibilities
 
@@ -9,6 +9,7 @@ CampusBridge is a static multi-page site with shared CSS and small page-specific
 | `/` | Product overview and navigation | `js/site.js` |
 | `/planner.html` | Authoritative plan form, calculation, and existing integrated tools | `app.js` |
 | `/roadmap.html` | Dated contribution roadmap | `js/roadmap-page.js` |
+| `/savings.html` | Browser-local saved roadmap snapshots, JSON backup/restore, and student-entered BDT deposit history | `js/savings-page.js` |
 | `/stress-tests.html` | Independent financial scenarios | `js/stress-tests-page.js` |
 | `/transfers.html` | Student-entered quote validation and comparison | `js/transfers-page.js` |
 | `/assistant.html` | General assistant and selected local plan explanations | `js/assistant-page.js` |
@@ -22,6 +23,8 @@ CampusBridge is a static multi-page site with shared CSS and small page-specific
 The planner calls `lib/finance.js` for validation and calculations. Other pages restore the validated profile using `lib/plan-state.js`, then call the same finance module for the roadmap, scenario results, quote checks, and report data. The state module uses an explicit schema version and field allowlists in tab-scoped `sessionStorage`; it rejects missing, malformed, outdated, unsupported, out-of-range, or otherwise invalid data. When present, stress-test scenario inputs are saved and their results are recalculated from the restored baseline; result numbers are not trusted from browser storage. It does not store a report-only name, account labels, API keys, tokens, or uploaded documents. `sessionStorage` is not encrypted and is not a user account backup.
 
 The planner remains the place to create or update the baseline. A successful recalculation replaces the saved profile and clears old stress results. Stress tests use cloned inputs; the report reads the same saved profile and only the optional stress outputs generated from it. If no valid plan is stored, dependent pages show an empty state rather than inventing inputs.
+
+The Savings Tracker uses the namespaced `campusbridge.savings-tracker.v1` local-storage key. It stores validated planner inputs, a historical result and dated schedule from the existing finance engine, and student-entered BDT deposits. Opening a roadmap validates the saved result against the finance engine at its original calculation time; recalculating it creates a separate linked revision. JSON backups are versioned and validated before import; importing replaces this browser's tracker data after confirmation. This tracker does not use Supabase tables or MFA, while unrelated authentication and cloud-saved plans continue to use Supabase.
 
 The browser calls the existing Vercel routes `/api/exchange-rates` and `/api/assistant`. The Bangladesh Bank parser and rate metadata remain in `lib/bangladesh-bank-rates.js` and `lib/exchange-rates.js`; the serverless endpoint remains `api/exchange-rates.js`. The assistant endpoint is `api/assistant.js`; its request contract accepts only a question, and the API key remains server-side. No financial profile or quotes are sent to the model.
 

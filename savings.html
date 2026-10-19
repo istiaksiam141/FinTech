@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#fdfcf9"><meta name="description" content="Track student-entered savings deposits against a saved CampusBridge financial roadmap.">
+  <title>Savings Tracker — CampusBridge AI</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/styles/site.css">
+</head>
+<body data-page="savings">
+  <div id="site-header"></div>
+  <main id="main-content" class="pageHero savingsPage"><div class="wrap">
+    <span class="eyebrow">This browser · Student-entered records</span><h1>Savings <em>Tracker</em></h1>
+    <p class="lead">Compare deposits you record with a saved financial roadmap. CampusBridge does not connect to or verify bank and wallet transactions.</p>
+    <p id="savings-status" class="savingsStatus" role="status" aria-live="polite">Loading your browser's saved tracker…</p>
+    <p class="localDataNotice"><strong>Stored only in this browser.</strong> Your tracker is not synced across accounts or devices. It may be lost if browser data is cleared, so export a JSON backup regularly.</p>
+    <section id="savings-content">
+      <section class="surface savingsPanel"><div class="savingsToolbar"><div><h2>My saved roadmaps</h2><p class="muted">Each roadmap keeps its inputs, saved calculation results, schedule, and rate details as a historical snapshot.</p></div><div class="inlineButtons"><button class="button" id="refresh-savings" type="button">Refresh</button><button class="button" id="export-savings" type="button">Export backup</button><button class="button" id="import-savings" type="button">Import backup</button><input id="savings-backup-file" type="file" accept="application/json,.json" hidden></div></div><div id="saved-roadmaps" class="savedRoadmapList"></div><p id="no-roadmaps" class="emptyNote" hidden>No roadmap saved yet. Calculate a plan in the <a href="/planner.html">Financial Planner</a>, then choose <strong>Save Roadmap</strong>.</p></section>
+      <section id="selected-roadmap" hidden>
+        <div class="surface savingsPanel"><div class="savingsToolbar"><div><p class="eyebrow">Historical plan snapshot</p><h2 id="selected-name"></h2><p id="snapshot-meta" class="muted"></p></div><div class="inlineButtons"><button class="button" id="rename-roadmap" type="button">Rename</button><button class="button" id="revise-roadmap" type="button">Recalculate revised plan</button><button class="button cautionButton" id="delete-roadmap" type="button">Delete roadmap</button></div></div><p id="selected-description" class="small muted"></p></div>
+        <div class="savingsMetricGrid" id="savings-metrics"></div>
+        <section class="surface savingsPanel"><h2>Actual deposits vs saved plan</h2><div id="comparison-summary" class="comparisonSummary"></div><div id="plan-actual-chart"></div><p id="planned-note" class="small muted"></p></section>
+        <section class="surface savingsPanel"><div class="savingsToolbar"><div><h2>Record a completed deposit</h2><p class="muted">Student-entered record; not a verified bank or mobile-wallet transaction.</p></div></div><form id="deposit-form" class="accountForm depositForm" novalidate><input type="hidden" id="deposit-id"><label for="deposit-amount">Amount (BDT)<input id="deposit-amount" type="number" min="0.01" max="1000000000000" step="0.01" required inputmode="decimal"></label><label for="deposit-date">Deposit date<input id="deposit-date" type="date" required></label><label for="deposit-note">Note (optional)<input id="deposit-note" type="text" maxlength="250" placeholder="Personal note"></label><p class="small muted">Currency is recorded in BDT. A deposit cannot be dated before this roadmap was calculated.</p><div class="inlineButtons"><button class="button primary" id="deposit-submit" type="submit">Add deposit</button><button class="button" id="deposit-cancel" type="button" hidden>Cancel edit</button></div></form><h3 class="historyHeading">Deposit history</h3><div id="deposit-history" class="depositHistory"></div><p id="no-deposits" class="emptyNote" hidden>No deposits recorded for this roadmap yet.</p></section>
+        <section class="surface savingsPanel"><h2>Savings history charts</h2><div class="savingsChartsGrid"><figure class="savingsChart"><figcaption>Deposits by month (BDT)</figcaption><div id="monthly-chart"></div><ul id="monthly-legend" class="savingsLegend"></ul></figure><figure class="savingsChart"><figcaption>Cumulative deposits (BDT)</figcaption><div id="cumulative-chart"></div><p id="cumulative-description" class="small muted"></p></figure></div><p class="small muted">Charts include only valid BDT deposits stored in this browser. They do not forecast future savings.</p></section>
+      </section>
+    </section>
+  </div></main>
+  <div id="site-footer"></div>
+  <script src="/lib/finance.js"></script><script src="/lib/plan-state.js"></script><script src="/lib/savings-tracker.js"></script>
+  <script src="/js/site.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="/js/supabase-config.js"></script><script src="/js/supabase-client.js"></script><script src="/js/auth-status.js"></script><script src="/js/savings-page.js"></script>
+</body></html>

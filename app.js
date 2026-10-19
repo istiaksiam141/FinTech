@@ -724,7 +724,7 @@ function compute() {
   if (!result.ok) { PlanState?.clearPlan(); latest = null; renderContributionRoadmap(null); clearStressTestResults(); byId("readinessReportPreview").hidden = true; latestReadinessReportProfile = null; byId("deadlineTrigger").setAttribute("aria-invalid", String(!input.deadline)); byId("formError").textContent = result.errors.join(" "); byId("plannerResults").innerHTML = '<p class="muted">Enter your figures and a current, source-identified exchange rate to calculate.</p>'; return; }
   const roadmap = Finance.buildContributionRoadmap(input, result, calculationDate);
   const savedPlan = PlanState?.savePlan(enteredProfile);
-  byId("formError").textContent = savedPlan?.ok === false ? "The calculation is ready, but this browser could not save the plan for the other pages. Check browser session-storage settings and try again." : ""; latest = { input, result, roadmap }; renderContributionRoadmap(roadmap,input.planningMode); const tuitionOnly = input.planningMode === Finance.PLANNING_MODES.TUITION_ONLY;
+  byId("formError").textContent = savedPlan?.ok === false ? "The calculation is ready, but this browser could not save the plan for the other pages. Check browser session-storage settings and try again." : ""; latest = { input, result, roadmap, profile: enteredProfile }; renderContributionRoadmap(roadmap,input.planningMode); const tuitionOnly = input.planningMode === Finance.PLANNING_MODES.TUITION_ONLY;
   const priorities = result.gap === 0 ? ["Keep the emergency reserve protected.","Confirm the university payment deadline and instructions.","Refresh assumptions before paying."] : [result.shortfall > 0 ? "Close the projected shortfall: current savings capacity is not enough." : "Set aside the monthly target before the tuition deadline.", "Verify the payment route and any institution-specific fees.", "Keep emergency savings and committed funds separate from tuition."];
   const monthlyTargetText = result.gap === 0 ? Finance.describeMonthlySavingsTarget(result).message : contributionScheduleText(result);
   const destinationCosts = Number.isFinite(result.estimatedOtherCosts / result.rate) && result.estimatedOtherCosts / result.rate <= Finance.MAX_CALCULATED_BDT ? money(result.estimatedOtherCosts / result.rate, result.tuitionCurrency) : "Not available";
@@ -734,7 +734,10 @@ function compute() {
   const reportCopy = document.createElement("div"), reportHeading = document.createElement("strong"), reportHint = document.createElement("p");
   reportHeading.textContent = "Take this plan with you"; reportHint.textContent = "Review an A4 report, then print it or save it as a PDF."; reportCopy.append(reportHeading, reportHint);
   const reportButton = document.createElement("button"); reportButton.className = "button primary"; reportButton.type = "button"; reportButton.textContent = "Create print-ready report"; reportButton.addEventListener("click", generateReadinessReport);
-  reportAction.append(reportCopy, reportButton); byId("plannerResults").append(reportAction);
+  const saveRoadmapButton = document.createElement("button"); saveRoadmapButton.className = "button"; saveRoadmapButton.type = "button"; saveRoadmapButton.textContent = "Save Roadmap";
+  saveRoadmapButton.addEventListener("click", () => { const dialog = byId("save-roadmap-dialog"); if (dialog?.showModal) { dialog.showModal(); byId("save-roadmap-name").focus(); } else byId("formError").textContent = "Roadmap saving is unavailable in this browser."; });
+  reportAction.append(reportCopy, reportButton, saveRoadmapButton); byId("plannerResults").append(reportAction);
+  window.CampusBridgePlannerLatest = () => latest ? { profile: latest.profile || latest.input } : null;
   logEvent("calculate_tuition_gap", "success", "Tuition affordability calculation completed; financial values omitted");
   renderTransfers();
 }

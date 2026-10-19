@@ -141,6 +141,7 @@
     </div></section>
   </main>
   <div id="site-footer"></div>
+  <dialog id="save-roadmap-dialog" class="clearPlanDialog" aria-labelledby="save-roadmap-title" aria-describedby="save-roadmap-description"><form id="save-roadmap-form" class="clearPlanDialogContent"><h2 id="save-roadmap-title">Save this roadmap?</h2><p id="save-roadmap-description">This saves the validated inputs and calculation results as a historical snapshot in this browser. Later changes create another snapshot; they do not overwrite this one. Data is not synced to an account or another device.</p><label for="save-roadmap-name">Roadmap name<input id="save-roadmap-name" type="text" maxlength="80" required autocomplete="off"></label><p id="save-roadmap-message" role="status" aria-live="polite"></p><div class="clearPlanDialogActions"><button class="button" type="button" data-roadmap-cancel>Cancel</button><button class="button primary" id="save-roadmap-confirm" type="submit">Save Roadmap</button></div></form></dialog>
   <section id="readinessReportPreview" class="readinessReportPreview" aria-label="Student financial readiness report preview" hidden><div class="reportPreviewControls"><p>Review your report before printing. Print or save it as PDF using your browser.</p><div class="inlineButtons"><button class="button primary" id="printReadinessReport" type="button">Print / Save as PDF</button><button class="button" id="closeReadinessReport" type="button">Close preview</button></div></div><article id="readinessReportPage" class="readinessReportPage" aria-live="polite"></article></section>
   <script src="lib/finance.js"></script>
   <script src="lib/planner-results.js"></script>
@@ -152,5 +153,5 @@
   <script src="/js/site.js"></script>
   <script src="/js/page-utils.js"></script>
   <script src="/app.js"></script>
-<script src="/lib/cloud-plans.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="/js/supabase-config.js"></script><script src="/js/supabase-client.js"></script><script src="/js/auth-status.js"></script></body>
+<script src="/lib/cloud-plans.js"></script><script src="/lib/savings-tracker.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="/js/supabase-config.js"></script><script src="/js/supabase-client.js"></script><script src="/js/auth-status.js"></script><script src="/js/planner-savings.js"></script></body>
 </html>

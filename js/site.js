@@ -1,7 +1,7 @@
 (function () {
   "use strict";
   const groups = [
-    { id: "planning", label: "Financial Planning", icon: "chart", pages: [["planner", "Planner", "/planner.html", "calculator"], ["roadmap", "Savings roadmap", "/roadmap.html", "route"], ["stress", "Stress tests", "/stress-tests.html", "chart"]] },
+    { id: "planning", label: "Financial Planning", icon: "chart", pages: [["planner", "Planner", "/planner.html", "calculator"], ["roadmap", "Savings roadmap", "/roadmap.html", "route"], ["savings", "Savings Tracker", "/savings.html", "chart"], ["stress", "Stress tests", "/stress-tests.html", "chart"]] },
     { id: "more", label: "More", icon: "more", pages: [["report", "Financial Report", "/report.html", "fileText"], ["privacy", "Privacy", "/privacy.html", "shieldCheck"]] }
   ];
   const createIcon = name => {

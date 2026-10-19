@@ -9,6 +9,7 @@ CampusBridge AI is a static multi-page financial-planning prototype for students
 - `/` — Home and links to the tools.
 - `/planner.html` — Authoritative plan inputs, both planning modes, results, rates, roadmap, transfer quote entry, assistant, stress tests, and report actions.
 - `/roadmap.html` — Dated contribution schedule from the saved plan.
+- `/savings.html` — Browser-local savings roadmap snapshots, student-entered BDT deposits, history, comparisons, and JSON backup/restore. No account or database setup is required for this tracker.
 - `/stress-tests.html` — Rate, expense, and missed-contribution scenarios on copies of the plan.
 - `/transfers.html` — Compare manually entered, unverified provider quotes.
 - `/assistant.html` — General AI explanations and deterministic local answers for selected plan questions.
@@ -43,3 +44,5 @@ git diff --check
 ## Boundaries
 
 The browser stores the minimum current plan in tab session storage to share it across pages. This storage is not encrypted. Rates are references, manual quote entries are not authenticated, there is no connected bank account, and the site does not initiate transfers. See `docs/` for calculation, security, and production boundaries.
+
+Savings Tracker data is stored in this browser profile's local storage. It is not synced between devices or accounts and can be lost when browser data is cleared; export JSON backups regularly. Imported backups replace the browser's current tracker data after confirmation. Deposit entries are student-entered, not verified bank transactions or balances. Saved roadmap results are historical snapshots; saving a revised plan creates a separate record. This tracker does not use Supabase tables, RLS policies, or MFA. Supabase remains in use for unrelated account and cloud-saved plan features.

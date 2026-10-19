@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.join(__dirname, '..');
-const routes = ['index.html', 'planner.html', 'roadmap.html', 'stress-tests.html', 'transfers.html', 'assistant.html', 'report.html', 'account.html', 'privacy.html'];
+const routes = ['index.html', 'planner.html', 'roadmap.html', 'savings.html', 'stress-tests.html', 'transfers.html', 'assistant.html', 'report.html', 'account.html', 'privacy.html'];
 
 test('all static routes exist with useful titles, shared shell, and page-specific initialization', () => {
   for (const file of routes) {
@@ -22,7 +22,7 @@ test('all static routes exist with useful titles, shared shell, and page-specifi
 test('each dependent page declares every static element its module initializes', () => {
   const modules = [
     ['roadmap.html', 'js/roadmap-page.js'], ['stress-tests.html', 'js/stress-tests-page.js'],
-    ['transfers.html', 'js/transfers-page.js'], ['assistant.html', 'js/assistant-page.js'], ['report.html', 'js/report-page.js']
+    ['transfers.html', 'js/transfers-page.js'], ['assistant.html', 'js/assistant-page.js'], ['report.html', 'js/report-page.js'], ['savings.html', 'js/savings-page.js']
   ];
   for (const [page, script] of modules) {
     const html = fs.readFileSync(path.join(root, page), 'utf8');
@@ -35,7 +35,7 @@ test('each dependent page declares every static element its module initializes',
 
 test('shared navigation points to every migrated page and preserves real static destinations', () => {
   const site = fs.readFileSync(path.join(root, 'js/site.js'), 'utf8');
-  for (const href of ['/', '/planner.html', '/roadmap.html', '/stress-tests.html', '/transfers.html', '/assistant.html', '/report.html', '/privacy.html']) {
+  for (const href of ['/', '/planner.html', '/roadmap.html', '/savings.html', '/stress-tests.html', '/transfers.html', '/assistant.html', '/report.html', '/privacy.html']) {
     assert.ok(site.includes(`"${href}"`), `navigation should include ${href}`);
     const target = href === '/' ? 'index.html' : href.slice(1);
     assert.ok(fs.existsSync(path.join(root, target)), `route target ${target} should exist`);
@@ -80,7 +80,7 @@ test('every shared dropdown option receives its own decorative outline icon', ()
   const site = fs.readFileSync(path.join(root, 'js/site.js'), 'utf8');
   const expected = [
     ['Planner', '/planner.html', 'calculator'], ['Savings roadmap', '/roadmap.html', 'route'],
-    ['Stress tests', '/stress-tests.html', 'chart'],
+    ['Savings Tracker', '/savings.html', 'chart'], ['Stress tests', '/stress-tests.html', 'chart'],
     ['Financial Report', '/report.html', 'fileText'], ['Privacy', '/privacy.html', 'shieldCheck']
   ];
   for (const [label, href, icon] of expected) {
@@ -96,7 +96,7 @@ test('every shared dropdown option receives its own decorative outline icon', ()
   assert.match(css, /\.navlinks \.navDropdown a\{display:flex;align-items:center;gap:10px/);
 });
 
-test('all pages load one shared Supabase client after its official CDN and config', () => {
+test('shared authentication controls load after the Supabase client on every page', () => {
   for (const file of routes) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     const cdn = html.indexOf('cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
@@ -104,7 +104,8 @@ test('all pages load one shared Supabase client after its official CDN and confi
     const client = html.indexOf('/js/supabase-client.js');
     const authStatus = html.indexOf('/js/auth-status.js');
     assert.ok(cdn >= 0 && cdn < config && config < client && client < authStatus, `${file} must load Supabase once in dependency order`);
-    for (const local of ['/lib/cloud-plans.js', '/js/supabase-config.js', '/js/supabase-client.js', '/js/auth-status.js']) assert.ok(fs.existsSync(path.join(root, local.slice(1))), `${file}: missing ${local}`);
+    for (const local of ['/js/supabase-config.js', '/js/supabase-client.js', '/js/auth-status.js']) assert.ok(fs.existsSync(path.join(root, local.slice(1))), `${file}: missing ${local}`);
+    if (file !== 'savings.html') assert.ok(fs.existsSync(path.join(root, 'lib/cloud-plans.js')), `${file}: missing cloud-plan client`);
   }
   const config = fs.readFileSync(path.join(root, 'js/supabase-config.js'), 'utf8');
   const supabaseUrl = config.match(/\burl\s*:\s*["']([^"']+)["']/)?.[1];
@@ -113,6 +114,14 @@ test('all pages load one shared Supabase client after its official CDN and confi
   assert.ok(publishableKey && publishableKey !== 'YOUR_SUPABASE_PUBLISHABLE_KEY', 'Supabase publishable key must be configured');
   assert.match(publishableKey, /^sb_publishable_[A-Za-z0-9_-]+$/, 'key must use the configured publishable-key format');
   assert.doesNotMatch(config, /service_role|secret/i);
+  const savings = fs.readFileSync(path.join(root, 'savings.html'), 'utf8');
+  assert.match(savings, /supabase-js@2[\s\S]*supabase-config\.js[\s\S]*supabase-client\.js[\s\S]*auth-status\.js/, 'shared header authentication loads in dependency order');
+  assert.doesNotMatch(savings, /\/lib\/cloud-plans\.js|\/lib\/mfa-flow\.js/, 'local tracker does not load cloud-plan or MFA-flow modules');
+  const tracker = fs.readFileSync(path.join(root, 'lib/savings-tracker.js'), 'utf8');
+  assert.doesNotMatch(tracker, /supabase|auth\.mfa|aal[12]/i, 'local tracker storage does not call Supabase or MFA');
+  assert.match(savings, /export-savings/);
+  assert.match(savings, /import-savings/);
+  assert.match(savings, /not synced across accounts or devices/);
 });
 
 test('account route exposes email, OAuth, recovery, and explicit cloud-plan actions', () => {
