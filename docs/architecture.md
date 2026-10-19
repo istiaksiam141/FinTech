@@ -59,10 +59,11 @@ The repository identifies CampusBridge AI as a FinTechathon 2026 project for stu
 ### AI and chat history
 
 1. The shared assistant task router uses validated current planner state and `lib/finance.js` for supported funding, savings, budget, rate-provenance, and quote-comparison tasks. Missing inputs are not guessed.
-2. For general questions not handled locally, the browser posts only `{ question }` to `/api/assistant`.
-3. `api/assistant.js` validates the request, reads `GROQ_API_KEY` from the server environment, and sends a system instruction plus that one question to Groq. Saved conversation history, planner data, quotes, and account details are not sent as context.
-4. For a signed-in user, `lib/assistant-chat.js` separately saves the question and displayed answer in `assistant_messages`, associated with `assistant_conversations`. The browser lists and filters by the authenticated user ID; intended authorization is enforced by the policies in `docs/supabase-assistant-chat.sql`.
-5. Signed-out chat remains in page memory only. The conversation SQL file is a reviewed migration artifact; this repository cannot confirm it has been applied to any Supabase project.
+2. For general questions, the browser sends the current question and, for a saved signed-in chat, its conversation ID and current user-message ID. It does not send earlier messages.
+3. `api/assistant.js` verifies the access token through Supabase Auth and confirms conversation ownership under the user's JWT and existing RLS policies. It checks that the referenced message is the latest user message in that conversation and matches the submitted question.
+4. Raw prior conversation text is not sent to Groq. Arbitrary natural-language messages cannot be reliably classified as free of financial or identifying details, so the endpoint sends only the current question after verifying its saved references. No saved plans, balances, quotes, or other database records are loaded as model context.
+5. For a signed-in user, `lib/assistant-chat.js` separately saves the question and displayed answer in `assistant_messages`, associated with `assistant_conversations`. The browser lists and filters by the authenticated user ID; intended authorization is enforced by the policies in `docs/supabase-assistant-chat.sql`.
+6. Signed-out chat remains in page memory only and sends the current question without saved-history context. The conversation SQL file is a reviewed migration artifact; this repository cannot confirm it has been applied to any Supabase project.
 
 ### Supabase account data
 
@@ -78,6 +79,6 @@ The Savings Tracker is separate from Supabase. It stores versioned records under
 - Node.js `>=22`; npm lockfile and `openai` SDK dependency.
 - Vercel function convention for `/api/exchange-rates` and `/api/assistant`; no `vercel.json` was found during repository review.
 - Supabase JS v2 browser CDN for Auth and data operations.
-- Environment variables used by application code: required `GROQ_API_KEY`, optional `GROQ_MODEL` (defaults to `openai/gpt-oss-20b`). The Supabase URL and browser-safe publishable key are in browser configuration; their values are intentionally not repeated here.
+- Environment variables used by the server: `GROQ_API_KEY`, `SUPABASE_URL`, and `SUPABASE_PUBLISHABLE_KEY`; `GROQ_MODEL` is optional (defaults to `openai/gpt-oss-20b`). The Supabase URL and publishable key are also in browser configuration; values are intentionally not repeated here. The assistant history route never uses a service-role key.
 
 The repo does not prove the active Vercel project, production environment-variable configuration, domain, or live Supabase schema/provider settings. See [testing and deployment](test-results.md) and [Supabase setup](supabase-setup.md).

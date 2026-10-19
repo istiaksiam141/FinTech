@@ -18,14 +18,16 @@ These are separate features: cloud-saved plans are explicit Supabase rows; signe
 
 ## AI request and response handling
 
-For a general question, the browser sends only `{ question }` to `/api/assistant`; the server then sends the system instruction and the current question to Groq. Stored conversation history, plan profile, account balances, quotes, and report content are not sent as model context. The selected plan-question path calculates locally through `lib/finance.js`, then signed-in chat persistence may store the displayed answer in Supabase. Users are warned not to include sensitive information in questions.
+For a general question in a signed-out or temporary chat, the browser sends only `{ question }` to `/api/assistant`. For a signed-in saved conversation, it also sends the selected conversation ID, current saved user-message ID, and the current Supabase access token in the authorization header. It does not send prior messages. The server verifies the token with Supabase Auth, checks conversation ownership under that user's JWT and existing RLS policies, and confirms that the referenced current user message is the latest user message in that conversation and matches the submitted question. The route rejects arbitrary client-supplied message history.
+
+The endpoint does not load or forward prior message text. Arbitrary natural-language text cannot be reliably classified as free of financial or identifying details, including spelled-out amounts and details repeated in assistant replies. Therefore saved conversations remain available for the user to reopen in the app, but only the current question is sent to Groq. No saved plan, balance, quote, or unrelated database record is loaded as model context. Local deterministic finance requests use `lib/finance.js` and do not go to Groq.
 
 The endpoint validates the request shape and question length, limits body and output size, uses a bounded SDK timeout, and responds with generic provider errors. Markdown is rendered through safe DOM operations rather than executing model HTML. The per-IP rate limiter is in-memory and per serverless instance; it is not a global or durable abuse-control system. Provider availability and account limits are external dependencies.
 
 ## Application controls present in source
 
 - Planner and state restoration use field allowlists, numeric/calendar validation, schema versions, and recalculation from validated inputs. The browser-storage modules fail safely for unavailable or malformed storage where their code handles it.
-- The assistant request includes only the current question. AI is explanatory; `lib/finance.js` performs the application's numeric planning calculations and quote validation.
+- The assistant request accepts only the current question and optional saved conversation/current-message references; raw history and financial inputs are rejected. The server verifies saved references under the user's JWT and existing RLS, but does not load prior chat text for Groq. AI is explanatory; `lib/finance.js` performs numeric planning calculations and quote validation.
 - Bangladesh Bank rates are fetched server-side and checked for expected sheet layout, date, currency rows, units, and numeric rates. The rate route returns an error rather than an invented fallback and uses a best-effort Vercel CDN cache for successes.
 - Cloud-plan and chat clients call Supabase Auth `getUser()` and filter operations by the authenticated user ID. These client filters are defense in depth, not authorization boundaries.
 - The chat migration defines RLS on both chat tables and policies that require the authenticated owner; message policies also require the referenced conversation to belong to that user. The migration file is not evidence those policies exist in a live database.
@@ -36,7 +38,7 @@ The endpoint validates the request shape and question length, limits body and ou
 
 - The repository cannot confirm whether `saved_plans`, assistant chat tables, their grants, or their RLS policies are installed in the live Supabase project. `docs/supabase-assistant-chat.sql` must be reviewed and applied separately if the chat schema is absent.
 - Email confirmation, Google provider configuration, redirect URLs, MFA settings, actual Supabase ownership policies, and cross-user isolation have not been verified against production.
-- The live Vercel project, deployment scopes, domains, headers, monitoring, and server environment variables are not visible here. No Vercel deployment configuration file is checked in.
+- The live Vercel project, deployment scopes, domains, headers, monitoring, and server environment variables are not visible here. The signed-in history route requires `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in addition to `GROQ_API_KEY`; no actual values are documented. No Vercel deployment configuration file is checked in.
 - Student-entered financial values and quotes can be inaccurate. Quote references are not authenticated. No bank is connected and no payment is executed.
 - Browser storage is not encrypted. A same-origin script compromise can read browser data and act with the current authenticated session.
 - External requests go to Vercel API functions, Bangladesh Bank, Groq, Supabase, the Supabase JS CDN, and configured font hosts. Their current availability and policies are not established by local tests.

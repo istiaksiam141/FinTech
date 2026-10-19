@@ -70,19 +70,21 @@
     renderList(); status.textContent = "Conversation deleted.";
   }
   async function saveQuestion(text) {
-    if (!userId || !chat) return;
+    if (!userId || !chat) return null;
     const ownerId = userId;
     if (!activeConversationId) {
       const created = await chat.createConversation(text);
-      if (userId !== ownerId) return;
-      if (!created.ok) { status.textContent = `${created.error} The answer can still be viewed until you leave this page.`; return; }
+      if (userId !== ownerId) return null;
+      if (!created.ok) { status.textContent = `${created.error} The answer can still be viewed until you leave this page.`; return null; }
       activeConversationId = created.conversation.id;
       conversations.unshift(created.conversation); renderList();
       historyNote.textContent = "Select a conversation to reopen it. Your chat is saved to your account.";
     }
-    const result = await chat.saveMessage(activeConversationId, "user", text);
-    if (userId !== ownerId) return;
+    const conversationId = activeConversationId;
+    const result = await chat.saveMessage(conversationId, "user", text);
+    if (userId !== ownerId) return null;
     if (!result.ok) status.textContent = `${result.error} The answer can still be viewed until you leave this page.`;
+    return { conversationId, currentMessageId: result.ok ? result.message.id : null };
   }
   async function saveAnswer(content) {
     if (!userId || !chat || !activeConversationId) return;
@@ -118,23 +120,34 @@
     const turn = Conversation.createTurn(answer, text);
     question.value = "";
     turn.response.textContent = "Preparing your answer…";
-    const conversationIdAtSubmit = activeConversationId;
-    await saveQuestion(text);
-    const requestConversationId = activeConversationId || conversationIdAtSubmit;
     Conversation.scrollToLatest(turn.element);
 
     try {
+      const savedQuestion = await saveQuestion(text);
       const plan = loadPlan();
       const task = window.CampusBridgeAssistantTask.run({ question: text, Finance, plan, money });
       if (task.handled) {
         Renderer.render(turn.response, task.answer);
         status.textContent = "Answered locally using validated planner results. No plan or quote details were sent to the AI service.";
-        if (requestConversationId && requestConversationId === activeConversationId) await saveAnswer(task.answer);
+        if (savedQuestion?.conversationId && savedQuestion.conversationId === activeConversationId) await saveAnswer(task.answer);
         return;
       }
 
-      status.textContent = "Sending only your question to CampusBridge AI…";
-      const response = await fetch("/api/assistant", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ question: text }) });
+      status.textContent = savedQuestion?.conversationId && savedQuestion.currentMessageId
+        ? "Verifying this saved conversation…"
+        : "Sending only your question to CampusBridge AI…";
+      const headers = { "Content-Type": "application/json", Accept: "application/json" };
+      const requestBody = { question: text };
+      if (savedQuestion?.conversationId && savedQuestion.currentMessageId) {
+        const { data, error } = await window.CampusBridgeSupabase.client.auth.getSession();
+        const accessToken = data?.session?.access_token;
+        if (error || typeof accessToken !== "string" || !accessToken) throw new Error("Sign in again to use saved conversation context.");
+        headers.Authorization = `Bearer ${accessToken}`;
+        requestBody.conversationId = savedQuestion.conversationId;
+        requestBody.currentMessageId = savedQuestion.currentMessageId;
+        status.textContent = "Sending only your question to CampusBridge AI…";
+      }
+      const response = await fetch("/api/assistant", { method: "POST", headers, body: JSON.stringify(requestBody) });
       let payload = {};
       try { payload = await response.json(); } catch { /* handled below */ }
       if (!response.ok) throw new Error(typeof payload.error === "string" ? payload.error : "The assistant is temporarily unavailable.");
@@ -144,7 +157,7 @@
         const warning = document.createElement("p"); warning.className = "answerNotice"; warning.textContent = "This answer may be incomplete because it reached a response limit. Ask a narrower question."; turn.response.append(warning);
       }
       status.textContent = "General educational information only. Your saved plan and quotes were not sent.";
-      if (requestConversationId && requestConversationId === activeConversationId) await saveAnswer(payload.answer);
+      if (savedQuestion?.conversationId && savedQuestion.conversationId === activeConversationId) await saveAnswer(payload.answer);
     } catch (error) {
       const message = error.message || "The assistant is temporarily unavailable.";
       turn.response.textContent = `Assistant unavailable: ${message}`; status.textContent = message;

@@ -27,7 +27,7 @@ See [system architecture](docs/architecture.md), [financial methodology and assu
 - For local API routes, the Vercel CLI through `npx` and network access.
 - For remote AI answers, a Groq API key configured as the server-side environment variable `GROQ_API_KEY`.
 
-The only application environment variable required by the AI API is `GROQ_API_KEY`. `GROQ_MODEL` is optional; the code defaults to `openai/gpt-oss-20b`. Supabase browser configuration is kept in `js/supabase-config.js` and is intentionally not loaded from server environment variables. Do not put secret or service-role credentials in browser code. No environment values are included here.
+The AI API uses server-side `GROQ_API_KEY`; `GROQ_MODEL` is optional and defaults to `openai/gpt-oss-20b`. Signed-in saved-conversation verification also requires server-side `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`. These let the API verify the user's session and check that the selected conversation and latest question belong to that user under RLS. Prior message text is not sent to Groq. Use only the publishable key, never a service-role or secret key. The browser's Supabase configuration remains in `js/supabase-config.js`. No actual environment values are included here.
 
 ## Run locally on Windows
 
@@ -43,7 +43,7 @@ Install the dependency versions recorded by the lockfile:
 npm ci
 ```
 
-For the full site with Vercel API routes, create the ignored local environment file from the safe example and edit it to add your own Groq key:
+For the full site with Vercel API routes, create the ignored local environment file from the safe example and edit it with your Groq key and the Supabase project URL and publishable key:
 
 ```powershell
 Copy-Item .env.example .env.local
