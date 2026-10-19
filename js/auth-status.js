@@ -80,6 +80,7 @@
     const email = document.createElement("p"); email.className = "profileEmail";
     const status = document.createElement("p"); status.id = "account-status"; status.className = "accountStatus"; status.setAttribute("role", "status"); status.textContent = "Checking sign-in…";
     const account = document.createElement("a"); account.href = "/account.html"; account.textContent = "My Account";
+    if (document.body.dataset.page === "account") account.setAttribute("aria-current", "page");
     const logout = document.createElement("button"); logout.type = "button"; logout.className = "profileLogout"; logout.textContent = "Log out";
     dropdown.append(name, email, status, account, logout); profile.append(toggle, dropdown); slot.replaceChildren(neutral, login, profile);
 

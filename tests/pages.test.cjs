@@ -35,7 +35,7 @@ test('each dependent page declares every static element its module initializes',
 
 test('shared navigation points to every migrated page and preserves real static destinations', () => {
   const site = fs.readFileSync(path.join(root, 'js/site.js'), 'utf8');
-  for (const href of ['/', '/planner.html', '/roadmap.html', '/stress-tests.html', '/transfers.html', '/assistant.html', '/report.html', '/account.html', '/privacy.html']) {
+  for (const href of ['/', '/planner.html', '/roadmap.html', '/stress-tests.html', '/transfers.html', '/assistant.html', '/report.html', '/privacy.html']) {
     assert.ok(site.includes(`"${href}"`), `navigation should include ${href}`);
     const target = href === '/' ? 'index.html' : href.slice(1);
     assert.ok(fs.existsSync(path.join(root, target)), `route target ${target} should exist`);
@@ -43,8 +43,17 @@ test('shared navigation points to every migrated page and preserves real static 
   assert.match(site, /aria-current", "page"/);
   assert.match(site, /assistantLink\.href = "\/assistant\.html"/);
   assert.match(site, /assistantLink\.append\(createIcon\("sparkle"\)/);
-  assert.match(site, /nav\.append\(home, assistantLink\)/, 'AI Assistant is a first-class top-level navigation link');
+  assert.match(site, /transfersLink\.href = "\/transfers\.html"/);
+  assert.match(site, /transfersLink\.lastChild\.textContent = "Transfers"/);
+  assert.match(site, /find\(item => item\.id === "planning"\)[\s\S]*find\(item => item\.id === "more"\)[\s\S]*nav\.append\(planningGroup\.container, assistantLink, transfersLink, moreGroup\.container\)/, 'the top-level order is Home, Financial Planning, AI Assistant, Transfers, More');
+  assert.match(site, /id: "more", label: "More"/);
+  assert.match(site, /pages: \[\["report", "Financial Report", "\/report\.html", "fileText"\], \["privacy", "Privacy", "\/privacy\.html", "shieldCheck"\]\]/, 'More contains only the report and privacy destinations');
+  assert.doesNotMatch(site, /label: "Transfers & Support"|label: "Transfer and Supports?"|label: "Transfer & Supports?"/);
   assert.doesNotMatch(site, /\[\["assistant", "AI assistant", "\/assistant\.html"/, 'AI Assistant is no longer buried in a dropdown');
+  const authStatus = fs.readFileSync(path.join(root, 'js/auth-status.js'), 'utf8');
+  assert.match(authStatus, /account\.href = "\/account\.html"/);
+  assert.match(authStatus, /account\.textContent = "My Account"/, 'Account remains available from the profile menu');
+  assert.match(authStatus, /document\.body\.dataset\.page === "account"\) account\.setAttribute\("aria-current", "page"\)/, 'Account keeps its active-page indicator inside the profile menu');
   assert.match(site, /confirm\(/);
 });
 
@@ -52,16 +61,15 @@ test('every shared dropdown option receives its own decorative outline icon', ()
   const site = fs.readFileSync(path.join(root, 'js/site.js'), 'utf8');
   const expected = [
     ['Planner', '/planner.html', 'calculator'], ['Savings roadmap', '/roadmap.html', 'route'],
-    ['Stress tests', '/stress-tests.html', 'chart'], ['Transfers', '/transfers.html', 'arrowsLeftRight'],
-    ['Account', '/account.html', 'userRound'],
-    ['Financial report', '/report.html', 'fileText'], ['Privacy', '/privacy.html', 'shieldCheck']
+    ['Stress tests', '/stress-tests.html', 'chart'],
+    ['Financial Report', '/report.html', 'fileText'], ['Privacy', '/privacy.html', 'shieldCheck']
   ];
   for (const [label, href, icon] of expected) {
     assert.ok(site.includes(`"${label}", "${href}", "${icon}"`), `${label} should retain its route and use its matching icon`);
     assert.ok(site.includes(`${icon}: '`), `${icon} should have an inline SVG drawing`);
   }
   assert.match(site, /for \(const \[id, label, href, iconName\] of group\.pages\)/);
-  assert.match(site, /pages: \[\["account", "Account", "\/account\.html", "userRound"\], \["report", "Financial report", "\/report\.html", "fileText"\]/);
+  assert.match(site, /pages: \[\["report", "Financial Report", "\/report\.html", "fileText"\]/);
   assert.match(site, /link\.append\(createIcon\(iconName\), linkLabel\)/);
   assert.match(site, /setAttribute\("aria-hidden", "true"\)/, 'SVG icons stay decorative while labels remain text');
   const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');

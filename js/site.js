@@ -2,8 +2,7 @@
   "use strict";
   const groups = [
     { id: "planning", label: "Financial Planning", icon: "chart", pages: [["planner", "Planner", "/planner.html", "calculator"], ["roadmap", "Savings roadmap", "/roadmap.html", "route"], ["stress", "Stress tests", "/stress-tests.html", "chart"]] },
-    { id: "support", label: "Transfers & Support", icon: "transfer", pages: [["transfers", "Transfers", "/transfers.html", "arrowsLeftRight"]] },
-    { id: "account", label: "My Account", icon: "user", pages: [["account", "Account", "/account.html", "userRound"], ["report", "Financial report", "/report.html", "fileText"], ["privacy", "Privacy", "/privacy.html", "shieldCheck"]] }
+    { id: "more", label: "More", icon: "more", pages: [["report", "Financial Report", "/report.html", "fileText"], ["privacy", "Privacy", "/privacy.html", "shieldCheck"]] }
   ];
   const createIcon = name => {
     const drawings = {
@@ -12,6 +11,7 @@
       chart: '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
       transfer: '<path d="M17 3l4 4-4 4"/><path d="M3 7h18"/><path d="m7 21-4-4 4-4"/><path d="M21 17H3"/>',
       user: '<circle cx="12" cy="8" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/>',
+      more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
       calculator: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 12h2m4 0h2m-8 4h2m4 0h2"/>',
       route: '<circle cx="6" cy="19" r="2"/><path d="M8 19h4a4 4 0 0 0 4-4V9a4 4 0 0 1 4-4"/><circle cx="20" cy="5" r="2"/><path d="M6 17V7a2 2 0 0 1 2-2h3"/>',
       arrowsLeftRight: '<path d="M17 8H3m0 0 4-4M3 8l4 4"/><path d="M7 16h14m0 0-4-4m4 4-4 4"/>',
@@ -54,7 +54,10 @@
     const assistantLink = document.createElement("a"); assistantLink.href = "/assistant.html"; assistantLink.className = "navPill aiNavPill";
     assistantLink.append(createIcon("sparkle"), document.createElement("span")); assistantLink.lastChild.textContent = "AI Assistant";
     if (page === "assistant") assistantLink.setAttribute("aria-current", "page");
-    nav.append(home, assistantLink);
+    const transfersLink = document.createElement("a"); transfersLink.href = "/transfers.html"; transfersLink.className = "navPill";
+    transfersLink.append(createIcon("arrowsLeftRight"), document.createElement("span")); transfersLink.lastChild.textContent = "Transfers";
+    if (page === "transfers") transfersLink.setAttribute("aria-current", "page");
+    nav.append(home);
     const groupControls = [];
     for (const group of groups) {
       const active = group.pages.some(([id]) => id === page);
@@ -73,7 +76,7 @@
         if (id === page) link.setAttribute("aria-current", "page");
         submenu.append(link);
       }
-      container.append(toggle, submenu); nav.append(container); groupControls.push({ container, toggle, submenu });
+      container.append(toggle, submenu); groupControls.push({ id: group.id, container, toggle, submenu });
       toggle.addEventListener("click", () => {
         const open = toggle.getAttribute("aria-expanded") !== "true";
         for (const item of groupControls) {
@@ -90,6 +93,8 @@
         if (event.target.closest("a")) closeNavigation();
       });
     }
+    const planningGroup = groupControls.find(item => item.id === "planning"), moreGroup = groupControls.find(item => item.id === "more");
+    nav.append(planningGroup.container, assistantLink, transfersLink, moreGroup.container);
     const accountStatus = document.createElement("div"); accountStatus.id = "nav-auth-slot"; accountStatus.className = "navAuthSlot"; accountStatus.hidden = true; accountStatus.setAttribute("aria-busy", "true");
     const clear = document.createElement("button"); clear.type = "button"; clear.className = "button smallbtn clearPlanButton"; clear.textContent = "Clear plan"; clear.dataset.clearPlan = "";
     nav.append(accountStatus, clear);
