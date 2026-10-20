@@ -14,7 +14,7 @@
 
   function getDisplayName(user) {
     const metadata = user?.user_metadata || {};
-    const metadataName = readableName(metadata.full_name || metadata.name || metadata.preferred_name || metadata.preferred_username);
+    const metadataName = readableName(metadata.display_name || metadata.full_name || metadata.name || metadata.preferred_name || metadata.preferred_username);
     if (metadataName) return metadataName;
     const givenName = readableName(metadata.given_name), familyName = readableName(metadata.family_name);
     if (givenName || familyName) return [givenName, familyName].filter(Boolean).join(" ");
@@ -24,11 +24,18 @@
     return words.map(word => word.charAt(0).toLocaleUpperCase() + word.slice(1).toLocaleLowerCase()).join(" ");
   }
 
+  function getAvatarPath(user) {
+    const userId = user?.id, path = user?.user_metadata?.avatar_path;
+    if (typeof userId !== "string" || typeof path !== "string") return "";
+    const parts = path.split("/");
+    return parts.length === 2 && parts[0] === userId && /^[a-zA-Z0-9-]+$/.test(parts[1]) ? path : "";
+  }
+
   function getNavigationState(user) {
-    if (!user) return { authenticated: false, displayName: "", email: "", initial: "" };
+    if (!user) return { authenticated: false, displayName: "", email: "", initial: "", avatarPath: "" };
     const displayName = getDisplayName(user);
     const email = typeof user.email === "string" ? user.email.trim() : "";
-    return { authenticated: true, displayName, email, initial: Array.from(displayName)[0].toLocaleUpperCase() };
+    return { authenticated: true, displayName, email, initial: Array.from(displayName)[0].toLocaleUpperCase(), avatarPath: getAvatarPath(user) };
   }
 
   function createSessionController(client, onSession, onUnavailable = () => {}) {
@@ -115,6 +122,10 @@
 
     const profile = document.createElement("div"); profile.className = "profileControl"; profile.hidden = true;
     const toggle = document.createElement("button"); toggle.type = "button"; toggle.className = "profileAvatar";
+    const initial = document.createElement("span"); initial.className = "profileAvatarInitial";
+    const image = document.createElement("img"); image.className = "profileAvatarImage"; image.alt = ""; image.hidden = true;
+    image.referrerPolicy = "no-referrer";
+    toggle.append(initial, image);
     toggle.setAttribute("aria-haspopup", "true"); toggle.setAttribute("aria-expanded", "false"); toggle.setAttribute("aria-controls", "profile-dropdown");
     const dropdown = document.createElement("div"); dropdown.id = "profile-dropdown"; dropdown.className = "profileDropdown"; dropdown.hidden = true;
     const name = document.createElement("p"); name.className = "profileDisplayName";
@@ -154,7 +165,23 @@
         return;
       }
       name.textContent = view.displayName; email.textContent = view.email || "Email unavailable";
-      toggle.textContent = view.initial; toggle.setAttribute("aria-label", `Account menu for ${view.displayName}`);
+      initial.textContent = view.initial; initial.hidden = false; image.hidden = true; image.removeAttribute("src");
+      toggle.setAttribute("aria-label", `Account menu for ${view.displayName}`);
+      if (view.avatarPath) {
+        const storage = root.CampusBridgeSupabase?.client?.storage?.from("profile-photos");
+        if (typeof storage?.createSignedUrl === "function") {
+          storage.createSignedUrl(view.avatarPath, 86400).then(({ data, error } = {}) => {
+            if (revision !== renderRevision || error || !data?.signedUrl) return;
+            image.onload = () => {
+              if (revision !== renderRevision) return;
+              image.hidden = false;
+              initial.hidden = true;
+            };
+            image.onerror = () => { if (revision === renderRevision) image.hidden = true; };
+            image.src = data.signedUrl;
+          }).catch(() => { if (revision === renderRevision) image.hidden = true; });
+        }
+      }
       status.textContent = "Checking sign-in…";
       updateAssuranceStatus(user, revision);
     }
@@ -200,5 +227,5 @@
     else renderUser(null);
   }
 
-  return Object.freeze({ getDisplayName, getNavigationState, createSessionController, createLogoutController, initialize });
+  return Object.freeze({ getDisplayName, getAvatarPath, getNavigationState, createSessionController, createLogoutController, initialize });
 });

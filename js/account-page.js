@@ -6,7 +6,15 @@
   const accountAccess = byId("account-access-layout");
   const authOptions = byId("account-auth-options"), challengePanel = byId("mfa-challenge-panel"), recoveryForm = byId("recovery-complete-form");
   const plansList = byId("cloud-plan-list"), saveForm = byId("cloud-save-form");
-  const authForms = ["signup-form", "login-form", "reset-request-form", "recovery-complete-form", "cloud-save-form", "mfa-challenge-form", "mfa-enroll-form", "mfa-disable-form"].map(byId).filter(Boolean);
+  const profileNameForm = byId("profile-name-form"), profilePhotoForm = byId("profile-photo-form");
+  const profileNameInput = byId("profile-display-name"), profilePhotoInput = byId("profile-photo-file");
+  const profilePhotoStatus = byId("profile-photo-status"), avatarImage = byId("account-avatar-image");
+  const avatarInitial = byId("account-avatar-initial"), photoRemoveButton = byId("profile-photo-remove");
+  const profilePhotoDropzone = byId("profile-photo-dropzone"), profilePhotoName = byId("profile-photo-filename");
+  const profilePhotoPrompt = byId("profile-photo-prompt-main"), profilePhotoBrowse = byId("profile-photo-browse");
+  const profilePhotoSave = byId("profile-photo-save");
+  const profileSummaryName = byId("profile-summary-name"), profileSummaryEmail = byId("profile-summary-email");
+  const authForms = ["signup-form", "login-form", "reset-request-form", "recovery-complete-form", "profile-name-form", "profile-photo-form", "cloud-save-form", "mfa-challenge-form", "mfa-enroll-form", "mfa-disable-form"].map(byId).filter(Boolean);
   const say = (message, kind = "info") => { status.hidden = false; status.textContent = message; status.dataset.kind = kind; };
   const setBusy = (form, busy) => { form.querySelectorAll("button[type=submit]").forEach(button => { button.disabled = busy; button.dataset.originalText ||= button.textContent; button.textContent = busy ? "Please wait…" : button.dataset.originalText; }); };
   const accountFormHashes = new Set(["#signup-form", "#login-form", "#reset-request-form"]);
@@ -53,7 +61,7 @@
   };
   const cloudPlans = window.CampusBridgeCloudPlans?.createCloudPlans({ client, planState: window.CampusBridgePlanState });
   const mfa = window.CampusBridgeMfaFlow?.createMfaFlow({ client });
-  let session = null, loadingPlans = false, security = { status: "checking" }, securityRevision = 0;
+  let session = null, loadingPlans = false, security = { status: "checking" }, securityRevision = 0, avatarRevision = 0, previewUrl = "", selectedProfilePhoto = null;
   let recoveryActive = new URLSearchParams(location.search).get("flow") === "recovery";
 
   document.querySelectorAll("[data-password-toggle]").forEach(toggle => {
@@ -81,6 +89,7 @@
     accountAccess.hidden = showAccountPanel;
     document.body.classList.toggle("account-panel-only", showAccountPanel);
     cloudPanel.hidden = !showAccountPanel;
+    if (showAccountPanel) renderProfileSettings();
     authOptions.hidden = recoveryActive || (signedIn && (requiringFactor || unavailable || security.status === "checking"));
     challengePanel.hidden = !requiringFactor;
     recoveryForm.hidden = !recoveryActive;
@@ -89,6 +98,133 @@
     document.querySelectorAll("[data-auth-logout]").forEach(button => { button.hidden = !signedIn; });
     updateMfaSettings();
     scrollToAccountHash();
+  }
+  function displayNameFor(user) {
+    const metadata = user?.user_metadata || {};
+    const name = metadata.display_name || metadata.full_name || metadata.name || metadata.preferred_name || metadata.preferred_username;
+    if (typeof name === "string" && name.trim() && !name.includes("@")) return name.trim().replace(/\s+/g, " ");
+    return user?.email?.split("@")[0]?.split("+")[0] || "User";
+  }
+  function userAvatarPath(user) {
+    const path = user?.user_metadata?.avatar_path;
+    if (typeof user?.id !== "string" || typeof path !== "string" || !path.startsWith(`${user.id}/`)) return "";
+    return /^[a-zA-Z0-9-]+$/.test(path.slice(user.id.length + 1)) ? path : "";
+  }
+  function renderProfileSettings() {
+    const user = session?.user;
+    const displayName = displayNameFor(user);
+    profileNameInput.value = displayName;
+    profileSummaryName.textContent = displayName;
+    profileSummaryEmail.textContent = user?.email || "Email unavailable";
+    avatarInitial.textContent = Array.from(displayName)[0].toLocaleUpperCase();
+    const path = userAvatarPath(user), revision = ++avatarRevision;
+    photoRemoveButton.hidden = !path;
+    profilePhotoSave.disabled = !selectedProfilePhoto;
+    const showInitial = () => {
+      avatarImage.hidden = true;
+      avatarImage.removeAttribute("src");
+      avatarInitial.hidden = false;
+    };
+    if (selectedProfilePhoto && previewUrl) {
+      avatarImage.src = previewUrl;
+      avatarImage.hidden = false;
+      avatarInitial.hidden = true;
+    } else showInitial();
+    profilePhotoDropzone.classList.toggle("has-selection", Boolean(selectedProfilePhoto));
+    profilePhotoName.textContent = selectedProfilePhoto ? selectedProfilePhoto.name : "JPG, PNG or WebP · Up to 3 MB";
+    profilePhotoPrompt.textContent = selectedProfilePhoto ? "Ready to upload" : "Drop a photo here or";
+    profilePhotoBrowse.textContent = selectedProfilePhoto ? "change photo" : "browse files";
+    profilePhotoStatus.textContent = path ? "Loading your private profile picture…" : "No profile picture uploaded.";
+    if (selectedProfilePhoto) {
+      profilePhotoStatus.textContent = "Preview ready. Save picture to update your account.";
+      return;
+    }
+    if (!path) return;
+    const storage = client?.storage?.from("profile-photos");
+    if (typeof storage?.createSignedUrl !== "function") {
+      profilePhotoStatus.textContent = "Profile-picture storage is unavailable. Check the Supabase setup.";
+      return;
+    }
+    storage.createSignedUrl(path, 86400).then(({ data, error } = {}) => {
+      if (revision !== avatarRevision) return;
+      if (error || !data?.signedUrl) {
+        profilePhotoStatus.textContent = "Could not load your profile picture. You can upload another one.";
+        return;
+      }
+      avatarImage.onload = () => {
+        if (revision !== avatarRevision) return;
+        avatarImage.hidden = false;
+        avatarInitial.hidden = true;
+        profilePhotoStatus.textContent = "Your profile picture is private to your account.";
+      };
+      avatarImage.onerror = () => {
+        if (revision === avatarRevision) profilePhotoStatus.textContent = "Could not display your profile picture. You can upload another one.";
+      };
+      avatarImage.src = data.signedUrl;
+    }).catch(() => {
+      if (revision === avatarRevision) profilePhotoStatus.textContent = "Could not load your profile picture. You can upload another one.";
+    });
+  }
+  function storageBucket() {
+    const storage = client?.storage?.from("profile-photos");
+    if (!storage) throw new Error("Profile-picture storage is unavailable. Apply docs/supabase-profile-storage.sql in your Supabase project, then try again.");
+    return storage;
+  }
+  function selectedImage(file) {
+    if (!file) throw new Error("Choose a profile picture first.");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("Choose a JPG, PNG, or WebP image.");
+    if (file.size > 3 * 1024 * 1024) throw new Error("Choose an image that is 3 MB or smaller.");
+    return file;
+  }
+  function updateCurrentUser(user) {
+    if (!user) throw new Error("Supabase did not return the updated account. Refresh and check your profile.");
+    if (session) session.user = user;
+    renderProfileSettings();
+  }
+  function clearPhotoPreview() {
+    if (!previewUrl) return;
+    URL.revokeObjectURL(previewUrl);
+    previewUrl = "";
+  }
+  function clearSelectedProfilePhoto() {
+    selectedProfilePhoto = null;
+    clearPhotoPreview();
+    profilePhotoInput.value = "";
+    profilePhotoSave.disabled = true;
+  }
+  function selectProfilePhoto(file) {
+    try {
+      selectedProfilePhoto = selectedImage(file);
+      clearPhotoPreview();
+      previewUrl = URL.createObjectURL(selectedProfilePhoto);
+      avatarImage.onload = () => {
+        avatarImage.hidden = false;
+        avatarInitial.hidden = true;
+      };
+      avatarImage.onerror = () => {
+        profilePhotoStatus.textContent = "This image could not be previewed. Choose a different picture.";
+        clearSelectedProfilePhoto();
+        renderProfileSettings();
+      };
+      avatarImage.src = previewUrl;
+      profilePhotoSave.disabled = false;
+      profilePhotoDropzone.classList.add("has-selection");
+      profilePhotoName.textContent = selectedProfilePhoto.name;
+      profilePhotoPrompt.textContent = "Ready to upload";
+      profilePhotoBrowse.textContent = "change photo";
+      profilePhotoStatus.textContent = "Preview ready. Save picture to update your account.";
+      return true;
+    } catch (error) {
+      clearSelectedProfilePhoto();
+      renderProfileSettings();
+      profilePhotoStatus.textContent = errorText(error);
+      return false;
+    }
+  }
+  async function deleteOwnedAvatar(path) {
+    if (!path) return null;
+    const { error } = await storageBucket().remove([path]);
+    return error || null;
   }
   function updateMfaSettings() {
     const ready = security.status === "ready", factors = security.factors || [];
@@ -178,6 +314,94 @@
     say(window.CampusBridgeSupabase?.configured && !window.CampusBridgeSupabase.libraryAvailable ? "Supabase client could not load. Check your network connection and refresh." : "Cloud accounts are not configured yet. Add the project's browser-safe publishable key in js/supabase-config.js; never use a service-role key.", "error");
     authForms.forEach(form => form.querySelectorAll("button").forEach(button => { button.disabled = true; }));
   }
+  profileNameForm.addEventListener("submit", event => {
+    event.preventDefault();
+    if (!client || !session?.user || security.status !== "ready") return;
+    submit(profileNameForm, async () => {
+      const displayName = profileNameInput.value.trim();
+      if (!displayName || displayName.length > 40) throw new Error("Enter a username between 1 and 40 characters.");
+      const { data, error } = await client.auth.updateUser({ data: { display_name: displayName } });
+      if (error) throw error;
+      updateCurrentUser(data?.user);
+      say("Your username has been updated.", "success");
+    });
+  });
+  profilePhotoInput.addEventListener("change", () => {
+    const file = profilePhotoInput.files?.[0];
+    if (file) selectProfilePhoto(file);
+    profilePhotoInput.value = "";
+  });
+  profilePhotoDropzone.addEventListener("click", () => profilePhotoInput.click());
+  profilePhotoDropzone.addEventListener("keydown", event => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    profilePhotoInput.click();
+  });
+  profilePhotoDropzone.addEventListener("dragenter", event => {
+    event.preventDefault();
+    profilePhotoDropzone.classList.add("is-dragging");
+  });
+  profilePhotoDropzone.addEventListener("dragover", event => {
+    event.preventDefault();
+    profilePhotoDropzone.classList.add("is-dragging");
+  });
+  profilePhotoDropzone.addEventListener("dragleave", event => {
+    if (!profilePhotoDropzone.contains(event.relatedTarget)) profilePhotoDropzone.classList.remove("is-dragging");
+  });
+  profilePhotoDropzone.addEventListener("drop", event => {
+    event.preventDefault();
+    profilePhotoDropzone.classList.remove("is-dragging");
+    const file = event.dataTransfer?.files?.[0];
+    if (file) selectProfilePhoto(file);
+  });
+  profilePhotoForm.addEventListener("submit", event => {
+    event.preventDefault();
+    if (!client || !session?.user || security.status !== "ready") return;
+    submit(profilePhotoForm, async () => {
+      const file = selectedImage(selectedProfilePhoto);
+      const bucket = storageBucket(), user = session.user;
+      if (typeof window.crypto?.randomUUID !== "function") throw new Error("Secure image uploads are unavailable in this browser.");
+      const path = `${user.id}/${window.crypto.randomUUID()}`;
+      const { error: uploadError } = await bucket.upload(path, file, { cacheControl: "3600", contentType: file.type, upsert: false });
+      if (uploadError) throw uploadError;
+      let update;
+      try {
+        update = await client.auth.updateUser({ data: { avatar_path: path } });
+        if (update.error) throw update.error;
+      } catch (error) {
+        const { error: cleanupError } = await bucket.remove([path]);
+        if (cleanupError) throw new Error(`${errorText(error)} The uploaded image could not be cleaned up.`);
+        throw error;
+      }
+      const oldPath = userAvatarPath(user);
+      clearSelectedProfilePhoto();
+      profilePhotoForm.reset();
+      updateCurrentUser(update.data?.user);
+      if (oldPath && oldPath !== path) {
+        const cleanupError = await deleteOwnedAvatar(oldPath);
+        if (cleanupError) {
+          say("Your new profile picture was saved, but the previous picture could not be removed from storage.", "error");
+          return;
+        }
+      }
+      say("Your profile picture has been updated.", "success");
+    });
+  });
+  photoRemoveButton.addEventListener("click", () => {
+    if (!client || !session?.user || security.status !== "ready") return;
+    photoRemoveButton.disabled = true;
+    submit(profilePhotoForm, async () => {
+      const oldPath = userAvatarPath(session.user);
+      const { data, error } = await client.auth.updateUser({ data: { avatar_path: null } });
+      if (error) throw error;
+      clearSelectedProfilePhoto();
+      updateCurrentUser(data?.user);
+      profilePhotoForm.reset();
+      const cleanupError = await deleteOwnedAvatar(oldPath);
+      if (cleanupError) say("Your profile picture was removed from your account, but its stored file could not be deleted.", "error");
+      else say("Your profile picture has been removed.", "success");
+    }).finally(() => { photoRemoveButton.disabled = false; });
+  });
   byId("signup-form").addEventListener("submit", event => {
     event.preventDefault(); if (!client) return;
     const form = event.currentTarget;

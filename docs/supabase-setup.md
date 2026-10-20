@@ -49,6 +49,12 @@ Only the signed-in user can request cloud operations. The browser obtains that u
 
 The auth session itself is persisted by Supabase JS in browser local storage using the library defaults. Do not use cloud saving on a shared or untrusted device. No passwords or OAuth client secrets are stored by CampusBridge.
 
+## Private profile pictures
+
+The account page lets signed-in users change the name shown in their account menu and upload or remove a profile picture. Pictures are stored in a private `profile-photos` bucket under the user's Auth ID, and the shared navigation requests a short-lived signed URL to display the current picture. Each image is limited to 3 MB and JPEG, PNG, or WebP. The username is display metadata and does not change the login email or create a unique public handle.
+
+Before enabling picture uploads, review and manually apply [`supabase-profile-storage.sql`](supabase-profile-storage.sql) in the Supabase SQL Editor. It creates/updates the private bucket and owner-only select, insert, update, and delete policies. The page does not apply database changes automatically. Existing accounts need no schema migration; display names and the private object path are stored in Supabase Auth user metadata. The live bucket and policies were not verified here.
+
 ## Optional authenticator-app MFA
 
 The account page supports optional TOTP enrollment, QR scanning, first-code verification, login challenges, and factor removal with the Supabase JS v2 `auth.mfa` APIs. Enrollment secrets and verification codes are held only in the active page flow; CampusBridge does not write them to local storage. Supabase persists its own auth session as described above.

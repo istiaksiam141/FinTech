@@ -259,7 +259,10 @@ test('shared authentication controls load after the Supabase client on every pag
 
 test('account route exposes email, OAuth, recovery, and explicit cloud-plan actions', () => {
   const html = fs.readFileSync(path.join(root, 'account.html'), 'utf8');
-  for (const id of ['signup-form', 'login-form', 'google-signin', 'reset-request-form', 'recovery-complete-form', 'cloud-save-form', 'cloud-plan-list', 'mfa-challenge-form', 'mfa-enroll-form', 'mfa-disable-form', 'mfa-qr-code']) assert.ok(html.includes(`id="${id}"`), `account page is missing #${id}`);
+  for (const id of ['signup-form', 'login-form', 'google-signin', 'reset-request-form', 'recovery-complete-form', 'profile-name-form', 'profile-display-name', 'profile-summary-name', 'profile-summary-email', 'profile-photo-form', 'profile-photo-file', 'profile-photo-dropzone', 'profile-photo-save', 'profile-photo-remove', 'cloud-save-form', 'cloud-plan-list', 'mfa-challenge-form', 'mfa-enroll-form', 'mfa-disable-form', 'mfa-qr-code']) assert.ok(html.includes(`id="${id}"`), `account page is missing #${id}`);
+  assert.match(html, /role="button" tabindex="0" aria-describedby="profile-photo-help profile-photo-status"/, 'photo dropzone is keyboard and screen-reader accessible');
+  assert.match(html, /Drop a photo here or/);
+  assert.match(html, /browse files/);
   assert.match(html, /class="accountLayout"[\s\S]*class="accountMain"[\s\S]*class="accountStory"/, 'account access uses a split-panel layout');
   assert.match(html, /fonts\.googleapis\.com\/css2\?family=DM\+Sans:[^"]*Manrope:/, 'the account page loads its body and heading font families');
   assert.doesNotMatch(html, /<details\b/, 'account forms do not use expand/collapse disclosures');
@@ -279,10 +282,30 @@ test('account route exposes email, OAuth, recovery, and explicit cloud-plan acti
   assert.match(account, /accountAccess\.hidden = showAccountPanel/);
   assert.match(account, /cloudPanel\.hidden = !showAccountPanel/);
   assert.match(account, /document\.body\.classList\.toggle\("account-panel-only", showAccountPanel\)/);
+  assert.match(account, /updateUser\(\{ data: \{ display_name: displayName \} \}\)/);
+  assert.match(account, /bucket\.upload\(path, file/);
+  assert.match(account, /data: \{ avatar_path: path \}/);
+  assert.match(account, /file\.size > 3 \* 1024 \* 1024/);
+  assert.match(account, /image\/jpeg", "image\/png", "image\/webp/);
+  assert.match(account, /createSignedUrl\(path, 86400\)/);
+  assert.match(account, /profilePhotoDropzone\.addEventListener\("drop"/);
+  assert.match(account, /profilePhotoInput\.click\(\)/);
+  assert.match(account, /event\.key !== "Enter" && event\.key !== " "/);
+  assert.match(account, /profilePhotoSave\.disabled = !selectedProfilePhoto/);
+  assert.match(account, /Profile-picture storage is unavailable/);
+  const storageSetup = fs.readFileSync(path.join(root, 'docs/supabase-profile-storage.sql'), 'utf8');
+  assert.match(storageSetup, /'profile-photos',\s*'profile-photos',\s*false/);
+  assert.match(storageSetup, /auth\.uid\(\)::text/);
+  assert.match(storageSetup, /for select[\s\S]*for insert[\s\S]*for update[\s\S]*for delete/i);
   assert.equal((html.match(/data-password-toggle/g) || []).length, 5, 'login, signup, and recovery passwords have visibility controls');
   assert.match(account, /toggle\.setAttribute\("aria-label", visible \? "Hide password" : "Show password"\)/);
   assert.ok(css.includes('.accountHero #cloud-plans-panel .mfaSettings{border-color:#e3e8df;background:#f7f8f3'), 'the authenticator panel uses the warm account palette');
   assert.match(css, /\.passwordVisibilityToggle\{[^}]*position:absolute/);
+  assert.match(css, /\.profilePhotoDropzone\.is-dragging/, 'profile photo drop target responds to drag-and-drop');
+  assert.match(css, /\.profilePhotoFileInput\{position:absolute!important/, 'native file picker stays accessible without its default appearance');
+  assert.match(css, /\.profilePhotoActions \.button\[hidden\]\{display:none!important\}/, 'remove-picture action stays hidden when no picture exists');
+  assert.match(css, /@media\(max-width:760px\)\{\.profileSettingsGrid\{grid-template-columns:1fr\}/, 'profile cards stack on narrow layouts');
+  assert.match(css, /\.accountHero #cloud-plans-panel\{[^}]*padding:clamp/, 'signed-in account content has a responsive page card layout');
   assert.match(css, /\.accountPasswordField>\.passwordInputWrap\{grid-column:1\/-1\}/, 'password toggle retains a full-width login input');
   assert.match(account, /input\.form\?\.addEventListener\("reset", resetVisibility\)/, 'reset forms restore hidden password text');
   assert.match(css, /\.accountLayout\{font-family:'DM Sans',sans-serif\}/, 'account copy uses the project body font');
