@@ -341,6 +341,10 @@ test('account route exposes email, OAuth, recovery, and explicit cloud-plan acti
   assert.ok(css.includes('.accountHero #cloud-plans-panel .mfaSettings{border-color:#e3e8df;background:#f7f8f3'), 'the authenticator panel uses the warm account palette');
   assert.match(css, /\.passwordVisibilityToggle\{[^}]*position:absolute/);
   assert.match(css, /\.studyCountryFlag\{[^}]*border-radius:50%/, 'country flags are displayed in circular badges');
+  assert.match(css, /\.studyCountryFlag\{[^}]*box-shadow:inset/, 'country flags have dimensional lighting and depth');
+  assert.match(css, /\.studyCountryOption:hover \.studyCountryFlag[^}]*perspective\(90px\) rotateY/, 'country flags animate with a subtle 3D tilt on interaction');
+  assert.match(css, /\.profileSettingsGrid\{[^}]*align-items:stretch/, 'the display-name and profile-picture cards share a consistent row height');
+  assert.match(css, /@media\(prefers-reduced-motion:reduce\)\{\.studyCountryFlag/, 'flag and dropdown motion respects reduced-motion preferences');
   assert.match(css, /\.studyCountryOptions\[hidden\]\{display:none\}/, 'the country menu supports its hidden state');
   assert.match(css, /\.studyCountryOption\[aria-selected=true\]/, 'the selected country receives a visible menu state');
   assert.match(css, /\.profilePhotoDropzone\.is-dragging/, 'profile photo drop target responds to drag-and-drop');
