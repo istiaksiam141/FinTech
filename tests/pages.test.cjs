@@ -81,7 +81,7 @@ test('planner previews its first calculation and keeps AI explanations secondary
   assert.ok(previewIndex > introIndex && previewIndex < planningModeIndex, 'the preview appears in the planner before the guided inputs');
   for (const outcome of outcomes) assert.ok(planner.includes(outcome), `planner previews ${outcome}`);
   assert.match(planner, /after you review your assumptions and calculate your plan/i);
-  assert.match(planner, /the planner is the source of your validated financial figures/i);
+  assert.match(planner, /deterministic finance engine remains the source of calculated figures/i);
   assert.match(steps, /planningDetails\.append\(stepper\)/, 'guided financial steps stay inside the currency-gated fieldset');
   assert.match(steps, /planningDetails\.querySelectorAll\("\[required\]"\)/, 'the currency selector remains outside the guided field validation');
   assert.equal((planner.match(/id="planningCurrencyStep"/g) || []).length, 1, 'the currency selector appears once');
@@ -380,12 +380,12 @@ test('account route exposes email, OAuth, recovery, and explicit cloud-plan acti
   assert.match(css, /\.accountHero h1\{/, 'the Welcome back heading keeps its existing display typography');
 });
 
-test('feature pages reuse the finance engine and assistant remote request contains only question and server-verified references', () => {
+test('feature pages reuse the finance engine and assistant remote request includes current plan summary and server-verified references', () => {
   for (const file of ['js/roadmap-page.js', 'js/stress-tests-page.js', 'js/report-page.js', 'js/transfers-page.js', 'js/assistant-page.js']) {
     assert.match(fs.readFileSync(path.join(root, file), 'utf8'), /CampusBridgePageUtils/);
   }
   const assistant = fs.readFileSync(path.join(root, 'js/assistant-page.js'), 'utf8');
-  assert.match(assistant, /requestBody = \{ question: text \}/);
+  assert.match(assistant, /requestBody = \{ question: text, planContext \}/);
   assert.match(assistant, /requestBody\.conversationId = savedQuestion\.conversationId/);
   assert.doesNotMatch(assistant, /JSON\.stringify\(\{[^}]*profile|requestBody\.messages/);
   assert.ok(fs.existsSync(path.join(root, 'api/assistant.js')));

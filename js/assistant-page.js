@@ -128,25 +128,21 @@
     question.value = "";
     turn.response.textContent = "Preparing your answer…";
     Conversation.scrollToLatest(turn.element);
+    let fallbackTask = { handled: false }, savedQuestion = null, assistantRequestStarted = false;
 
     try {
-      const savedQuestion = await saveQuestion(text);
+      savedQuestion = await saveQuestion(text);
       const plan = loadPlan();
-      const task = window.CampusBridgeAssistantTask.run({ question: text, Finance, plan, money });
-      if (task.handled) {
-        Renderer.render(turn.response, task.answer);
-        status.textContent = "Answered locally using validated planner results. No plan or quote details were sent to the AI service.";
-        if (savedQuestion?.conversationId && savedQuestion.currentMessageId && savedQuestion.conversationId === activeConversationId) await saveAnswer(task.answer);
-        return;
-      }
+      fallbackTask = window.CampusBridgeAssistantTask.run({ question: text, Finance, plan, money });
+      const planContext = window.CampusBridgeAssistantPlanContext.summarize(plan);
 
       if (savedQuestion?.conversationId && !savedQuestion.currentMessageId) throw new Error("The saved question could not be verified. Please try again before using the AI assistant.");
 
       status.textContent = savedQuestion?.conversationId && savedQuestion.currentMessageId
-        ? "Verifying this saved conversation…"
-        : "Sending only your question to CampusBridge AI…";
+        ? "Verifying this saved conversation and preparing your current plan summary…"
+        : "Sending your question with a compact current plan summary to CampusBridge AI…";
       const headers = { "Content-Type": "application/json", Accept: "application/json" };
-      const requestBody = { question: text };
+      const requestBody = { question: text, planContext };
       if (savedQuestion?.conversationId && savedQuestion.currentMessageId) {
         const { data, error } = await window.CampusBridgeSupabase.client.auth.getSession();
         const accessToken = data?.session?.access_token;
@@ -156,9 +152,10 @@
         requestBody.currentMessageId = savedQuestion.currentMessageId;
         if (useHistory?.checked === true) requestBody.includeHistory = true;
         status.textContent = useHistory?.checked === true
-          ? "Sending your question and consented recent messages from this chat to CampusBridge AI…"
-          : "Sending only your question to CampusBridge AI…";
+          ? "Sending your question, current plan summary, and consented recent chat messages to CampusBridge AI…"
+          : "Sending your question and current plan summary to CampusBridge AI…";
       }
+      assistantRequestStarted = true;
       const response = await fetch("/api/assistant", { method: "POST", headers, body: JSON.stringify(requestBody) });
       let payload = {};
       try { payload = await response.json(); } catch { /* handled below */ }
@@ -168,11 +165,21 @@
       if (payload.incomplete === true) {
         const warning = document.createElement("p"); warning.className = "answerNotice"; warning.textContent = "This answer may be incomplete because it reached a response limit. Ask a narrower question."; turn.response.append(warning);
       }
-      status.textContent = "General educational information only. Your saved plan and quotes were not sent.";
+      status.textContent = planContext.status === "available"
+        ? "The answer uses a compact current plan summary; full form fields, account details, tracker notes, and quote references are not sent."
+        : "No valid plan is available; the question and unavailable-plan status were sent.";
       if (savedQuestion?.conversationId && savedQuestion.conversationId === activeConversationId) await saveAnswer(payload.answer);
     } catch (error) {
       const message = error.message || "The assistant is temporarily unavailable.";
-      turn.response.textContent = `Assistant unavailable: ${message}`; status.textContent = message;
+      if (fallbackTask.handled) {
+        Renderer.render(turn.response, fallbackTask.answer);
+        status.textContent = assistantRequestStarted
+          ? "AI unavailable; showing deterministic guidance from the current planner results."
+          : "Assistant request could not be completed; showing deterministic guidance from the current planner results.";
+        if (savedQuestion?.conversationId && savedQuestion.currentMessageId && savedQuestion.conversationId === activeConversationId) await saveAnswer(fallbackTask.answer);
+      } else {
+        turn.response.textContent = `Assistant unavailable: ${message}`; status.textContent = message;
+      }
     } finally {
       pending = false; submit.disabled = false; question.disabled = false; answer.setAttribute("aria-busy", "false");
       Conversation.scrollToLatest(turn.element, { onlyIfVisible: true });

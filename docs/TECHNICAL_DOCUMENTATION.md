@@ -9,7 +9,7 @@ This document describes behavior found in the repository source and tests, plus 
 
 CampusBridge AI is a student-facing prototype for organizing study-abroad tuition costs, available funds, savings assumptions, exchange-rate references, and manually collected payment-provider quotes. It aims to make those assumptions visible and explainable so a student can inspect a funding estimate and a time-based savings plan.
 
-The financial engine is deterministic application code. It validates inputs and calculates totals, funding gaps, schedules, quote eligibility, and scenarios. The AI assistant explains general concepts and can use explicitly consented recent messages from the selected saved chat; it is not the financial calculation engine and does not receive the user's saved plans, balances, or quotes.
+The financial engine is deterministic application code. It validates inputs and calculates totals, funding gaps, schedules, quote eligibility, and scenarios. The AI assistant can explain and assess a compact summary of the current calculated plan, dated savings schedule, rate provenance, linked tracker aggregates, and eligible entered quotes. It does not calculate or change the authoritative financial results. Full form fields, account details, tracker notes, and quote references are excluded.
 
 The application does not connect to a bank, verify a manually entered provider quote, issue a payment, or guarantee rates, fees, admission, visas, affordability, or funding. A Bangladesh Bank reference rate is not a student's executable payment price.
 
@@ -198,7 +198,7 @@ Server environment variable names in `.env.example` are `GROQ_API_KEY`, `SUPABAS
 
 ## 9. Security, privacy, and limitations
 
-- Current plan calculations and quote validation run locally. The model does not receive saved plans, account balances, quote rows, or calculation results from storage.
+- Current plan calculations and quote validation run locally. For an AI request, the model receives a bounded, server-validated summary of current calculated results, selected planning context, linked savings-tracker aggregates, and eligible entered quote comparisons. It does not receive full profile fields, account details, tracker notes, quote references, or saved database plans.
 - Saved-chat history is sent to the AI provider only after explicit opt-in for that request. It can include personal or financial details typed in that chat. Without consent, no earlier message text is sent.
 - Server-side conversation checks use the user's token and RLS, but this repository cannot prove the live RLS state or successful two-user isolation in a deployed project.
 - Browser storage is not encrypted. Same-origin scripts can access it; this is not suitable as a secure vault for credentials or bank secrets.
@@ -285,4 +285,4 @@ Potential follow-up workâ€”subject to product, privacy, and security review
 
 ## 14. Conclusion
 
-CampusBridge AI combines local deterministic planning with optional account-backed persistence and an explanatory assistant. The key system boundary is that financial calculations remain in validated application code while AI explanations use only the question and, after explicit opt-in, bounded messages from the selected saved conversation. The repository documents intended implementation; production configuration, live database policy state, and external-service behavior still require separate verification.
+CampusBridge AI combines local deterministic planning with optional account-backed persistence and an explanatory assistant. Financial calculations remain in validated application code. AI explanations use a bounded current-plan summary and, after explicit opt-in, bounded messages from the selected saved conversation. The repository documents intended implementation; production configuration, live database policy state, and external-service behavior still require separate verification.

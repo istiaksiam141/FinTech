@@ -852,7 +852,7 @@ test('quote currency must match the selected corridor currency',()=>{
 test('comparison ranking and report export share the same eligible quote list',()=>{
   const app=fs.readFileSync(path.join(__dirname,'..','app.js'),'utf8');
   const calls=app.match(/currentQuoteComparison\(\)/g)||[];
-  assert.equal(calls.length,3,'the helper is defined and used for both comparison and report export');
+  assert.equal(calls.length,4,'the helper is used for comparison, assistant context, and report export');
   assert.ok(app.includes('const comparison=cmp.ok?cmp.available:[]'));
   assert.ok(app.includes('const excluded=cmp.ok?cmp.unavailable:[]'));
   const quotes=[quote(),quote({name:'Expired',timestamp:'2026-10-12T11:59'})];
@@ -916,7 +916,7 @@ test('active UI has blank financial inputs and working external quote paths; scr
 
 test('student-facing privacy notices, progressive quote entry, and technical disclosures are present',()=>{
   const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'planner.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
-  for(const marker of ['id="privacy"','Supported planning and quote questions are answered locally. General questions are sent to the AI assistant.','Your financial form and quote entries are not included','id="addQuoteProvider"','What will the downloaded report contain?','id="requirements"','Technical integration readiness','formal privacy/terms documents are not configured']) assert.ok(html.includes(marker),`missing ${marker}`);
+  for(const marker of ['id="privacy"','the browser sends your question with a compact summary of the current calculated plan','It omits full form entries, account details, tracker notes, and quote references','id="addQuoteProvider"','What will the downloaded report contain?','id="requirements"','Technical integration readiness','formal privacy/terms documents are not configured']) assert.ok(html.includes(marker),`missing ${marker}`);
   assert.match(app,/providerDefs\.slice\(0,\s*visibleProviderCount\)/,'quote forms are shown progressively');
   assert.match(app,/quoteDrafts\.clear\(\)/,'clearing planner inputs also clears saved-in-page quote drafts');
   assert.match(app,/What this estimate uses/);
