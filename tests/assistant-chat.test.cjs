@@ -59,14 +59,14 @@ test('assistant page exposes saved conversations and sends only trusted conversa
   assert.ok(page.indexOf('assistant-conversation-list') < page.indexOf('assistant-form'));
   assert.match(page, /assistant-chat\.js[\s\S]*assistant-page\.js/);
   assert.match(page, /Signed-in conversations, including your questions and answers, are saved/);
-  assert.match(page, /AI requests include your current question and, when available, a compact summary of calculated costs, funding, savings dates/);
+  assert.match(page, /current structured financial report: costs, funding, dated savings schedule, saved stress tests, rate provenance, matching tracker totals, eligible quotes, missing information, and limitations/);
   assert.match(page, /id="assistant-use-history" type="checkbox"/);
   assert.match(page, /up to 11 recent messages from that same chat/);
   assert.match(page, /<details class="assistantPrivacyDetails">[\s\S]*?<summary>Full data and privacy details<\/summary>/, 'full disclosure is available in a collapsed detail view');
-  assert.match(page, /AI requests include your current question and, when available, a compact summary of calculated costs, funding, savings dates, and relevant entered comparison data/);
+  assert.match(page, /When a valid plan is available in this browser, each AI request includes a compact summary/);
   assert.match(page, /Include recent messages from this saved chat with my question \(optional\)/, 'history sharing remains an explicit checkbox choice');
   assert.doesNotMatch(page, /id="assistant-use-history" type="checkbox" checked/, 'history sharing is off by default');
-  assert.match(script, /Sending your question with a compact current plan summary to CampusBridge AI/);
+  assert.match(script, /Sending your question with the current financial report to CampusBridge AI/);
   assert.match(script, /requestBody = \{ question: text, planContext \}/);
   assert.match(script, /requestBody\.conversationId = savedQuestion\.conversationId/);
   assert.match(script, /requestBody\.currentMessageId = savedQuestion\.currentMessageId/);

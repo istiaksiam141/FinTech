@@ -131,6 +131,15 @@
   currencySelect.disabled = true;
   document.getElementById("quote-currency-note").textContent = plan.ok ? `Quotes must match the saved plan currency (${currency}).` : "";
   form.querySelectorAll('[data-field="timestamp"]').forEach(initializeTimestampPicker);
+  window.CampusBridgeTransferQuoteContext = () => {
+    const amount = document.getElementById("transfer-principal").value;
+    const sort = document.getElementById("quote-sort").value;
+    const quotes = [...form.querySelectorAll("[data-quote]")].map(card => {
+      const value = field => card.querySelector(`[data-field="${field}"]`).value;
+      return { name: value("name"), currency, totalCost: value("total"), recipientAmount: value("recipient"), timestamp: value("timestamp"), fee: value("fee"), quotedRate: value("rate"), days: value("days") };
+    });
+    return { comparison: Finance.compareEnteredQuotes({ amount, to: currency, sort }, quotes), ranking: sort };
+  };
   if (!plan.ok) { notice.textContent = plan.message; form.hidden = true; return; }
   let comparisonStarted = false;
   function compareQuotes() {

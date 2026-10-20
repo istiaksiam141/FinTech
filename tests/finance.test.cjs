@@ -852,7 +852,7 @@ test('quote currency must match the selected corridor currency',()=>{
 test('comparison ranking and report export share the same eligible quote list',()=>{
   const app=fs.readFileSync(path.join(__dirname,'..','app.js'),'utf8');
   const calls=app.match(/currentQuoteComparison\(\)/g)||[];
-  assert.equal(calls.length,4,'the helper is used for comparison, assistant context, and report export');
+  assert.equal(calls.length,5,'the helper is used by the shared quote context, comparison, assistant context, and report export');
   assert.ok(app.includes('const comparison=cmp.ok?cmp.available:[]'));
   assert.ok(app.includes('const excluded=cmp.ok?cmp.unavailable:[]'));
   const quotes=[quote(),quote({name:'Expired',timestamp:'2026-10-12T11:59'})];

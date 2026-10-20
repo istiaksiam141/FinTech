@@ -9,6 +9,7 @@
   const question = document.getElementById("assistant-widget-question");
   const messages = document.querySelector("[data-assistant-widget-messages]");
   const status = document.querySelector("[data-assistant-widget-status]");
+  const reportPreview = document.querySelector("[data-assistant-widget-report]");
   if (!panel || !launcher || !form || !question || !messages || !status) return;
 
   let pending = false;
@@ -30,6 +31,8 @@
     if (!dependencies) {
       dependencies = loadScript("/lib/finance.js", () => Boolean(window.CampusBridgeFinance))
         .then(() => loadScript("/lib/plan-state.js", () => Boolean(window.CampusBridgePlanState)))
+        .then(() => loadScript("/lib/savings-tracker.js", () => Boolean(window.CampusBridgeSavingsTracker)))
+        .then(() => loadScript("/lib/assistant-plan-context.js", () => Boolean(window.CampusBridgeAssistantPlanContext)))
         .then(() => loadScript("/lib/assistant-task.js", () => Boolean(window.CampusBridgeAssistantTask)))
         .then(() => loadScript("/js/page-utils.js", () => Boolean(window.CampusBridgePageUtils)))
         .then(() => loadScript("/lib/assistant-renderer.js", () => Boolean(window.CampusBridgeAssistantRenderer)))
@@ -70,6 +73,19 @@
   function renderAnswer(container, text) {
     window.CampusBridgeAssistantRenderer.render(container, text);
     messages.scrollTop = messages.scrollHeight;
+  }
+
+  function currentPlanContext() {
+    const plan = window.CampusBridgePageUtils.loadPlan();
+    const stored = window.CampusBridgePlanState.loadPlan();
+    const quoteContext = window.CampusBridgePlannerQuoteContext?.() || window.CampusBridgeTransferQuoteContext?.() || {};
+    const context = window.CampusBridgeAssistantPlanContext.summarize(plan, {
+      stressScenarios: stored?.ok ? stored.stressScenarios : [],
+      quoteComparison: quoteContext.comparison || null,
+      quoteRanking: quoteContext.ranking || null
+    });
+    if (reportPreview) reportPreview.textContent = JSON.stringify(context.financialReport || { status: "unavailable", reason: context.reason }, null, 2);
+    return context;
   }
 
   launcher.addEventListener("click", () => setOpen(panel.hidden));
@@ -115,26 +131,22 @@
     appendMessage(text, "user");
     question.value = "";
     const reply = appendMessage("Preparing your answer…", "assistant");
+    let fallbackTask = { handled: false };
 
     try {
       await prepareDependencies();
-      const task = window.CampusBridgeAssistantTask.run({
+      fallbackTask = window.CampusBridgeAssistantTask.run({
         question: text,
         Finance: window.CampusBridgeFinance,
         plan: window.CampusBridgePageUtils.loadPlan(),
         money: window.CampusBridgePageUtils.money
       });
-      if (task.handled) {
-        renderAnswer(reply, task.answer);
-        status.textContent = "Answered locally. Your plan and quotes were not sent.";
-        return;
-      }
-
-      status.textContent = "Sending only your question to CampusBridge AI…";
+      const planContext = currentPlanContext();
+      status.textContent = planContext.status === "available" ? "Sending your question with the current financial report to CampusBridge AI…" : "Sending your question; no valid current financial report is available.";
       const response = await fetch("/api/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ question: text })
+        body: JSON.stringify({ question: text, planContext })
       });
       let payload = {};
       try { payload = await response.json(); } catch { /* handled below */ }
@@ -147,10 +159,15 @@
         warning.textContent = "This answer may be incomplete. Ask a narrower question.";
         reply.append(warning);
       }
-      status.textContent = "General educational information only. Your plan and quotes were not sent.";
+      status.textContent = "The answer uses the supplied report when available. Deterministic calculations remain authoritative.";
     } catch (error) {
-      reply.textContent = `I couldn’t prepare an answer: ${error.message || "The assistant is temporarily unavailable."}`;
-      status.textContent = error.message || "The assistant is temporarily unavailable.";
+      if (fallbackTask?.handled) {
+        renderAnswer(reply, fallbackTask.answer);
+        status.textContent = "AI unavailable; showing local guidance based on current planner results.";
+      } else {
+        reply.textContent = `I couldn’t prepare an answer: ${error.message || "The assistant is temporarily unavailable."}`;
+        status.textContent = error.message || "The assistant is temporarily unavailable.";
+      }
     } finally {
       pending = false;
       submit.disabled = false;

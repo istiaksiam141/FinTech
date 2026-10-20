@@ -11,8 +11,18 @@
   const list = document.getElementById("assistant-conversation-list");
   const historyNote = document.getElementById("assistant-history-note");
   const useHistory = document.getElementById("assistant-use-history");
+  const reportPreview = document.getElementById("assistant-report-preview");
   const submit = form.querySelector('button[type="submit"]');
   let pending = false, userId = null, conversations = [], activeConversationId = null, authRevision = 0;
+
+  function currentPlanContext() {
+    const plan = loadPlan();
+    const stored = window.CampusBridgePlanState?.loadPlan?.();
+    const context = window.CampusBridgeAssistantPlanContext.summarize(plan, { stressScenarios: stored?.ok ? stored.stressScenarios : [] });
+    if (reportPreview) reportPreview.textContent = JSON.stringify(context.financialReport || { status: "unavailable", reason: context.reason }, null, 2);
+    return context;
+  }
+  currentPlanContext();
 
   function clearTranscript() { answer.replaceChildren(); delete answer.dataset.conversationStarted; }
   function renderList() {
@@ -134,13 +144,13 @@
       savedQuestion = await saveQuestion(text);
       const plan = loadPlan();
       fallbackTask = window.CampusBridgeAssistantTask.run({ question: text, Finance, plan, money });
-      const planContext = window.CampusBridgeAssistantPlanContext.summarize(plan);
+      const planContext = currentPlanContext();
 
       if (savedQuestion?.conversationId && !savedQuestion.currentMessageId) throw new Error("The saved question could not be verified. Please try again before using the AI assistant.");
 
       status.textContent = savedQuestion?.conversationId && savedQuestion.currentMessageId
-        ? "Verifying this saved conversation and preparing your current plan summary…"
-        : "Sending your question with a compact current plan summary to CampusBridge AI…";
+        ? "Verifying this saved conversation and preparing your current financial report…"
+        : "Sending your question with the current financial report to CampusBridge AI…";
       const headers = { "Content-Type": "application/json", Accept: "application/json" };
       const requestBody = { question: text, planContext };
       if (savedQuestion?.conversationId && savedQuestion.currentMessageId) {
@@ -152,8 +162,8 @@
         requestBody.currentMessageId = savedQuestion.currentMessageId;
         if (useHistory?.checked === true) requestBody.includeHistory = true;
         status.textContent = useHistory?.checked === true
-          ? "Sending your question, current plan summary, and consented recent chat messages to CampusBridge AI…"
-          : "Sending your question and current plan summary to CampusBridge AI…";
+          ? "Sending your question, current financial report, and consented recent chat messages to CampusBridge AI…"
+          : "Sending your question and current financial report to CampusBridge AI…";
       }
       assistantRequestStarted = true;
       const response = await fetch("/api/assistant", { method: "POST", headers, body: JSON.stringify(requestBody) });
@@ -166,7 +176,7 @@
         const warning = document.createElement("p"); warning.className = "answerNotice"; warning.textContent = "This answer may be incomplete because it reached a response limit. Ask a narrower question."; turn.response.append(warning);
       }
       status.textContent = planContext.status === "available"
-        ? "The answer uses a compact current plan summary; full form fields, account details, tracker notes, and quote references are not sent."
+        ? "The answer uses the current financial report; account details, tracker notes, and quote references are not sent."
         : "No valid plan is available; the question and unavailable-plan status were sent.";
       if (savedQuestion?.conversationId && savedQuestion.conversationId === activeConversationId) await saveAnswer(payload.answer);
     } catch (error) {
