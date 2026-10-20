@@ -158,6 +158,7 @@ test('shared navigation offers a persistent accessible light-blue theme toggle',
   assert.match(site, /className = "themeToggle"/);
   assert.match(site, /wrap\.append\(brand, nav, themeToggle\)/, 'the theme switch remains available outside the collapsed mobile menu');
   assert.match(site, /aria-pressed", String\(active\)/);
+  assert.match(site, /logo\.src = document\.body\.dataset\.theme === "blue" \? "\/assets\/brand\/logo-transparent\.png" : "\/assets\/brand\/logo-header\.png"/, 'newly created shared logos use an asset with contrast for the active theme');
   assert.match(site, /localStorage\.setItem\(themeStorageKey, nextTheme\)/);
   assert.match(site, /logo\.src = active \? "\/assets\/brand\/logo-transparent\.png" : "\/assets\/brand\/logo-header\.png"/);
   assert.match(css, /body\[data-theme="blue"\]\{color-scheme:light;--ink:#1a2424/);
