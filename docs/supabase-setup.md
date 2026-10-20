@@ -49,11 +49,11 @@ Only the signed-in user can request cloud operations. The browser obtains that u
 
 The auth session itself is persisted by Supabase JS in browser local storage using the library defaults. Do not use cloud saving on a shared or untrusted device. No passwords or OAuth client secrets are stored by CampusBridge.
 
-## Private profile pictures
+## Profile avatars
 
-The account page lets signed-in users change the name shown in their account menu and upload or remove a profile picture. Pictures are stored in a private `profile-photos` bucket under the user's Auth ID, and the shared navigation requests a short-lived signed URL to display the current picture. Each image is limited to 3 MB and JPEG, PNG, or WebP. The username is display metadata and does not change the login email or create a unique public handle.
+The account page lets signed-in users change their display name and choose from six pre-made profile avatars. The selected avatar ID is stored in Auth user metadata and its illustration is served from the local `assets/profile-avatars/` directory, so new avatar selections do not require image uploads or a storage bucket. Existing uploaded profile pictures continue to display until the user selects a preset avatar or chooses initials; the legacy private `profile-photos` bucket is used only to display or remove those existing files. The username is display metadata and does not change the login email or create a unique public handle.
 
-Before enabling picture uploads, review and manually apply [`supabase-profile-storage.sql`](supabase-profile-storage.sql) in the Supabase SQL Editor. It creates/updates the private bucket and owner-only select, insert, update, and delete policies. The page does not apply database changes automatically. Existing accounts need no schema migration; display names and the private object path are stored in Supabase Auth user metadata. The live bucket and policies were not verified here.
+Existing uploaded pictures require [`supabase-profile-storage.sql`](supabase-profile-storage.sql) for private display and removal. It creates/updates the private bucket and owner-only select, insert, update, and delete policies. The page does not apply database changes automatically. Choosing a preset avatar requires no storage setup or schema migration; the avatar ID and display name are stored in Supabase Auth user metadata. The live bucket and policies were not verified here.
 
 ## Optional authenticator-app MFA
 

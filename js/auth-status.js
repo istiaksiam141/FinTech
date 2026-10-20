@@ -1,9 +1,20 @@
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
-  if (root?.document) api.initialize(root);
+  if (root?.document) {
+    root.CampusBridgeAuthNavigation = api;
+    api.initialize(root);
+  }
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
+  const PROFILE_AVATARS = Object.freeze({
+    sage: "Sage",
+    sky: "Sky",
+    sunset: "Sunset",
+    ocean: "Ocean",
+    berry: "Berry",
+    gold: "Gold"
+  });
 
   function readableName(value) {
     if (typeof value !== "string") return "";
@@ -31,12 +42,21 @@
     return parts.length === 2 && parts[0] === userId && /^[a-zA-Z0-9-]+$/.test(parts[1]) ? path : "";
   }
 
+  function getAvatarId(user) {
+    const id = user?.user_metadata?.avatar_id;
+    return typeof id === "string" && Object.hasOwn(PROFILE_AVATARS, id) ? id : "";
+  }
+
+  function getAvatarUrl(id) {
+    return getAvatarId({ user_metadata: { avatar_id: id } }) ? `/assets/profile-avatars/${id}.svg` : "";
+  }
+
   function getNavigationState(user) {
-    if (!user) return { authenticated: false, displayName: "", email: "", initial: "", avatarPath: "", studyCountry: "" };
+    if (!user) return { authenticated: false, displayName: "", email: "", initial: "", avatarId: "", avatarPath: "", studyCountry: "" };
     const displayName = getDisplayName(user);
     const email = typeof user.email === "string" ? user.email.trim() : "";
     const studyCountry = typeof user.user_metadata?.study_country === "string" ? user.user_metadata.study_country : "";
-    return { authenticated: true, displayName, email, initial: Array.from(displayName)[0].toLocaleUpperCase(), avatarPath: getAvatarPath(user), studyCountry };
+    return { authenticated: true, displayName, email, initial: Array.from(displayName)[0].toLocaleUpperCase(), avatarId: getAvatarId(user), avatarPath: getAvatarPath(user), studyCountry };
   }
 
   function createSessionController(client, onSession, onUnavailable = () => {}) {
@@ -169,7 +189,15 @@
       name.textContent = view.displayName; email.textContent = view.email || "Email unavailable";
       initial.textContent = view.initial; initial.hidden = false; image.hidden = true; image.removeAttribute("src");
       toggle.setAttribute("aria-label", `Account menu for ${view.displayName}`);
-      if (view.avatarPath) {
+      if (view.avatarId) {
+        image.onload = () => {
+          if (revision !== renderRevision) return;
+          image.hidden = false;
+          initial.hidden = true;
+        };
+        image.onerror = () => { if (revision === renderRevision) image.hidden = true; };
+        image.src = getAvatarUrl(view.avatarId);
+      } else if (view.avatarPath) {
         const storage = root.CampusBridgeSupabase?.client?.storage?.from("profile-photos");
         if (typeof storage?.createSignedUrl === "function") {
           storage.createSignedUrl(view.avatarPath, 86400).then(({ data, error } = {}) => {
@@ -229,5 +257,5 @@
     else renderUser(null);
   }
 
-  return Object.freeze({ getDisplayName, getAvatarPath, getNavigationState, createSessionController, createLogoutController, initialize });
+  return Object.freeze({ PROFILE_AVATARS, getDisplayName, getAvatarId, getAvatarPath, getAvatarUrl, getNavigationState, createSessionController, createLogoutController, initialize });
 });

@@ -283,16 +283,21 @@ test('shared authentication controls load after the Supabase client on every pag
 
 test('account route exposes email, OAuth, recovery, and explicit cloud-plan actions', () => {
   const html = fs.readFileSync(path.join(root, 'account.html'), 'utf8');
-  for (const id of ['signup-form', 'login-form', 'google-signin', 'reset-request-form', 'recovery-complete-form', 'profile-name-form', 'profile-display-name', 'study-country-picker', 'study-country-toggle', 'study-country-options', 'study-country-flag', 'study-country-value', 'study-country-status', 'study-country-save', 'profile-summary-name', 'profile-summary-email', 'profile-photo-form', 'profile-photo-file', 'profile-photo-dropzone', 'profile-photo-save', 'profile-photo-remove', 'cloud-save-form', 'cloud-plan-name', 'cloud-plan-list', 'mfa-settings-badge', 'mfa-challenge-form', 'mfa-enroll-form', 'mfa-disable-form', 'mfa-qr-code']) assert.ok(html.includes(`id="${id}"`), `account page is missing #${id}`);
+  for (const id of ['signup-form', 'login-form', 'google-signin', 'reset-request-form', 'recovery-complete-form', 'profile-name-form', 'profile-display-name', 'study-country-picker', 'study-country-toggle', 'study-country-options', 'study-country-flag', 'study-country-value', 'study-country-status', 'study-country-save', 'profile-summary-name', 'profile-summary-email', 'profile-avatar-form', 'profile-avatar-options', 'profile-avatar-save', 'profile-avatar-remove', 'profile-avatar-status', 'cloud-save-form', 'cloud-plan-name', 'cloud-plan-list', 'mfa-settings-badge', 'mfa-challenge-form', 'mfa-enroll-form', 'mfa-disable-form', 'mfa-qr-code']) assert.ok(html.includes(`id="${id}"`), `account page is missing #${id}`);
   assert.match(html, /profileNameControls[\s\S]*studyCountryPicker[\s\S]*study-country-toggle[\s\S]*study-country-options/, 'study destination is a profile preference immediately below the display-name controls');
   assert.equal((html.match(/data-study-country=/g) || []).length, 21, 'the country menu contains popular study destinations with a flag per choice');
   assert.match(html, /aria-haspopup="listbox" aria-expanded="false" aria-controls="study-country-options"/, 'the country picker exposes its listbox relationship and open state');
   const flags = fs.readFileSync(path.join(root, 'assets/study-country-flags.svg'), 'utf8');
   for (const [, code] of html.matchAll(/data-study-country="([A-Z]{2})"/g)) assert.ok(flags.includes(`<symbol id="flag-${code}"`), `${code} has a local flag illustration`);
   assert.match(html, /id="cloud-save-form"[\s\S]*class="cloudSaveIntro"[\s\S]*class="cloudSaveControls"[\s\S]*id="cloud-plan-name"[\s\S]*Save plan/, 'cloud-plan saving has separate guidance, naming, and action controls');
-  assert.match(html, /role="button" tabindex="0" aria-describedby="profile-photo-help profile-photo-status"/, 'photo dropzone is keyboard and screen-reader accessible');
-  assert.match(html, /Drop a photo here or/);
-  assert.match(html, /browse files/);
+  assert.match(html, /role="group" aria-label="Choose a profile avatar" aria-describedby="profile-avatar-help profile-avatar-status"/, 'avatar choices are grouped and described for assistive technology');
+  assert.equal((html.match(/data-profile-avatar=/g) || []).length, 6, 'the profile provides six pre-made avatar choices');
+  assert.doesNotMatch(html, /type="file"|browse files|Drop a photo here/, 'the profile no longer prompts users to upload a photo');
+  const avatarIds = ['sage', 'sky', 'sunset', 'ocean', 'berry', 'gold'];
+  for (const id of avatarIds) {
+    assert.match(html, new RegExp(`data-profile-avatar="${id}"[^>]*aria-pressed="false"`), `${id} avatar is a selectable button`);
+    assert.equal(fs.existsSync(path.join(root, 'assets', 'profile-avatars', `${id}.svg`)), true, `${id} avatar artwork exists locally`);
+  }
   assert.match(html, /class="accountLayout"[\s\S]*class="accountMain"[\s\S]*class="accountStory"/, 'account access uses a split-panel layout');
   assert.match(html, /fonts\.googleapis\.com\/css2\?family=DM\+Sans:[^"]*Manrope:/, 'the account page loads its body and heading font families');
   assert.doesNotMatch(html, /<details\b/, 'account forms do not use expand/collapse disclosures');
@@ -322,16 +327,12 @@ test('account route exposes email, OAuth, recovery, and explicit cloud-plan acti
   assert.match(account, /updateUser\(\{ data: \{ study_country: countryCode \} \}\)/, 'the selected study destination is saved in the signed-in user profile');
   assert.match(account, /studyCountryOptions\.addEventListener\("keydown"/, 'the country list supports keyboard navigation');
   assert.match(account, /studyCountrySave\.addEventListener\("click"/, 'the country choice is saved only after explicit confirmation');
-  assert.match(account, /bucket\.upload\(path, file/);
-  assert.match(account, /data: \{ avatar_path: path \}/);
-  assert.match(account, /file\.size > 3 \* 1024 \* 1024/);
-  assert.match(account, /image\/jpeg", "image\/png", "image\/webp/);
-  assert.match(account, /createSignedUrl\(path, 86400\)/);
-  assert.match(account, /profilePhotoDropzone\.addEventListener\("drop"/);
-  assert.match(account, /profilePhotoInput\.click\(\)/);
-  assert.match(account, /event\.key !== "Enter" && event\.key !== " "/);
-  assert.match(account, /profilePhotoSave\.disabled = !selectedProfilePhoto/);
-  assert.match(account, /Profile-picture storage is unavailable/);
+  assert.match(account, /data: \{ avatar_id: selectedAvatarId, avatar_path: null \}/, 'saving an avatar stores its preset id and clears any old uploaded image reference');
+  assert.match(account, /data: \{ avatar_id: null, avatar_path: null \}/, 'the user can return to initials and clear the saved avatar');
+  assert.match(account, /avatarChoices\.forEach\(choice => choice\.addEventListener\("click"/, 'avatar choices preview on selection');
+  assert.match(account, /profileAvatars\.getAvatarUrl\(displayedAvatarId\)/, 'the account preview uses the local preset artwork');
+  assert.match(account, /createSignedUrl\(path, 86400\)/, 'legacy uploaded pictures continue to display until replaced');
+  assert.doesNotMatch(account, /bucket\.upload|type="file"|\.addEventListener\("drop"/, 'the account page has no profile-photo upload flow');
   const storageSetup = fs.readFileSync(path.join(root, 'docs/supabase-profile-storage.sql'), 'utf8');
   assert.match(storageSetup, /'profile-photos',\s*'profile-photos',\s*false/);
   assert.match(storageSetup, /auth\.uid\(\)::text/);
@@ -347,9 +348,8 @@ test('account route exposes email, OAuth, recovery, and explicit cloud-plan acti
   assert.match(css, /@media\(prefers-reduced-motion:reduce\)\{\.studyCountryFlag/, 'flag and dropdown motion respects reduced-motion preferences');
   assert.match(css, /\.studyCountryOptions\[hidden\]\{display:none\}/, 'the country menu supports its hidden state');
   assert.match(css, /\.studyCountryOption\[aria-selected=true\]/, 'the selected country receives a visible menu state');
-  assert.match(css, /\.profilePhotoDropzone\.is-dragging/, 'profile photo drop target responds to drag-and-drop');
-  assert.match(css, /\.profilePhotoFileInput\{position:absolute!important/, 'native file picker stays accessible without its default appearance');
-  assert.match(css, /\.profilePhotoActions \.button\[hidden\]\{display:none!important\}/, 'remove-picture action stays hidden when no picture exists');
+  assert.match(css, /\.profileAvatarOption\[aria-pressed=true\]/, 'the selected avatar has a clear visual state');
+  assert.match(css, /\.profileAvatarActions \.button\[hidden\]\{display:none!important\}/, 'use-initials action stays hidden when no preset or legacy picture exists');
   assert.match(css, /@media\(max-width:760px\)\{\.profileSettingsGrid\{grid-template-columns:1fr\}/, 'profile cards stack on narrow layouts');
   assert.match(css, /\.accountHero #cloud-plans-panel\{[^}]*padding:clamp/, 'signed-in account content has a responsive page card layout');
   assert.match(css, /\.accountHero #cloud-plans-panel \.cloudSaveForm\{grid-template-columns:minmax\(220px,\.78fr\) minmax\(0,1\.22fr\)/, 'save-plan card has a balanced intro-to-control ratio');

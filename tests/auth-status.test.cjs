@@ -6,7 +6,7 @@ const AuthNavigation = require('../js/auth-status.js');
 
 test('logged-out navigation state offers login without an avatar or logout state', () => {
   assert.deepEqual(AuthNavigation.getNavigationState(null), {
-    authenticated: false, displayName: '', email: '', initial: '', avatarPath: '', studyCountry: ''
+    authenticated: false, displayName: '', email: '', initial: '', avatarId: '', avatarPath: '', studyCountry: ''
   });
   const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'auth-status.js'), 'utf8');
   assert.match(source, /\/account\.html#login-form/);
@@ -17,9 +17,9 @@ test('logged-out navigation state offers login without an avatar or logout state
 
 test('logged-in navigation prefers profile names and uses an uppercase initial', () => {
   assert.deepEqual(AuthNavigation.getNavigationState({
-    id: 'student-id', email: 'student@example.com', user_metadata: { full_name: 'Amina Rahman' }
+    id: 'student-id', email: 'student@example.com', user_metadata: { full_name: 'Amina Rahman', avatar_id: 'sage' }
   }), {
-    authenticated: true, displayName: 'Amina Rahman', email: 'student@example.com', initial: 'A', avatarPath: '', studyCountry: ''
+    authenticated: true, displayName: 'Amina Rahman', email: 'student@example.com', initial: 'A', avatarId: 'sage', avatarPath: '', studyCountry: ''
   });
 });
 
@@ -31,14 +31,19 @@ test('navigation state carries the saved study-country preference', () => {
   assert.match(source, /campusbridge:study-destination/);
 });
 
-test('profile settings override provider names and accept only own avatar paths', () => {
+test('profile settings accept only known preset avatars and own legacy image paths', () => {
   const user = {
     id: 'student-id', email: 'student@example.com',
     user_metadata: { display_name: 'Sam Rivera', full_name: 'Provider Name', avatar_path: 'student-id/photo-123' }
   };
   assert.deepEqual(AuthNavigation.getNavigationState(user), {
-    authenticated: true, displayName: 'Sam Rivera', email: 'student@example.com', initial: 'S', avatarPath: 'student-id/photo-123', studyCountry: ''
+    authenticated: true, displayName: 'Sam Rivera', email: 'student@example.com', initial: 'S', avatarId: '', avatarPath: 'student-id/photo-123', studyCountry: ''
   });
+  assert.equal(AuthNavigation.getAvatarId({ user_metadata: { avatar_id: 'sage' } }), 'sage');
+  assert.equal(AuthNavigation.getAvatarUrl('sage'), '/assets/profile-avatars/sage.svg');
+  assert.equal(AuthNavigation.getAvatarId({ user_metadata: { avatar_id: '../other' } }), '');
+  assert.equal(AuthNavigation.getAvatarId({ user_metadata: { avatar_id: 'unknown' } }), '');
+  assert.deepEqual(Object.keys(AuthNavigation.PROFILE_AVATARS), ['sage', 'sky', 'sunset', 'ocean', 'berry', 'gold']);
   assert.equal(AuthNavigation.getAvatarPath({ ...user, user_metadata: { avatar_path: 'another-user/photo-123' } }), '');
   assert.equal(AuthNavigation.getAvatarPath({ ...user, user_metadata: { avatar_path: 'student-id/../other' } }), '');
 });
@@ -46,7 +51,7 @@ test('profile settings override provider names and accept only own avatar paths'
 test('email fallback is readable and safely falls back to User', () => {
   assert.equal(AuthNavigation.getDisplayName({ email: 'amina.rahman+campus@example.com' }), 'Amina Rahman');
   assert.deepEqual(AuthNavigation.getNavigationState({}), {
-    authenticated: true, displayName: 'User', email: '', initial: 'U', avatarPath: '', studyCountry: ''
+    authenticated: true, displayName: 'User', email: '', initial: 'U', avatarId: '', avatarPath: '', studyCountry: ''
   });
 });
 

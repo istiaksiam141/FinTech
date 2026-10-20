@@ -7,8 +7,8 @@
   const accountAccess = byId("account-access-layout");
   const authOptions = byId("account-auth-options"), challengePanel = byId("mfa-challenge-panel"), recoveryForm = byId("recovery-complete-form");
   const plansList = byId("cloud-plan-list"), saveForm = byId("cloud-save-form");
-  const profileNameForm = byId("profile-name-form"), profilePhotoForm = byId("profile-photo-form");
-  const profileNameInput = byId("profile-display-name"), profilePhotoInput = byId("profile-photo-file");
+  const profileNameForm = byId("profile-name-form"), profileAvatarForm = byId("profile-avatar-form");
+  const profileNameInput = byId("profile-display-name");
   const studyCountryPicker = byId("study-country-picker"), studyCountryToggle = byId("study-country-toggle");
   const studyCountryOptions = byId("study-country-options"), studyCountryFlag = byId("study-country-flag");
   const studyCountryValue = byId("study-country-value"), studyCountryStatus = byId("study-country-status");
@@ -25,13 +25,12 @@
     flag.replaceChildren(svg);
   };
   studyCountryChoices.forEach(option => studyCountryFlagArtwork(option.querySelector(".studyCountryFlag"), option.dataset.studyCountry));
-  const profilePhotoStatus = byId("profile-photo-status"), avatarImage = byId("account-avatar-image");
-  const avatarInitial = byId("account-avatar-initial"), photoRemoveButton = byId("profile-photo-remove");
-  const profilePhotoDropzone = byId("profile-photo-dropzone"), profilePhotoName = byId("profile-photo-filename");
-  const profilePhotoPrompt = byId("profile-photo-prompt-main"), profilePhotoBrowse = byId("profile-photo-browse");
-  const profilePhotoSave = byId("profile-photo-save");
+  const profileAvatarStatus = byId("profile-avatar-status"), avatarImage = byId("account-avatar-image");
+  const avatarInitial = byId("account-avatar-initial"), avatarRemoveButton = byId("profile-avatar-remove");
+  const avatarSaveButton = byId("profile-avatar-save"), avatarChoices = [...document.querySelectorAll("[data-profile-avatar]")];
+  const profileAvatars = window.CampusBridgeAuthNavigation;
   const profileSummaryName = byId("profile-summary-name"), profileSummaryEmail = byId("profile-summary-email");
-  const authForms = ["signup-form", "login-form", "reset-request-form", "recovery-complete-form", "profile-name-form", "profile-photo-form", "cloud-save-form", "mfa-challenge-form", "mfa-enroll-form", "mfa-disable-form"].map(byId).filter(Boolean);
+  const authForms = ["signup-form", "login-form", "reset-request-form", "recovery-complete-form", "profile-name-form", "profile-avatar-form", "cloud-save-form", "mfa-challenge-form", "mfa-enroll-form", "mfa-disable-form"].map(byId).filter(Boolean);
   const say = (message, kind = "info") => { status.hidden = false; status.textContent = message; status.dataset.kind = kind; };
   const setBusy = (form, busy) => { form.querySelectorAll("button[type=submit]").forEach(button => { button.disabled = busy; button.dataset.originalText ||= button.textContent; button.textContent = busy ? "Please wait…" : button.dataset.originalText; }); };
   const accountFormHashes = new Set(["#signup-form", "#login-form", "#reset-request-form"]);
@@ -78,7 +77,7 @@
   };
   const cloudPlans = window.CampusBridgeCloudPlans?.createCloudPlans({ client, planState: window.CampusBridgePlanState });
   const mfa = window.CampusBridgeMfaFlow?.createMfaFlow({ client });
-  let session = null, loadingPlans = false, security = { status: "checking" }, securityRevision = 0, avatarRevision = 0, previewUrl = "", selectedProfilePhoto = null, studyCountryUserId = null;
+  let session = null, loadingPlans = false, security = { status: "checking" }, securityRevision = 0, avatarRevision = 0, selectedAvatarId = null, selectedAvatarUserId = null, studyCountryUserId = null;
   let recoveryActive = new URLSearchParams(location.search).get("flow") === "recovery";
 
   document.querySelectorAll("[data-password-toggle]").forEach(toggle => {
@@ -130,6 +129,10 @@
   function renderProfileSettings() {
     const user = session?.user;
     const displayName = displayNameFor(user);
+    if (selectedAvatarUserId !== user?.id) {
+      selectedAvatarUserId = user?.id || null;
+      selectedAvatarId = null;
+    }
     profileNameInput.value = displayName;
     profileSummaryName.textContent = displayName;
     profileSummaryEmail.textContent = user?.email || "Email unavailable";
@@ -154,109 +157,72 @@
     studyCountryStatus.textContent = studyCountry
       ? `${studyCountry.lastElementChild.textContent} is saved as your study destination.`
       : "Choose a destination to personalize your profile.";
-    const path = userAvatarPath(user), revision = ++avatarRevision;
-    photoRemoveButton.hidden = !path;
-    profilePhotoSave.disabled = !selectedProfilePhoto;
+    const path = userAvatarPath(user), savedAvatarId = profileAvatars?.getAvatarId(user) || "";
+    const displayedAvatarId = selectedAvatarId ?? savedAvatarId, revision = ++avatarRevision;
+    avatarChoices.forEach(choice => choice.setAttribute("aria-pressed", String(choice.dataset.profileAvatar === displayedAvatarId)));
+    avatarRemoveButton.hidden = !path && !savedAvatarId;
+    avatarSaveButton.disabled = !client || !user || security.status !== "ready" || !selectedAvatarId || selectedAvatarId === savedAvatarId;
     const showInitial = () => {
       avatarImage.hidden = true;
       avatarImage.removeAttribute("src");
       avatarInitial.hidden = false;
     };
-    if (selectedProfilePhoto && previewUrl) {
-      avatarImage.src = previewUrl;
+    if (displayedAvatarId) {
+      avatarImage.onload = () => {
+        if (revision !== avatarRevision) return;
+        avatarImage.hidden = false;
+        avatarInitial.hidden = true;
+      };
+      avatarImage.onerror = () => {
+        if (revision !== avatarRevision) return;
+        showInitial();
+        profileAvatarStatus.textContent = "Could not display this avatar. Choose another one and try again.";
+      };
+      avatarImage.src = profileAvatars.getAvatarUrl(displayedAvatarId);
       avatarImage.hidden = false;
       avatarInitial.hidden = true;
-    } else showInitial();
-    profilePhotoDropzone.classList.toggle("has-selection", Boolean(selectedProfilePhoto));
-    profilePhotoName.textContent = selectedProfilePhoto ? selectedProfilePhoto.name : "JPG, PNG or WebP · Up to 3 MB";
-    profilePhotoPrompt.textContent = selectedProfilePhoto ? "Ready to upload" : "Drop a photo here or";
-    profilePhotoBrowse.textContent = selectedProfilePhoto ? "change photo" : "browse files";
-    profilePhotoStatus.textContent = path ? "Loading your private profile picture…" : "No profile picture uploaded.";
-    if (selectedProfilePhoto) {
-      profilePhotoStatus.textContent = "Preview ready. Save picture to update your account.";
+      profileAvatarStatus.textContent = selectedAvatarId && selectedAvatarId !== savedAvatarId
+        ? `${profileAvatars.PROFILE_AVATARS[selectedAvatarId]} selected. Save avatar to update your account.`
+        : `${profileAvatars.PROFILE_AVATARS[displayedAvatarId]} avatar selected.`;
       return;
     }
+    showInitial();
+    profileAvatarStatus.textContent = path ? "Loading your current profile picture…" : "Choose an avatar to personalize your account.";
     if (!path) return;
     const storage = client?.storage?.from("profile-photos");
     if (typeof storage?.createSignedUrl !== "function") {
-      profilePhotoStatus.textContent = "Profile-picture storage is unavailable. Check the Supabase setup.";
+      profileAvatarStatus.textContent = "Could not load your current profile picture. Choose an avatar to replace it.";
       return;
     }
     storage.createSignedUrl(path, 86400).then(({ data, error } = {}) => {
       if (revision !== avatarRevision) return;
       if (error || !data?.signedUrl) {
-        profilePhotoStatus.textContent = "Could not load your profile picture. You can upload another one.";
+        profileAvatarStatus.textContent = "Could not load your current profile picture. Choose an avatar to replace it.";
         return;
       }
       avatarImage.onload = () => {
         if (revision !== avatarRevision) return;
         avatarImage.hidden = false;
         avatarInitial.hidden = true;
-        profilePhotoStatus.textContent = "Your profile picture is private to your account.";
+        profileAvatarStatus.textContent = "Your existing profile picture is private to your account.";
       };
       avatarImage.onerror = () => {
-        if (revision === avatarRevision) profilePhotoStatus.textContent = "Could not display your profile picture. You can upload another one.";
+        if (revision === avatarRevision) profileAvatarStatus.textContent = "Could not display your current picture. Choose an avatar to replace it.";
       };
       avatarImage.src = data.signedUrl;
     }).catch(() => {
-      if (revision === avatarRevision) profilePhotoStatus.textContent = "Could not load your profile picture. You can upload another one.";
+      if (revision === avatarRevision) profileAvatarStatus.textContent = "Could not load your current profile picture. Choose an avatar to replace it.";
     });
   }
   function storageBucket() {
     const storage = client?.storage?.from("profile-photos");
-    if (!storage) throw new Error("Profile-picture storage is unavailable. Apply docs/supabase-profile-storage.sql in your Supabase project, then try again.");
+    if (!storage) throw new Error("Existing profile-picture storage is unavailable. The profile change was saved, but its old image could not be deleted.");
     return storage;
-  }
-  function selectedImage(file) {
-    if (!file) throw new Error("Choose a profile picture first.");
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("Choose a JPG, PNG, or WebP image.");
-    if (file.size > 3 * 1024 * 1024) throw new Error("Choose an image that is 3 MB or smaller.");
-    return file;
   }
   function updateCurrentUser(user) {
     if (!user) throw new Error("Supabase did not return the updated account. Refresh and check your profile.");
     if (session) session.user = user;
     renderProfileSettings();
-  }
-  function clearPhotoPreview() {
-    if (!previewUrl) return;
-    URL.revokeObjectURL(previewUrl);
-    previewUrl = "";
-  }
-  function clearSelectedProfilePhoto() {
-    selectedProfilePhoto = null;
-    clearPhotoPreview();
-    profilePhotoInput.value = "";
-    profilePhotoSave.disabled = true;
-  }
-  function selectProfilePhoto(file) {
-    try {
-      selectedProfilePhoto = selectedImage(file);
-      clearPhotoPreview();
-      previewUrl = URL.createObjectURL(selectedProfilePhoto);
-      avatarImage.onload = () => {
-        avatarImage.hidden = false;
-        avatarInitial.hidden = true;
-      };
-      avatarImage.onerror = () => {
-        profilePhotoStatus.textContent = "This image could not be previewed. Choose a different picture.";
-        clearSelectedProfilePhoto();
-        renderProfileSettings();
-      };
-      avatarImage.src = previewUrl;
-      profilePhotoSave.disabled = false;
-      profilePhotoDropzone.classList.add("has-selection");
-      profilePhotoName.textContent = selectedProfilePhoto.name;
-      profilePhotoPrompt.textContent = "Ready to upload";
-      profilePhotoBrowse.textContent = "change photo";
-      profilePhotoStatus.textContent = "Preview ready. Save picture to update your account.";
-      return true;
-    } catch (error) {
-      clearSelectedProfilePhoto();
-      renderProfileSettings();
-      profilePhotoStatus.textContent = errorText(error);
-      return false;
-    }
   }
   async function deleteOwnedAvatar(path) {
     if (!path) return null;
@@ -440,81 +406,60 @@
       studyCountrySave.textContent = "Save country";
     }
   });
-  profilePhotoInput.addEventListener("change", () => {
-    const file = profilePhotoInput.files?.[0];
-    if (file) selectProfilePhoto(file);
-    profilePhotoInput.value = "";
-  });
-  profilePhotoDropzone.addEventListener("click", () => profilePhotoInput.click());
-  profilePhotoDropzone.addEventListener("keydown", event => {
-    if (event.key !== "Enter" && event.key !== " ") return;
+  avatarChoices.forEach(choice => choice.addEventListener("click", () => {
+    selectedAvatarId = choice.dataset.profileAvatar;
+    renderProfileSettings();
+  }));
+  profileAvatarForm.addEventListener("submit", event => {
     event.preventDefault();
-    profilePhotoInput.click();
-  });
-  profilePhotoDropzone.addEventListener("dragenter", event => {
-    event.preventDefault();
-    profilePhotoDropzone.classList.add("is-dragging");
-  });
-  profilePhotoDropzone.addEventListener("dragover", event => {
-    event.preventDefault();
-    profilePhotoDropzone.classList.add("is-dragging");
-  });
-  profilePhotoDropzone.addEventListener("dragleave", event => {
-    if (!profilePhotoDropzone.contains(event.relatedTarget)) profilePhotoDropzone.classList.remove("is-dragging");
-  });
-  profilePhotoDropzone.addEventListener("drop", event => {
-    event.preventDefault();
-    profilePhotoDropzone.classList.remove("is-dragging");
-    const file = event.dataTransfer?.files?.[0];
-    if (file) selectProfilePhoto(file);
-  });
-  profilePhotoForm.addEventListener("submit", event => {
-    event.preventDefault();
-    if (!client || !session?.user || security.status !== "ready") return;
-    submit(profilePhotoForm, async () => {
-      const file = selectedImage(selectedProfilePhoto);
-      const bucket = storageBucket(), user = session.user;
-      if (typeof window.crypto?.randomUUID !== "function") throw new Error("Secure image uploads are unavailable in this browser.");
-      const path = `${user.id}/${window.crypto.randomUUID()}`;
-      const { error: uploadError } = await bucket.upload(path, file, { cacheControl: "3600", contentType: file.type, upsert: false });
-      if (uploadError) throw uploadError;
-      let update;
-      try {
-        update = await client.auth.updateUser({ data: { avatar_path: path } });
-        if (update.error) throw update.error;
-      } catch (error) {
-        const { error: cleanupError } = await bucket.remove([path]);
-        if (cleanupError) throw new Error(`${errorText(error)} The uploaded image could not be cleaned up.`);
-        throw error;
-      }
-      const oldPath = userAvatarPath(user);
-      clearSelectedProfilePhoto();
-      profilePhotoForm.reset();
-      updateCurrentUser(update.data?.user);
-      if (oldPath && oldPath !== path) {
-        const cleanupError = await deleteOwnedAvatar(oldPath);
-        if (cleanupError) {
-          say("Your new profile picture was saved, but the previous picture could not be removed from storage.", "error");
+    if (!client || !session?.user || security.status !== "ready" || !selectedAvatarId) return;
+    submit(profileAvatarForm, async () => {
+      const oldPath = userAvatarPath(session.user);
+      const { data, error } = await client.auth.updateUser({ data: { avatar_id: selectedAvatarId, avatar_path: null } });
+      if (error) throw error;
+      selectedAvatarId = null;
+      updateCurrentUser(data?.user);
+      if (oldPath) {
+        try {
+          const cleanupError = await deleteOwnedAvatar(oldPath);
+          if (cleanupError) {
+            say("Your avatar was saved, but your previous uploaded picture could not be removed from storage.", "error");
+            return;
+          }
+        } catch (error) {
+          say(`Your avatar was saved, but the previous uploaded picture could not be removed: ${errorText(error)}`, "error");
           return;
         }
       }
-      say("Your profile picture has been updated.", "success");
-    });
+      say("Your profile avatar has been updated.", "success");
+    }).finally(renderProfileSettings);
   });
-  photoRemoveButton.addEventListener("click", () => {
+  avatarRemoveButton.addEventListener("click", () => {
     if (!client || !session?.user || security.status !== "ready") return;
-    photoRemoveButton.disabled = true;
-    submit(profilePhotoForm, async () => {
+    avatarRemoveButton.disabled = true;
+    submit(profileAvatarForm, async () => {
       const oldPath = userAvatarPath(session.user);
-      const { data, error } = await client.auth.updateUser({ data: { avatar_path: null } });
+      const { data, error } = await client.auth.updateUser({ data: { avatar_id: null, avatar_path: null } });
       if (error) throw error;
-      clearSelectedProfilePhoto();
+      selectedAvatarId = null;
       updateCurrentUser(data?.user);
-      profilePhotoForm.reset();
-      const cleanupError = await deleteOwnedAvatar(oldPath);
-      if (cleanupError) say("Your profile picture was removed from your account, but its stored file could not be deleted.", "error");
-      else say("Your profile picture has been removed.", "success");
-    }).finally(() => { photoRemoveButton.disabled = false; });
+      if (oldPath) {
+        try {
+          const cleanupError = await deleteOwnedAvatar(oldPath);
+          if (cleanupError) {
+            say("Your profile now uses initials, but your previous uploaded picture could not be removed from storage.", "error");
+            return;
+          }
+        } catch (cleanupError) {
+          say(`Your profile now uses initials, but the previous uploaded picture could not be removed: ${errorText(cleanupError)}`, "error");
+          return;
+        }
+      }
+      say("Your profile now uses your initials.", "success");
+    }).finally(() => {
+      avatarRemoveButton.disabled = false;
+      renderProfileSettings();
+    });
   });
   byId("signup-form").addEventListener("submit", event => {
     event.preventDefault(); if (!client) return;

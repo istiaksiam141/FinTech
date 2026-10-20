@@ -824,10 +824,10 @@ body[data-page=account] .accountHero>.wrap{width:min(1160px,calc(100% - 40px));m
 .profileSettingsForm{display:grid;align-content:start;gap:16px;min-width:0;padding:20px;border:1px solid #e6eae3;border-radius:16px;background:#fff;box-shadow:0 3px 12px rgba(30,56,38,.025)}
 .profileFormHeading{display:flex;align-items:flex-start;gap:12px}
 .profileFormHeading>div{display:grid;gap:4px;min-width:0}
-.profileFormHeading label,.profilePhotoLabel{color:#344c3e;font-weight:700}
+.profileFormHeading label,.profileAvatarLabel{color:#344c3e;font-weight:700}
 .profileFormHeading .muted{margin:0;color:#687168;font-size:.78rem;line-height:1.5}
 .profileFormIcon{display:grid;width:38px;height:38px;flex:none;place-items:center;border:1px solid #e0e9df;border-radius:12px;background:#f1f6f0;color:#276448;font-size:.82rem;font-weight:700}
-.profileFormIconPhoto svg,.profilePhotoUploadIcon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.profileFormIconAvatar svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .profileNameControls{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:9px}
 .studyCountryPicker{position:relative;display:grid;gap:8px;min-width:0}
 .studyCountryLabel{color:#344c3e;font-size:.8rem;font-weight:700}
@@ -856,20 +856,18 @@ body[data-page=account] .accountHero>.wrap{width:min(1160px,calc(100% - 40px));m
 @media(prefers-reduced-motion:reduce){.studyCountryFlag,.studyCountryOptions:not([hidden]){animation:none!important;transition:none!important}}
 .profileSettingsForm input:not([type=file]){width:100%;min-width:0;min-height:44px;padding:10px 12px;border:1px solid #d9e1d9;border-radius:10px;background:#fff;color:#253d32;font:inherit}
 .profileSettingsForm input:not([type=file]):focus{border-color:#27845f;outline:0;box-shadow:0 0 0 3px rgba(39,132,95,.14)}
-.profileSettingsForm .profileNameControls .button,.profilePhotoActions .button{width:auto;min-height:44px;justify-self:auto;padding:10px 16px;white-space:nowrap}
-.profileSettingsForm button:focus-visible,.profilePhotoDropzone:focus-visible{outline:3px solid rgba(39,132,95,.24);outline-offset:3px}
-.profilePhotoFileInput{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;clip-path:inset(50%)!important;white-space:nowrap!important}
-.profilePhotoDropzone{display:grid;min-height:112px;align-content:center;justify-items:center;gap:8px;padding:14px;border:1.5px dashed #b9cbbb;border-radius:14px;background:linear-gradient(145deg,#f6faf5,#f0f6ef);color:#365644;text-align:center;cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease,box-shadow .18s ease}
-.profilePhotoDropzone:hover,.profilePhotoDropzone.is-dragging,.profilePhotoDropzone.has-selection{border-color:#33835f;background:#edf6ee;box-shadow:0 5px 16px rgba(40,105,68,.08)}
-.profilePhotoDropzone:hover{transform:translateY(-1px)}
-.profilePhotoDropzone.is-dragging{outline:3px solid rgba(39,132,95,.14);outline-offset:2px}
-.profilePhotoUploadIcon{display:grid;width:34px;height:34px;place-items:center;border:1px solid #d6e7d7;border-radius:11px;background:#fff;color:#27714e}
-.profilePhotoDropzone strong{color:#365644;font-size:.8rem;font-weight:700}
-.profilePhotoDropzone strong .profilePhotoBrowse{color:#18724d;text-decoration:underline;text-underline-offset:3px}
-.profilePhotoFilename{max-width:100%;overflow:hidden;color:#78877a;font-size:.7rem;text-overflow:ellipsis;white-space:nowrap}
-.profilePhotoActions{display:flex;flex-wrap:wrap;gap:8px}
-.profilePhotoActions .button[hidden]{display:none!important}
-.profilePhotoActions .button:disabled{opacity:.48;cursor:not-allowed}
+.profileSettingsForm .profileNameControls .button,.profileAvatarActions .button{width:auto;min-height:44px;justify-self:auto;padding:10px 16px;white-space:nowrap}
+.profileSettingsForm button:focus-visible{outline:3px solid rgba(39,132,95,.24);outline-offset:3px}
+.profileAvatarOptions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.profileAvatarOption{display:grid;min-width:0;justify-items:center;gap:6px;padding:9px 5px;border:1px solid #e5eae3;border-radius:12px;background:linear-gradient(145deg,#fff,#f8faf7);color:#526458;font:600 .7rem 'DM Sans',sans-serif;cursor:pointer;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease}
+.profileAvatarOption:hover{transform:translateY(-2px);border-color:#a8c9ae;box-shadow:0 5px 13px rgba(33,70,47,.09)}
+.profileAvatarOption[aria-pressed=true]{border-color:#398460;background:#edf6ef;color:#145640;box-shadow:0 0 0 2px rgba(39,132,95,.12)}
+.profileAvatarOption img{display:block;width:54px;height:54px;border-radius:50%;object-fit:cover;box-shadow:0 2px 6px rgba(32,65,43,.12)}
+.profileAvatarOption span{overflow:hidden;max-width:100%;text-overflow:ellipsis}
+@media(prefers-reduced-motion:reduce){.profileAvatarOption{transition:none!important}}
+.profileAvatarActions{display:flex;flex-wrap:wrap;gap:8px}
+.profileAvatarActions .button[hidden]{display:none!important}
+.profileAvatarActions .button:disabled{opacity:.48;cursor:not-allowed}
 .profileSettingsForm [role=status]{min-height:1.4em;margin:0;color:#687168;font-size:.73rem}
 .accountHero #cloud-plans-panel .accountPlansSection{padding:4px 0 24px}
 .accountHero #cloud-plans-panel .cloudSaveForm{grid-template-columns:minmax(220px,.78fr) minmax(0,1.22fr);align-items:center;gap:clamp(18px,3vw,36px);margin:18px 0;padding:clamp(18px,2.5vw,26px);border:1px solid #e3e9e1;border-radius:18px;background:linear-gradient(120deg,#f5f8f3,#fbfcfa 65%,#f6f9f5);box-shadow:0 8px 22px rgba(32,62,41,.045)}
