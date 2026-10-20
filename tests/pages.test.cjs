@@ -259,7 +259,8 @@ test('shared authentication controls load after the Supabase client on every pag
 
 test('account route exposes email, OAuth, recovery, and explicit cloud-plan actions', () => {
   const html = fs.readFileSync(path.join(root, 'account.html'), 'utf8');
-  for (const id of ['signup-form', 'login-form', 'google-signin', 'reset-request-form', 'recovery-complete-form', 'profile-name-form', 'profile-display-name', 'profile-summary-name', 'profile-summary-email', 'profile-photo-form', 'profile-photo-file', 'profile-photo-dropzone', 'profile-photo-save', 'profile-photo-remove', 'cloud-save-form', 'cloud-plan-list', 'mfa-settings-badge', 'mfa-challenge-form', 'mfa-enroll-form', 'mfa-disable-form', 'mfa-qr-code']) assert.ok(html.includes(`id="${id}"`), `account page is missing #${id}`);
+  for (const id of ['signup-form', 'login-form', 'google-signin', 'reset-request-form', 'recovery-complete-form', 'profile-name-form', 'profile-display-name', 'profile-summary-name', 'profile-summary-email', 'profile-photo-form', 'profile-photo-file', 'profile-photo-dropzone', 'profile-photo-save', 'profile-photo-remove', 'cloud-save-form', 'cloud-plan-name', 'cloud-plan-list', 'mfa-settings-badge', 'mfa-challenge-form', 'mfa-enroll-form', 'mfa-disable-form', 'mfa-qr-code']) assert.ok(html.includes(`id="${id}"`), `account page is missing #${id}`);
+  assert.match(html, /id="cloud-save-form"[\s\S]*class="cloudSaveIntro"[\s\S]*class="cloudSaveControls"[\s\S]*id="cloud-plan-name"[\s\S]*Save plan/, 'cloud-plan saving has separate guidance, naming, and action controls');
   assert.match(html, /role="button" tabindex="0" aria-describedby="profile-photo-help profile-photo-status"/, 'photo dropzone is keyboard and screen-reader accessible');
   assert.match(html, /Drop a photo here or/);
   assert.match(html, /browse files/);
@@ -312,6 +313,8 @@ test('account route exposes email, OAuth, recovery, and explicit cloud-plan acti
   assert.match(css, /\.profilePhotoActions \.button\[hidden\]\{display:none!important\}/, 'remove-picture action stays hidden when no picture exists');
   assert.match(css, /@media\(max-width:760px\)\{\.profileSettingsGrid\{grid-template-columns:1fr\}/, 'profile cards stack on narrow layouts');
   assert.match(css, /\.accountHero #cloud-plans-panel\{[^}]*padding:clamp/, 'signed-in account content has a responsive page card layout');
+  assert.match(css, /\.accountHero #cloud-plans-panel \.cloudSaveForm\{grid-template-columns:minmax\(220px,\.78fr\) minmax\(0,1\.22fr\)/, 'save-plan card has a balanced intro-to-control ratio');
+  assert.match(css, /@media\(max-width:480px\)\{\.accountHero #cloud-plans-panel \.cloudSaveForm\{gap:14px;padding:17px\}\.cloudSaveControls\{grid-template-columns:minmax\(0,1fr\)\}/, 'save-plan controls stack cleanly at mobile width');
   assert.match(css, /\.accountPasswordField>\.passwordInputWrap\{grid-column:1\/-1\}/, 'password toggle retains a full-width login input');
   assert.match(account, /input\.form\?\.addEventListener\("reset", resetVisibility\)/, 'reset forms restore hidden password text');
   assert.match(css, /\.accountLayout\{font-family:'DM Sans',sans-serif\}/, 'account copy uses the project body font');

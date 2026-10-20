@@ -847,9 +847,20 @@ body[data-page=account] .accountHero>.wrap{width:min(1160px,calc(100% - 40px));m
 .profilePhotoActions .button:disabled{opacity:.48;cursor:not-allowed}
 .profileSettingsForm [role=status]{min-height:1.4em;margin:0;color:#687168;font-size:.73rem}
 .accountHero #cloud-plans-panel .accountPlansSection{padding:4px 0 24px}
-.accountHero #cloud-plans-panel .cloudSaveForm{grid-template-columns:minmax(0,1fr) auto;gap:10px;margin:16px 0;padding:16px;border:1px solid #e6eae3;border-radius:15px;background:#f8faf7}
-.accountHero #cloud-plans-panel .cloudSaveForm label{color:#425748;font-size:.77rem;font-weight:700}
-.accountHero #cloud-plans-panel .cloudSaveForm input{background:#fff;border-color:#dce4da;color:#253d32}
+.accountHero #cloud-plans-panel .cloudSaveForm{grid-template-columns:minmax(220px,.78fr) minmax(0,1.22fr);align-items:center;gap:clamp(18px,3vw,36px);margin:18px 0;padding:clamp(18px,2.5vw,26px);border:1px solid #e3e9e1;border-radius:18px;background:linear-gradient(120deg,#f5f8f3,#fbfcfa 65%,#f6f9f5);box-shadow:0 8px 22px rgba(32,62,41,.045)}
+.cloudSaveIntro{display:flex;align-items:center;gap:14px;min-width:0}
+.cloudSaveIcon{display:grid;width:44px;height:44px;flex:none;place-items:center;border:1px solid #dce9dc;border-radius:14px;background:#fff;color:#27714e;box-shadow:0 3px 9px rgba(30,70,43,.05)}
+.cloudSaveIcon svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.cloudSaveIntro>div{display:grid;gap:4px}
+.accountHero #cloud-plans-panel .cloudSaveIntro h3{margin:0;color:#244d38;font:700 .98rem/1.35 Manrope,sans-serif}
+.accountHero #cloud-plans-panel .cloudSaveIntro p{margin:0;color:#748075;font-size:.76rem;line-height:1.5}
+.cloudSaveControls{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px;min-width:0}
+.accountHero #cloud-plans-panel .cloudSaveForm label{display:grid;gap:7px;min-width:0;color:#425748;font-size:.75rem;font-weight:700}
+.accountHero #cloud-plans-panel .cloudSaveForm input{width:100%;min-width:0;min-height:46px;padding:10px 12px;border:1px solid #dce4da;border-radius:11px;background:#fff;color:#253d32;font:400 .86rem 'DM Sans',sans-serif;transition:border-color .18s ease,box-shadow .18s ease}
+.accountHero #cloud-plans-panel .cloudSaveForm input:focus{border-color:#348660;outline:0;box-shadow:0 0 0 3px rgba(39,132,95,.13)}
+.accountHero #cloud-plans-panel .cloudSaveForm .cloudSaveControls>.button{display:inline-flex;width:auto;min-height:46px;align-items:center;justify-content:center;gap:8px;padding:10px 16px;white-space:nowrap}
+.cloudSaveControls>.button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cloudSaveControls>.button:active{transform:translateY(1px)}
 .accountHero #cloud-plans-panel .cloudPlanItem{border-color:#e4eae2;background:#fff;color:#293d33}
 .accountHero #cloud-plans-panel .cloudPlanItem .muted{color:#687168}
 .accountSignOut{display:flex;align-items:center;justify-content:space-between;gap:14px;padding-top:20px;border-top:1px solid #e9ece5}
@@ -879,6 +890,7 @@ body[data-page=account] #account-access-layout[hidden]{display:none!important}
 @media(max-width:760px){.profileSettingsGrid{grid-template-columns:1fr}}
 @media(max-width:640px){.accountHero #cloud-plans-panel{padding:20px;border-radius:19px}.accountSectionHeading{align-items:flex-start;flex-direction:column;gap:6px}.accountSectionHeading>p{text-align:left}.profileSettingsForm{padding:16px}.profileNameControls{grid-template-columns:1fr}.profileSettingsForm .profileNameControls .button{width:100%}.accountHero #cloud-plans-panel .cloudSaveForm{grid-template-columns:1fr}.accountSignOut{align-items:flex-start;flex-direction:column}}
 @media(max-width:700px){.accountHero #cloud-plans-panel .mfaSettings{grid-template-columns:minmax(0,1fr);padding:17px}.securityCardMain{grid-column:1;grid-template-columns:42px minmax(0,1fr);gap:11px}.securityIcon{width:40px;height:40px}.securityStatusBadge{grid-column:2;justify-self:start}.securityActions{grid-column:1;grid-row:2;justify-content:stretch}.securityActions .button{width:100%}.accountHero #cloud-plans-panel .mfaEnrollmentPanel{grid-template-columns:minmax(0,1fr);justify-items:stretch;gap:18px;padding:16px}.mfaEnrollmentIntro{justify-items:center;text-align:center}.mfaQrFrame{width:min(100%,210px)}.accountHero #cloud-plans-panel .mfaEnrollmentPanel .mfaCodeForm{width:100%}.accountHero #cloud-plans-panel .mfaEnrollmentPanel .mfaCodeForm input,.mfaEnrollmentPanel .mfaCodeForm button{width:100%;max-width:none}.accountHero #cloud-plans-panel .mfaDisablePanel{grid-template-columns:minmax(0,1fr);align-items:stretch;padding:16px}.mfaDisablePanel>div{grid-column:1}.mfaDisablePanel .button{min-width:0;width:100%}}
+@media(max-width:480px){.accountHero #cloud-plans-panel .cloudSaveForm{gap:14px;padding:17px}.cloudSaveControls{grid-template-columns:minmax(0,1fr)}.accountHero #cloud-plans-panel .cloudSaveForm .cloudSaveControls>.button{width:100%}.accountHero #cloud-plans-panel .cloudSaveForm input{font-size:16px}}
 
 /* Guided planner steps */
 body[data-page="planner"] .formIntro{gap:14px;padding:0 0 18px}

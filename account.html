@@ -120,7 +120,16 @@
         </section>
         <section class="accountPlansSection" aria-labelledby="account-plans-title">
         <div class="accountSectionHeading"><div><span class="accountSectionEyebrow">YOUR PLANNING</span><h2 id="account-plans-title">Cloud-saved plans</h2></div><p>Keep your plans available when you return.</p></div>
-        <form id="cloud-save-form" class="featureForm cloudSaveForm"><label for="cloud-plan-name">Name this plan</label><input id="cloud-plan-name" type="text" maxlength="80" required placeholder="For example, Autumn 2027 plan"><button class="button primary" type="submit">Save current planner plan</button></form>
+        <form id="cloud-save-form" class="featureForm cloudSaveForm">
+          <div class="cloudSaveIntro">
+            <span class="cloudSaveIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12m0-12L7.5 7.5M12 3l4.5 4.5"/><path d="M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"/></svg></span>
+            <div><h3>Save a new plan</h3><p>Create a private cloud copy to pick up where you left off.</p></div>
+          </div>
+          <div class="cloudSaveControls">
+            <label for="cloud-plan-name">Plan name<input id="cloud-plan-name" type="text" maxlength="80" required placeholder="e.g. Autumn 2027 plan"></label>
+            <button class="button primary" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m-7-7h14"/></svg><span>Save plan</span></button>
+          </div>
+        </form>
         <p id="cloud-plan-loading" class="small muted" hidden>Loading your plans…</p><div id="cloud-plan-list" class="cloudPlanList" aria-live="polite"></div>
         </section>
         <div class="accountSignOut"><p>Finished managing your account?</p><button class="button" type="button" data-auth-logout>Log out</button></div>
