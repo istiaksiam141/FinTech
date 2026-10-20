@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/styles/site.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body data-page="assistant">
   <div id="site-header"></div>
@@ -20,10 +20,10 @@
         <p class="lead">Use the planner for validated financial calculations. This assistant can explain general concepts, but it does not calculate, verify, or change your financial figures.</p>
         <div class="privacyNotice assistantPrivacyNotice" role="note">
           <strong>Before you ask</strong>
-          <p class="assistantPrivacySummary">Supported planning questions are answered locally. For other questions, only your current question goes to the AI by default. For a saved chat, opting in below also sends up to 11 recent messages (up to 6,000 characters) as context.</p>
+          <p class="assistantPrivacySummary">AI requests include your current question and, when available, a compact summary of calculated costs, funding, savings dates, and relevant entered comparison data. The deterministic finance engine remains authoritative. For a saved chat, opting in below also sends up to 11 recent messages (up to 6,000 characters) as context.</p>
           <details class="assistantPrivacyDetails">
             <summary>Full data and privacy details</summary>
-            <p>Supported planning questions are answered locally. By default, only the current question is sent to the AI service. For a saved conversation, checking the option below sends up to 11 recent messages from that same chat (up to 6,000 characters total) to Groq as context for your answer; those messages may contain personal or financial details. The server verifies your account and selected conversation before loading them. Saved plans, balances, quotes, and other database records are not sent. Signed-out chats send only the current question. Signed-in conversations, including your questions and answers, are saved to your CampusBridge account. Do not include your name, student ID, account details, or other sensitive information. Your financial form and quote entries are not included.</p>
+            <p>When a valid plan is available in this browser, each AI request includes a compact summary of its calculated costs, available and usable savings, funding gap, contribution dates, exchange-rate source and timestamp, and any matching savings-tracker totals or eligible entered quote comparisons. Full form fields, account details, tracker notes, and quote references are not sent. The AI explains the supplied results; the deterministic finance engine remains authoritative. Tracker deposits and quotes are student-entered and unverified. For a saved conversation, checking the option below also sends up to 11 recent messages from that same chat (up to 6,000 characters total); the server verifies your account and selected conversation before loading them. Signed-in conversations, including your questions and answers, are saved to your CampusBridge account. Do not include your name, student ID, account details, or other sensitive information.</p>
           </details>
         </div>
         <section class="assistantHistory surface" aria-label="Saved conversations">
@@ -50,6 +50,8 @@
   <script src="/lib/finance.js"></script>
   <script src="/lib/assistant-task.js"></script>
   <script src="/lib/plan-state.js"></script>
+  <script src="/lib/savings-tracker.js"></script>
+  <script src="/lib/assistant-plan-context.js"></script>
   <script src="/lib/assistant-renderer.js"></script>
   <script src="/js/site.js"></script>
   <script src="/js/page-utils.js"></script>

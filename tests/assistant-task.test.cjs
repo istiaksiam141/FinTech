@@ -90,7 +90,7 @@ test('rate answers preserve exact source and timestamp without making a freshnes
   assert.match(incomplete.answer, /cannot label this rate verified or current/i);
 });
 
-test('shared task module is loaded before both assistant entry points; Groq remains question-only', () => {
+test('shared task module is loaded before both assistant entry points; remote requests include current plan context', () => {
   const assistantHtml = fs.readFileSync(path.join(root, 'assistant.html'), 'utf8');
   const plannerHtml = fs.readFileSync(path.join(root, 'planner.html'), 'utf8');
   const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
@@ -99,9 +99,9 @@ test('shared task module is loaded before both assistant entry points; Groq rema
   assert.ok(plannerHtml.indexOf('assistant-task.js') < plannerHtml.indexOf('/app.js'));
   assert.match(app, /CampusBridgeAssistantTask\.run/);
   assert.match(page, /CampusBridgeAssistantTask\.run/);
-  assert.match(page, /requestBody = \{ question: text \}/);
+  assert.match(page, /requestBody = \{ question: text, planContext \}/);
   assert.match(page, /requestBody\.conversationId = savedQuestion\.conversationId/);
   assert.match(page, /requestBody\.currentMessageId = savedQuestion\.currentMessageId/);
   assert.doesNotMatch(page, /requestBody\.messages\s*=/);
-  assert.match(fs.readFileSync(path.join(root, 'api', 'assistant.js'), 'utf8'), /Only a question and saved conversation references are accepted/);
+  assert.match(fs.readFileSync(path.join(root, 'api', 'assistant.js'), 'utf8'), /Only a question, compact plan summary/);
 });

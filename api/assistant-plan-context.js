@@ -1,0 +1,29 @@
+"use strict";
+
+const Finance = require("../lib/finance.js");
+
+const hasKeys = (value, expected) => value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === expected.length && expected.every(key => Object.hasOwn(value, key));
+const stringOrNull = (value, max) => value === null || (typeof value === "string" && value.length <= max && !/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(value));
+const numberOrNull = (value, min = 0, max = Finance.MAX_CALCULATED_BDT, integer = false) => value === null || (typeof value === "number" && Number.isFinite(value) && value >= min && value <= max && (!integer || Number.isInteger(value)));
+const date = value => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+
+function validatePlanContext(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1 || !date(value.asOfDate)) return false;
+  if (value.status === "unavailable") return hasKeys(value, ["version", "status", "asOfDate", "reason"]) && value.reason === "No valid calculated plan is available in this browser.";
+  if (value.status !== "available" || !hasKeys(value, ["version", "status", "asOfDate", "destinationCountry", "planningMode", "planningCurrency", "tuition", "costs", "funding", "deadline", "schedule", "exchangeRate", "savingsTracker", "paymentComparison"])) return false;
+  if (!stringOrNull(value.destinationCountry, 80) || !["tuition-only", "all-costs"].includes(value.planningMode) || !Finance.CURRENCIES.includes(value.planningCurrency)) return false;
+  if (!hasKeys(value.tuition, ["enteredAmount", "amountBdt", "currency"]) || !numberOrNull(value.tuition.enteredAmount) || !numberOrNull(value.tuition.amountBdt) || value.tuition.currency !== value.planningCurrency) return false;
+  if (!hasKeys(value.costs, ["requiredFundsBdt", "paymentFeesBdt", "otherStudyCostsBdt", "initialLivingCostsBdt"]) || Object.values(value.costs).some(item => !numberOrNull(item))) return false;
+  const fundingKeys = ["availableSavingsBdt", "protectedReserveBdt", "committedFundsBdt", "usableSavingsBdt", "fundingGapBdt", "monthlySurplusBdt", "projectedCapacityBdt", "projectedShortfallBdt"];
+  if (!hasKeys(value.funding, fundingKeys) || Object.entries(value.funding).some(([key, item]) => !numberOrNull(item, key === "monthlySurplusBdt" ? -Finance.MAX_CALCULATED_BDT : 0))) return false;
+  if (!hasKeys(value.deadline, ["date", "daysRemaining", "complete30DayCycles"]) || (value.deadline.date !== null && !date(value.deadline.date)) || !numberOrNull(value.deadline.daysRemaining, 0, 36500, true) || !numberOrNull(value.deadline.complete30DayCycles, 0, 36500, true)) return false;
+  if (!hasKeys(value.schedule, ["requiredContributionBdtPerCycle", "requiredFinalContributionBdt", "monthlySavingsCapacityBdt", "roadmapState", "targetCanBeReachedByDeadline", "contributions"]) || !numberOrNull(value.schedule.requiredContributionBdtPerCycle) || !numberOrNull(value.schedule.requiredFinalContributionBdt) || !numberOrNull(value.schedule.monthlySavingsCapacityBdt) || !stringOrNull(value.schedule.roadmapState, 32) || typeof value.schedule.targetCanBeReachedByDeadline !== "boolean" || !Array.isArray(value.schedule.contributions) || value.schedule.contributions.length > Finance.MAX_ROADMAP_CYCLES || value.schedule.contributions.some(row => !Array.isArray(row) || row.length !== 3 || !date(row[0]) || !numberOrNull(row[1]) || typeof row[2] !== "boolean")) return false;
+  if (!hasKeys(value.exchangeRate, ["bdtPerPlanningCurrency", "source", "timestamp", "provenance"]) || !numberOrNull(value.exchangeRate.bdtPerPlanningCurrency, Number.MIN_VALUE) || !stringOrNull(value.exchangeRate.source, 160) || !stringOrNull(value.exchangeRate.timestamp, 64) || !stringOrNull(value.exchangeRate.provenance, 180)) return false;
+  const tracker = value.savingsTracker;
+  if (!hasKeys(tracker, ["status", "totalDepositsBdt", "recordCount", "monthTotals", "planStatus", "remainingBdt", "verifiedByBank"]) || !["available", "unavailable", "not-loaded", "no-matching-roadmap"].includes(tracker.status) || !numberOrNull(tracker.totalDepositsBdt) || !numberOrNull(tracker.recordCount, 0, 20000, true) || !Array.isArray(tracker.monthTotals) || tracker.monthTotals.length > 12 || tracker.monthTotals.some(row => !Array.isArray(row) || row.length !== 2 || !/^\d{4}-\d{2}$/.test(row[0]) || !numberOrNull(row[1])) || !stringOrNull(tracker.planStatus, 32) || !numberOrNull(tracker.remainingBdt) || tracker.verifiedByBank !== false) return false;
+  const comparison = value.paymentComparison;
+  if (!hasKeys(comparison, ["status", "principalBdt", "recipientCurrency", "ranking", "options"]) || !["available", "none-eligible", "unavailable"].includes(comparison.status) || !numberOrNull(comparison.principalBdt) || !stringOrNull(comparison.recipientCurrency, 3) || (comparison.recipientCurrency !== null && !Finance.CURRENCIES.includes(comparison.recipientCurrency)) || ![null, "cost", "recv", "time"].includes(comparison.ranking) || !Array.isArray(comparison.options) || comparison.options.length > 8) return false;
+  return comparison.options.every(option => hasKeys(option, ["provider", "senderCostBdt", "recipientAmount", "recipientCurrency", "feeBdt", "quotedRateBdtPerUnit", "deliveryDays", "quoteTimestamp", "verified"]) && stringOrNull(option.provider, 80) && numberOrNull(option.senderCostBdt) && numberOrNull(option.recipientAmount, Number.MIN_VALUE) && Finance.CURRENCIES.includes(option.recipientCurrency) && numberOrNull(option.feeBdt) && numberOrNull(option.quotedRateBdtPerUnit, Number.MIN_VALUE) && numberOrNull(option.deliveryDays, 0, Finance.MAX_DELIVERY_DAYS, true) && stringOrNull(option.quoteTimestamp, 40) && option.verified === false);
+}
+
+module.exports = Object.freeze({ validatePlanContext });
