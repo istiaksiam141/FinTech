@@ -103,7 +103,12 @@ test('planner setup and results use aligned responsive columns and styled curren
   const planner = fs.readFileSync(path.join(root, 'planner.html'), 'utf8');
   assert.match(css, /body\[data-page="planner"\] \.plannerGrid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\);gap:24px\}/);
   assert.match(css, /body\[data-page="planner"\] #planningCurrencyStep\{display:grid;gap:9px;margin:0 0 18px;padding:18px;border:1px solid #dfe9df;border-radius:15px/);
-  assert.match(css, /body\[data-page="planner"\] #planningCurrencyStep>select\{display:block;width:100%;min-height:46px/);
+  assert.match(css, /body\[data-page="planner"\] #planningCurrencyStep>\.customSelect\{display:block;margin-top:7px\}/, 'planning currency uses the shared custom dropdown');
+  assert.match(fs.readFileSync(path.join(root, 'app.js'), 'utf8'), /initializeCustomSelect\(byId\("planningCurrency"\)\)/, 'planning currency dropdown uses the shared behavior');
+  assert.match(fs.readFileSync(path.join(root, 'app.js'), 'utf8'), /\[\.\.\.select\.options\]\.filter\(option => !option\.disabled\)/, 'disabled placeholder options are not selectable in custom menus');
+  assert.match(fs.readFileSync(path.join(root, 'app.js'), 'utf8'), /if \(select\.required\) trigger\.setAttribute\("aria-required", "true"\)/, 'required state is exposed by the custom trigger');
+  assert.match(fs.readFileSync(path.join(root, 'app.js'), 'utf8'), /select\.addEventListener\("invalid", event => \{[\s\S]*?trigger\.setAttribute\("aria-invalid", "true"\);[\s\S]*?trigger\.focus\(\);/, 'invalid hidden selects focus their visible trigger');
+  assert.match(css, /\.customSelectMenu\{[^}]*max-height:min\(320px,50vh\);overflow-y:auto/, 'long custom dropdowns stay compact and scrollable');
   assert.match(css, /@media\(max-width:900px\)\{\s*body\[data-page="planner"\] \.plannerGrid\{grid-template-columns:minmax\(0,1fr\);gap:18px\}/);
   assert.match(planner, /<label for="planningCurrency">Planning currency<\/label><select id="planningCurrency"/, 'currency selector retains its explicit accessible label');
 });

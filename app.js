@@ -248,8 +248,8 @@ function syncCustomSelect(select) {
 let customSelectId = 0;
 function initializeCustomSelect(select) {
   if (select.closest(".customSelect")) return;
-  const label = select.closest("label");
-  const labelText = label?.querySelector(".fieldLabel")?.textContent.trim() || [...(label?.childNodes ?? [])].filter(node => node.nodeType === Node.TEXT_NODE).map(node => node.textContent.trim()).filter(Boolean).join(" ") || "Choose an option";
+  const label = select.labels?.[0] || select.closest("label");
+  const labelText = select.getAttribute("aria-label") || label?.querySelector(".fieldLabel, .quoteLabelText")?.textContent.trim() || [...(label?.childNodes ?? [])].filter(node => node.nodeType === Node.TEXT_NODE).map(node => node.textContent.trim()).filter(Boolean).join(" ") || label?.textContent.trim() || "Choose an option";
   const root = document.createElement("span");
   root.className = "customSelect";
   select.before(root);
@@ -262,6 +262,7 @@ function initializeCustomSelect(select) {
   trigger.setAttribute("role", "combobox");
   trigger.setAttribute("aria-haspopup", "listbox");
   trigger.setAttribute("aria-expanded", "false");
+  if (select.required) trigger.setAttribute("aria-required", "true");
   trigger.setAttribute("aria-label", labelText);
   trigger.innerHTML = '<span class="customSelectValue"></span><span class="customSelectChevron" aria-hidden="true"></span>';
   const menu = document.createElement("div");
@@ -282,9 +283,9 @@ function initializeCustomSelect(select) {
     menu.hidden = false;
     root.classList.add("isOpen");
     trigger.setAttribute("aria-expanded", "true");
-    menu.querySelector(`[data-value="${CSS.escape(select.value)}"]`)?.focus();
+    (menu.querySelector(`[data-value="${CSS.escape(select.value)}"]`) || menu.querySelector('[role="option"]'))?.focus();
   };
-  const options = [...select.options].map(option => {
+  const options = [...select.options].filter(option => !option.disabled).map(option => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "customSelectOption";
@@ -328,7 +329,15 @@ function initializeCustomSelect(select) {
     event.preventDefault();
     options[nextIndex].focus();
   });
-  select.addEventListener("change", () => syncCustomSelect(select));
+  select.addEventListener("change", () => {
+    syncCustomSelect(select);
+    trigger.removeAttribute("aria-invalid");
+  });
+  select.addEventListener("invalid", event => {
+    event.preventDefault();
+    trigger.setAttribute("aria-invalid", "true");
+    trigger.focus();
+  });
   syncCustomSelect(select);
 }
 function closeRateTimestampCalendar(restoreFocus = false) {
@@ -918,11 +927,12 @@ function renderTransfers(){const amount=byId("transferAmount").value,cur=corrido
 byId("profileForm").addEventListener("submit", e=>{e.preventDefault();planRequested=true;updateDeadlineHint();compute();});
 function hasPlanEntries(){return ["tuition","savings","emergency","committed","income","expenses","paymentFee","visaCost","applicationCost","flightCost","insuranceCost","documentCost","accommodationDeposit","initialSetupCost","otherOneTimeCosts","initialLivingMonths","monthlyRent","monthlyFood","monthlyTransport","monthlyUtilities","monthlyOtherLiving","deadline"].some(id=>byId(id).value!=="")||bankAccounts.length>0||exchangeRateState.mode==="api"||planCurrency()!=="BDT"&&byId("rateSource").value!=="";}
 function activatePlanningCurrency(currency){exchangeRateState.selectedCurrency=currency;byId("planningDetails").disabled=!currency;byId("planningDetails").hidden=!currency;updatePlanCurrencyLabels();if(currency==="BDT"){byId("planningCurrencyStatus").textContent="Financial entries will be in BDT. No conversion is needed.";refreshRate();}else{for(const id of ["exchangeRate","rateSource","rateTimestamp"])byId(id).value="";exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;byId("planningCurrencyStatus").textContent=`Financial entries will be in ${currency}. The exchange rate converts them to the BDT calculation base.`;renderFetchedRateStatus();refreshExchangeRate();}}
-function handlePlanningCurrencyChange(){const selector=byId("planningCurrency"),next=selector.value,previous=exchangeRateState.selectedCurrency;if(!next||next===previous)return;if(previous&&hasPlanEntries()){const confirmed=window.confirm(`Changing the planning currency starts a new plan and clears the current plan inputs. Historical browser-saved roadmaps and account-saved plans remain unchanged in their original currencies. Continue?`);if(!confirmed){selector.value=previous;return;}PlanState?.clearPlan();byId("profileForm").reset();selector.value=next;byId("planningDetails").disabled=true;byId("planningDetails").hidden=true;planRequested=false;bankAccounts=[];nextBankAccountId=1;latest=null;clearStressTestResults();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Choose a planning currency, then enter your financial figures.</p>';byId("formError").textContent="";}activatePlanningCurrency(next);}
+function handlePlanningCurrencyChange(){const selector=byId("planningCurrency"),next=selector.value,previous=exchangeRateState.selectedCurrency;if(!next||next===previous)return;if(previous&&hasPlanEntries()){const confirmed=window.confirm(`Changing the planning currency starts a new plan and clears the current plan inputs. Historical browser-saved roadmaps and account-saved plans remain unchanged in their original currencies. Continue?`);if(!confirmed){selector.value=previous;syncCustomSelect(selector);return;}PlanState?.clearPlan();byId("profileForm").reset();selector.value=next;syncCustomSelect(selector);byId("planningDetails").disabled=true;byId("planningDetails").hidden=true;planRequested=false;bankAccounts=[];nextBankAccountId=1;latest=null;clearStressTestResults();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Choose a planning currency, then enter your financial figures.</p>';byId("formError").textContent="";}activatePlanningCurrency(next);}
 byId("planningCurrency").addEventListener("change",handlePlanningCurrencyChange);
 byId("deadline").addEventListener("change",()=>{updateDeadlineHint();if(planRequested)compute();});
 initializeCustomSelect(byId("corridor"));
 initializeCustomSelect(byId("sortBy"));
+initializeCustomSelect(byId("planningCurrency"));
 byId("corridor").addEventListener("change",()=>{renderQuoteForms();renderTransfers();});
 byId("transferAmount").addEventListener("input",renderTransfers); byId("sortBy").addEventListener("change",renderTransfers);
 byId("providerQuoteForms").addEventListener("input",renderTransfers);
@@ -933,7 +943,7 @@ byId("addQuoteProvider").addEventListener("click", () => {
   renderTransfers();
   byId("providerQuoteForms").querySelector(`[data-provider="${providerDefs[visibleProviderCount - 1].id}"] .customSelectTrigger`).focus();
 });
-byId("resetProfile").addEventListener("click",()=>{PlanState?.clearPlan();restoredRateProvenance="";byId("profileForm").reset();byId("planningDetails").disabled=true;byId("planningDetails").hidden=true;exchangeRateState.selectedCurrency="";syncCustomSelect(byId("corridor"));planRequested=false;updateDeadlineHint();syncRateTimestampPicker();closeRateTimestampCalendar();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="CN";syncCustomSelect(byId("corridor"));exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Choose a planning currency, then enter your financial figures.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
+byId("resetProfile").addEventListener("click",()=>{PlanState?.clearPlan();restoredRateProvenance="";byId("profileForm").reset();byId("planningDetails").disabled=true;byId("planningDetails").hidden=true;exchangeRateState.selectedCurrency="";syncCustomSelect(byId("planningCurrency"));syncCustomSelect(byId("corridor"));planRequested=false;updateDeadlineHint();syncRateTimestampPicker();closeRateTimestampCalendar();bankAccounts=[];nextBankAccountId=1;quoteDrafts.clear();visibleProviderCount=1;byId("bankAccountError").textContent="";renderBankAccounts();byId("corridor").value="CN";syncCustomSelect(byId("corridor"));exchangeRateState.mode="manual";exchangeRateState.appliedCurrency=null;exchangeRateState.appliedUpdatedAtMs=null;exchangeRateState.appliedNextUpdateAtMs=null;byId("transferAmount").value="";renderFetchedRateStatus();refreshRate();renderQuoteForms();renderContributionRoadmap(null);byId("plannerResults").innerHTML='<p class="muted">Choose a planning currency, then enter your financial figures.</p>';byId("formError").textContent="";latest=null;resetScenario();renderTransfers();});
 byId("refreshExchangeRate").addEventListener("click",refreshExchangeRate);
 byId("useExchangeRate").addEventListener("click",useFetchedExchangeRate);
 byId("rateTimestamp").addEventListener("input",syncRateTimestampPicker);
@@ -1142,7 +1152,7 @@ function restoreSavedPlan() {
   const corridor = Object.entries(corridorMap).find(([, value]) => value.country === p.destinationCountry)?.[0] || Object.entries(corridorMap).find(([, value]) => value.currency === p.tuitionCur)?.[0];
   if (!corridor || !Finance.CURRENCIES.includes(p.tuitionCur)) { PlanState.clearPlan(); return false; }
   byId("corridor").value = corridor; syncCustomSelect(byId("corridor"));
-  byId("planningCurrency").value=p.tuitionCur; byId("planningDetails").disabled=false; byId("planningDetails").hidden=false; exchangeRateState.selectedCurrency=p.tuitionCur; updatePlanCurrencyLabels();
+  byId("planningCurrency").value=p.tuitionCur; syncCustomSelect(byId("planningCurrency")); byId("planningDetails").disabled=false; byId("planningDetails").hidden=false; exchangeRateState.selectedCurrency=p.tuitionCur; updatePlanCurrencyLabels();
   const fields = ["tuition", "exchangeRate", "rateSource", "rateTimestamp", "savings", "emergency", "committed", "income", "expenses", "paymentFee", "visaCost", "applicationCost", "flightCost", "insuranceCost", "documentCost", "accommodationDeposit", "initialSetupCost", "otherOneTimeCosts", "initialLivingMonths", "monthlyRent", "monthlyFood", "monthlyTransport", "monthlyUtilities", "monthlyOtherLiving", "deadline"];
   const rate=Number(p.exchangeRate),fromBdt=value=>value===""||value==null?"":String(Number(value)/rate);
   for (const id of fields) byId(id).value = ["tuition","exchangeRate","rateSource","rateTimestamp","initialLivingMonths","deadline"].includes(id)?p[id]??"":fromBdt(p[id]);

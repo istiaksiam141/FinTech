@@ -186,7 +186,7 @@
     .customSelectValue{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .customSelectChevron{width:9px;height:9px;flex:none;border-right:1.7px solid #648273;border-bottom:1.7px solid #648273;transform:rotate(45deg) translateY(-2px);transition:transform .18s}
     .customSelect.isOpen .customSelectChevron{transform:rotate(225deg) translate(-1px,-1px)}
-    .customSelectMenu{position:absolute;z-index:30;top:calc(100% + 7px);left:0;width:100%;min-width:max-content;max-width:min(360px,calc(100vw - 48px));padding:6px;border:1px solid rgba(220,226,216,.95);border-radius:14px;background:rgba(255,254,250,.97);box-shadow:0 16px 36px rgba(38,52,42,.16),inset 0 1px rgba(255,255,255,.95);backdrop-filter:blur(16px) saturate(145%);-webkit-backdrop-filter:blur(16px) saturate(145%)}
+    .customSelectMenu{position:absolute;z-index:30;top:calc(100% + 7px);left:0;width:100%;min-width:max-content;max-width:min(360px,calc(100vw - 48px));max-height:min(320px,50vh);overflow-y:auto;overscroll-behavior:contain;padding:6px;border:1px solid rgba(220,226,216,.95);border-radius:14px;background:rgba(255,254,250,.97);box-shadow:0 16px 36px rgba(38,52,42,.16),inset 0 1px rgba(255,255,255,.95);backdrop-filter:blur(16px) saturate(145%);-webkit-backdrop-filter:blur(16px) saturate(145%)}
     .customSelectMenu[hidden]{display:none}
     .customSelectOption{display:flex;width:100%;min-height:39px;align-items:center;justify-content:space-between;gap:20px;padding:0 10px;border:0;border-radius:9px;background:transparent;color:#505b52;text-align:left;font:500 .75rem 'DM Sans',sans-serif;white-space:nowrap;cursor:pointer}
     .customSelectOption:hover,.customSelectOption[aria-selected=true]{background:#eaf6f0;color:#125b45}
@@ -888,9 +888,7 @@ body[data-page="planner"] #planningCurrencyStep legend{display:flex;float:none;w
 body[data-page="planner"] #planningCurrencyStep .stepNumber{width:auto;min-width:25px;padding:0 7px;white-space:nowrap}
 body[data-page="planner"] #planningCurrencyStep>.small{margin:0;color:#687168;line-height:1.55}
 body[data-page="planner"] #planningCurrencyStep>label{display:block;margin:2px 0 0;color:#48564d;font-size:.79rem;font-weight:600}
-body[data-page="planner"] #planningCurrencyStep>select{display:block;width:100%;min-height:46px;margin-top:7px;padding:9px 12px;border:1px solid #d9e1d9;border-radius:11px;background:#fff;color:#253d32;font:500 .88rem 'DM Sans',sans-serif;transition:border-color .18s,box-shadow .18s}
-body[data-page="planner"] #planningCurrencyStep>select:hover{border-color:#abc9b5}
-body[data-page="planner"] #planningCurrencyStep>select:focus-visible{border-color:#27845f;outline:0;box-shadow:0 0 0 3px rgba(39,132,95,.14)}
+body[data-page="planner"] #planningCurrencyStep>.customSelect{display:block;margin-top:7px}
 body[data-page="planner"] #planningCurrencyStatus:empty{display:none}
 body[data-page="planner"] #plannerResults>.muted{margin:0;color:#606b63;line-height:1.65}
 @media(max-width:900px){
