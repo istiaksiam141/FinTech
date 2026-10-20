@@ -297,6 +297,17 @@ test('transfer quotes use editable provider names and refresh comparison labels 
   assert.match(page, /title\.textContent = quote\.quote\.name/, 'custom names are rendered as text in result cards');
 });
 
+test('planner quote labels keep required badges with label text and align input rows', () => {
+  const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(app, /<label><span class="quoteLabelText">Total sender cost \(BDT\) <span class="quoteRequired">Required<\/span><\/span><input data-field="total"/);
+  assert.match(app, /<label><span class="quoteLabelText">Recipient amount <span class="quoteCurrency">\(quote currency\)<\/span> <span class="quoteRequired">Required<\/span><\/span><input data-field="recipient"/);
+  assert.ok(app.indexOf('data-field="reference"') < app.indexOf('data-field="timestamp"'), 'the full-width timestamp follows the paired quote fields');
+  assert.match(css, /#providerQuoteForms \.quote>label\{grid-template-rows:minmax\(2\.7em,auto\) auto;align-content:start\}/);
+  assert.match(css, /#providerQuoteForms \.quoteLabelText\{display:block;min-height:2\.7em;line-height:1\.35\}/);
+  assert.match(css, /#providerQuoteForms \.quoteRequired\{display:inline;color:#9b6424;font-size:\.68rem;font-weight:600;white-space:nowrap\}/);
+});
+
 test('homepage keeps its planning actions and tool cards around a decorative animated globe', () => {
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');

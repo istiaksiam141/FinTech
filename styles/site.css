@@ -200,7 +200,13 @@
     #providerQuoteForms .quote{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
     #providerQuoteForms .quote>.tag,#providerQuoteForms .quote>h3,#providerQuoteForms .quote>p,#providerQuoteForms .quoteOptional{grid-column:1/-1}
     #providerQuoteForms .quote>.tag{color:#9b6424}
-    #providerQuoteForms .quoteRequired{color:#9b6424;font-size:.68rem;font-weight:600}
+    #providerQuoteForms .quoteRequired{display:inline;color:#9b6424;font-size:.68rem;font-weight:600;white-space:nowrap}
+    #providerQuoteForms .quote>label{grid-template-rows:minmax(2.7em,auto) auto;align-content:start}
+    #providerQuoteForms .quoteLabelText{display:block;min-height:2.7em;line-height:1.35}
+    #providerQuoteForms .quoteCurrency{display:inline;color:#6b6b66;font-size:.72rem;font-weight:500}
+    #providerQuoteForms .quote>label>input,
+    #providerQuoteForms .quote>label>.quoteTimestampPicker,
+    #providerQuoteForms .quote>label>.customSelect{width:100%;min-width:0}
     #providerQuoteForms .quoteOptional{margin-top:3px;padding-top:10px;border-top:1px solid #eeeae3}
     .quoteOptional summary,.reportDisclosure summary,.decisionDisclosure summary,.technicalDetails summary{color:#167656;font-size:.82rem;font-weight:700;cursor:pointer}
     .quoteActions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0}
