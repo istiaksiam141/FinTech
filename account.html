@@ -82,6 +82,36 @@
               <form id="profile-name-form" class="profileSettingsForm">
                 <div class="profileFormHeading"><span class="profileFormIcon" aria-hidden="true">Aa</span><div><label for="profile-display-name">Display name</label><p class="small muted">Shown in your account menu. Your sign-in email stays the same.</p></div></div>
                 <div class="profileNameControls"><input id="profile-display-name" type="text" maxlength="40" autocomplete="nickname" required><button class="button primary" type="submit">Save name</button></div>
+                <div id="study-country-picker" class="studyCountryPicker">
+                  <label id="study-country-label" class="studyCountryLabel">Where do you want to study?</label>
+                  <button id="study-country-toggle" class="studyCountryToggle" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="study-country-options" aria-labelledby="study-country-label study-country-value">
+                    <span id="study-country-flag" class="studyCountryFlag" aria-hidden="true">◎</span><span id="study-country-value" class="studyCountryValue">Choose a country</span><svg class="studyCountryChevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"></path></svg>
+                  </button>
+                  <div id="study-country-options" class="studyCountryOptions" role="listbox" aria-labelledby="study-country-label" hidden>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="AU" data-country-flag="🇦🇺"><span class="studyCountryFlag" aria-hidden="true">🇦🇺</span><span>Australia</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="CA" data-country-flag="🇨🇦"><span class="studyCountryFlag" aria-hidden="true">🇨🇦</span><span>Canada</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="CN" data-country-flag="🇨🇳"><span class="studyCountryFlag" aria-hidden="true">🇨🇳</span><span>China</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="DK" data-country-flag="🇩🇰"><span class="studyCountryFlag" aria-hidden="true">🇩🇰</span><span>Denmark</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="FI" data-country-flag="🇫🇮"><span class="studyCountryFlag" aria-hidden="true">🇫🇮</span><span>Finland</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="FR" data-country-flag="🇫🇷"><span class="studyCountryFlag" aria-hidden="true">🇫🇷</span><span>France</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="DE" data-country-flag="🇩🇪"><span class="studyCountryFlag" aria-hidden="true">🇩🇪</span><span>Germany</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="IN" data-country-flag="🇮🇳"><span class="studyCountryFlag" aria-hidden="true">🇮🇳</span><span>India</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="IE" data-country-flag="🇮🇪"><span class="studyCountryFlag" aria-hidden="true">🇮🇪</span><span>Ireland</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="JP" data-country-flag="🇯🇵"><span class="studyCountryFlag" aria-hidden="true">🇯🇵</span><span>Japan</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="NL" data-country-flag="🇳🇱"><span class="studyCountryFlag" aria-hidden="true">🇳🇱</span><span>Netherlands</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="NZ" data-country-flag="🇳🇿"><span class="studyCountryFlag" aria-hidden="true">🇳🇿</span><span>New Zealand</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="NO" data-country-flag="🇳🇴"><span class="studyCountryFlag" aria-hidden="true">🇳🇴</span><span>Norway</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="SG" data-country-flag="🇸🇬"><span class="studyCountryFlag" aria-hidden="true">🇸🇬</span><span>Singapore</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="KR" data-country-flag="🇰🇷"><span class="studyCountryFlag" aria-hidden="true">🇰🇷</span><span>South Korea</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="ES" data-country-flag="🇪🇸"><span class="studyCountryFlag" aria-hidden="true">🇪🇸</span><span>Spain</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="SE" data-country-flag="🇸🇪"><span class="studyCountryFlag" aria-hidden="true">🇸🇪</span><span>Sweden</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="CH" data-country-flag="🇨🇭"><span class="studyCountryFlag" aria-hidden="true">🇨🇭</span><span>Switzerland</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="AE" data-country-flag="🇦🇪"><span class="studyCountryFlag" aria-hidden="true">🇦🇪</span><span>United Arab Emirates</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="GB" data-country-flag="🇬🇧"><span class="studyCountryFlag" aria-hidden="true">🇬🇧</span><span>United Kingdom</span></button>
+                    <button class="studyCountryOption" type="button" role="option" aria-selected="false" data-study-country="US" data-country-flag="🇺🇸"><span class="studyCountryFlag" aria-hidden="true">🇺🇸</span><span>United States</span></button>
+                  </div>
+                  <div class="studyCountryActions"><p id="study-country-status" class="small muted" role="status" aria-live="polite">Choose a destination to personalize your profile.</p><button id="study-country-save" class="button primary" type="button" disabled>Save country</button></div>
+                </div>
               </form>
               <form id="profile-photo-form" class="profileSettingsForm profilePhotoForm">
                 <div class="profileFormHeading"><span class="profileFormIcon profileFormIconPhoto" aria-hidden="true">

@@ -829,6 +829,26 @@ body[data-page=account] .accountHero>.wrap{width:min(1160px,calc(100% - 40px));m
 .profileFormIcon{display:grid;width:38px;height:38px;flex:none;place-items:center;border:1px solid #e0e9df;border-radius:12px;background:#f1f6f0;color:#276448;font-size:.82rem;font-weight:700}
 .profileFormIconPhoto svg,.profilePhotoUploadIcon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .profileNameControls{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:9px}
+.studyCountryPicker{position:relative;display:grid;gap:8px;min-width:0}
+.studyCountryLabel{color:#344c3e;font-size:.8rem;font-weight:700}
+.studyCountryToggle{display:flex;width:100%;min-height:48px;align-items:center;gap:11px;padding:8px 12px;border:1px solid #d9e1d9;border-radius:11px;background:linear-gradient(135deg,#fff,#f8faf7);color:#253d32;text-align:left;cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease,background .18s ease}
+.studyCountryToggle:hover,.studyCountryToggle[aria-expanded=true]{border-color:#92bba0;background:#f5faf5}
+.studyCountryToggle:focus-visible,.studyCountryOption:focus-visible{outline:3px solid rgba(39,132,95,.24);outline-offset:2px}
+.studyCountryFlag{display:grid;width:30px;height:30px;flex:0 0 30px;place-items:center;overflow:hidden;border:1px solid rgba(44,74,52,.1);border-radius:50%;background:#f0f4ef;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:1rem;line-height:1}
+.studyCountryFlagArtwork{display:block;width:100%;height:100%;overflow:hidden;border-radius:inherit}
+.studyCountryValue{min-width:0;flex:1;overflow:hidden;font-size:.84rem;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.studyCountryChevron{width:17px;height:17px;flex:none;fill:none;stroke:#607668;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s ease}
+.studyCountryToggle[aria-expanded=true] .studyCountryChevron{transform:rotate(180deg)}
+.studyCountryOptions{position:absolute;z-index:15;top:calc(100% - 51px);right:0;left:0;display:grid;max-height:min(310px,45vh);gap:3px;overflow-y:auto;padding:7px;border:1px solid #e4e9e1;border-radius:13px;background:#fffefa;box-shadow:0 16px 38px rgba(24,56,37,.19);overscroll-behavior:contain}
+.studyCountryOptions[hidden]{display:none}
+.studyCountryOption{display:flex;min-width:0;min-height:42px;align-items:center;gap:10px;padding:5px 9px;border:1px solid transparent;border-radius:9px;background:transparent;color:#365246;font:500 .82rem 'DM Sans',sans-serif;text-align:left;cursor:pointer}
+.studyCountryOption:hover,.studyCountryOption:focus-visible{background:#edf5ee;color:#145640}
+.studyCountryOption[aria-selected=true]{border-color:#d9e9da;background:#eaf4eb;color:#145640;font-weight:700}
+.studyCountryOption .studyCountryFlag{width:27px;height:27px;flex-basis:27px;background:#fff}
+.studyCountryActions{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.studyCountryActions [role=status]{min-width:0;flex:1;font-size:.7rem;line-height:1.45}
+.studyCountryActions .button{min-height:38px;padding:8px 12px;font-size:.77rem}
+.studyCountryActions .button:disabled{opacity:.5;cursor:not-allowed}
 .profileSettingsForm input:not([type=file]){width:100%;min-width:0;min-height:44px;padding:10px 12px;border:1px solid #d9e1d9;border-radius:10px;background:#fff;color:#253d32;font:inherit}
 .profileSettingsForm input:not([type=file]):focus{border-color:#27845f;outline:0;box-shadow:0 0 0 3px rgba(39,132,95,.14)}
 .profileSettingsForm .profileNameControls .button,.profilePhotoActions .button{width:auto;min-height:44px;justify-self:auto;padding:10px 16px;white-space:nowrap}

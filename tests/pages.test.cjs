@@ -283,7 +283,12 @@ test('shared authentication controls load after the Supabase client on every pag
 
 test('account route exposes email, OAuth, recovery, and explicit cloud-plan actions', () => {
   const html = fs.readFileSync(path.join(root, 'account.html'), 'utf8');
-  for (const id of ['signup-form', 'login-form', 'google-signin', 'reset-request-form', 'recovery-complete-form', 'profile-name-form', 'profile-display-name', 'profile-summary-name', 'profile-summary-email', 'profile-photo-form', 'profile-photo-file', 'profile-photo-dropzone', 'profile-photo-save', 'profile-photo-remove', 'cloud-save-form', 'cloud-plan-name', 'cloud-plan-list', 'mfa-settings-badge', 'mfa-challenge-form', 'mfa-enroll-form', 'mfa-disable-form', 'mfa-qr-code']) assert.ok(html.includes(`id="${id}"`), `account page is missing #${id}`);
+  for (const id of ['signup-form', 'login-form', 'google-signin', 'reset-request-form', 'recovery-complete-form', 'profile-name-form', 'profile-display-name', 'study-country-picker', 'study-country-toggle', 'study-country-options', 'study-country-flag', 'study-country-value', 'study-country-status', 'study-country-save', 'profile-summary-name', 'profile-summary-email', 'profile-photo-form', 'profile-photo-file', 'profile-photo-dropzone', 'profile-photo-save', 'profile-photo-remove', 'cloud-save-form', 'cloud-plan-name', 'cloud-plan-list', 'mfa-settings-badge', 'mfa-challenge-form', 'mfa-enroll-form', 'mfa-disable-form', 'mfa-qr-code']) assert.ok(html.includes(`id="${id}"`), `account page is missing #${id}`);
+  assert.match(html, /profileNameControls[\s\S]*studyCountryPicker[\s\S]*study-country-toggle[\s\S]*study-country-options/, 'study destination is a profile preference immediately below the display-name controls');
+  assert.equal((html.match(/data-study-country=/g) || []).length, 21, 'the country menu contains popular study destinations with a flag per choice');
+  assert.match(html, /aria-haspopup="listbox" aria-expanded="false" aria-controls="study-country-options"/, 'the country picker exposes its listbox relationship and open state');
+  const flags = fs.readFileSync(path.join(root, 'assets/study-country-flags.svg'), 'utf8');
+  for (const [, code] of html.matchAll(/data-study-country="([A-Z]{2})"/g)) assert.ok(flags.includes(`<symbol id="flag-${code}"`), `${code} has a local flag illustration`);
   assert.match(html, /id="cloud-save-form"[\s\S]*class="cloudSaveIntro"[\s\S]*class="cloudSaveControls"[\s\S]*id="cloud-plan-name"[\s\S]*Save plan/, 'cloud-plan saving has separate guidance, naming, and action controls');
   assert.match(html, /role="button" tabindex="0" aria-describedby="profile-photo-help profile-photo-status"/, 'photo dropzone is keyboard and screen-reader accessible');
   assert.match(html, /Drop a photo here or/);
@@ -314,6 +319,9 @@ test('account route exposes email, OAuth, recovery, and explicit cloud-plan acti
   assert.match(account, /cloudPanel\.hidden = !showAccountPanel/);
   assert.match(account, /document\.body\.classList\.toggle\("account-panel-only", showAccountPanel\)/);
   assert.match(account, /updateUser\(\{ data: \{ display_name: displayName \} \}\)/);
+  assert.match(account, /updateUser\(\{ data: \{ study_country: countryCode \} \}\)/, 'the selected study destination is saved in the signed-in user profile');
+  assert.match(account, /studyCountryOptions\.addEventListener\("keydown"/, 'the country list supports keyboard navigation');
+  assert.match(account, /studyCountrySave\.addEventListener\("click"/, 'the country choice is saved only after explicit confirmation');
   assert.match(account, /bucket\.upload\(path, file/);
   assert.match(account, /data: \{ avatar_path: path \}/);
   assert.match(account, /file\.size > 3 \* 1024 \* 1024/);
@@ -332,6 +340,9 @@ test('account route exposes email, OAuth, recovery, and explicit cloud-plan acti
   assert.match(account, /toggle\.setAttribute\("aria-label", visible \? "Hide password" : "Show password"\)/);
   assert.ok(css.includes('.accountHero #cloud-plans-panel .mfaSettings{border-color:#e3e8df;background:#f7f8f3'), 'the authenticator panel uses the warm account palette');
   assert.match(css, /\.passwordVisibilityToggle\{[^}]*position:absolute/);
+  assert.match(css, /\.studyCountryFlag\{[^}]*border-radius:50%/, 'country flags are displayed in circular badges');
+  assert.match(css, /\.studyCountryOptions\[hidden\]\{display:none\}/, 'the country menu supports its hidden state');
+  assert.match(css, /\.studyCountryOption\[aria-selected=true\]/, 'the selected country receives a visible menu state');
   assert.match(css, /\.profilePhotoDropzone\.is-dragging/, 'profile photo drop target responds to drag-and-drop');
   assert.match(css, /\.profilePhotoFileInput\{position:absolute!important/, 'native file picker stays accessible without its default appearance');
   assert.match(css, /\.profilePhotoActions \.button\[hidden\]\{display:none!important\}/, 'remove-picture action stays hidden when no picture exists');

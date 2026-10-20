@@ -9,6 +9,22 @@
   const plansList = byId("cloud-plan-list"), saveForm = byId("cloud-save-form");
   const profileNameForm = byId("profile-name-form"), profilePhotoForm = byId("profile-photo-form");
   const profileNameInput = byId("profile-display-name"), profilePhotoInput = byId("profile-photo-file");
+  const studyCountryPicker = byId("study-country-picker"), studyCountryToggle = byId("study-country-toggle");
+  const studyCountryOptions = byId("study-country-options"), studyCountryFlag = byId("study-country-flag");
+  const studyCountryValue = byId("study-country-value"), studyCountryStatus = byId("study-country-status");
+  const studyCountrySave = byId("study-country-save");
+  const studyCountryChoices = [...document.querySelectorAll("[data-study-country]")];
+  const studyCountryFlagArtwork = (flag, code) => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    svg.classList.add("studyCountryFlagArtwork");
+    svg.setAttribute("viewBox", "0 0 36 36");
+    svg.setAttribute("aria-hidden", "true");
+    use.setAttribute("href", `/assets/study-country-flags.svg#flag-${code}`);
+    svg.append(use);
+    flag.replaceChildren(svg);
+  };
+  studyCountryChoices.forEach(option => studyCountryFlagArtwork(option.querySelector(".studyCountryFlag"), option.dataset.studyCountry));
   const profilePhotoStatus = byId("profile-photo-status"), avatarImage = byId("account-avatar-image");
   const avatarInitial = byId("account-avatar-initial"), photoRemoveButton = byId("profile-photo-remove");
   const profilePhotoDropzone = byId("profile-photo-dropzone"), profilePhotoName = byId("profile-photo-filename");
@@ -62,7 +78,7 @@
   };
   const cloudPlans = window.CampusBridgeCloudPlans?.createCloudPlans({ client, planState: window.CampusBridgePlanState });
   const mfa = window.CampusBridgeMfaFlow?.createMfaFlow({ client });
-  let session = null, loadingPlans = false, security = { status: "checking" }, securityRevision = 0, avatarRevision = 0, previewUrl = "", selectedProfilePhoto = null;
+  let session = null, loadingPlans = false, security = { status: "checking" }, securityRevision = 0, avatarRevision = 0, previewUrl = "", selectedProfilePhoto = null, studyCountryUserId = null;
   let recoveryActive = new URLSearchParams(location.search).get("flow") === "recovery";
 
   document.querySelectorAll("[data-password-toggle]").forEach(toggle => {
@@ -118,6 +134,26 @@
     profileSummaryName.textContent = displayName;
     profileSummaryEmail.textContent = user?.email || "Email unavailable";
     avatarInitial.textContent = Array.from(displayName)[0].toLocaleUpperCase();
+    if (studyCountryUserId !== user?.id) {
+      studyCountryUserId = user?.id || null;
+      studyCountryToggle.dataset.country = user?.user_metadata?.study_country || "";
+    }
+    const studyCountry = studyCountryChoices.find(option => option.dataset.studyCountry === user?.user_metadata?.study_country);
+    const selectedCountry = studyCountryChoices.find(option => option.dataset.studyCountry === studyCountryToggle.dataset.country);
+    const activeCountry = selectedCountry || studyCountry;
+    studyCountryToggle.dataset.country = activeCountry?.dataset.studyCountry || "";
+    if (activeCountry) studyCountryFlagArtwork(studyCountryFlag, activeCountry.dataset.studyCountry);
+    else studyCountryFlag.textContent = "◎";
+    studyCountryValue.textContent = activeCountry?.lastElementChild.textContent || "Choose a country";
+    studyCountryChoices.forEach(option => {
+      const selected = option === activeCountry;
+      option.setAttribute("aria-selected", String(selected));
+      option.tabIndex = -1;
+    });
+    studyCountrySave.disabled = !client || !user || !activeCountry || activeCountry === studyCountry;
+    studyCountryStatus.textContent = studyCountry
+      ? `${studyCountry.lastElementChild.textContent} is saved as your study destination.`
+      : "Choose a destination to personalize your profile.";
     const path = userAvatarPath(user), revision = ++avatarRevision;
     photoRemoveButton.hidden = !path;
     profilePhotoSave.disabled = !selectedProfilePhoto;
@@ -244,6 +280,7 @@
     security = session?.user ? { status: "checking" } : { status: "signed-out" };
     setAuthVisible();
     if (!session?.user) {
+      studyCountryUserId = null;
       if (mfa?.inspect) void mfa.inspect(null);
       byId("mfa-qr-code").removeAttribute("src");
       byId("mfa-enroll-panel").hidden = true;
@@ -330,6 +367,78 @@
       updateCurrentUser(data?.user);
       say("Your username has been updated.", "success");
     });
+  });
+  const closeStudyCountryOptions = (restoreFocus = false) => {
+    studyCountryOptions.hidden = true;
+    studyCountryToggle.setAttribute("aria-expanded", "false");
+    if (restoreFocus) studyCountryToggle.focus();
+  };
+  const openStudyCountryOptions = () => {
+    studyCountryOptions.hidden = false;
+    studyCountryToggle.setAttribute("aria-expanded", "true");
+    const active = studyCountryChoices.find(option => option.dataset.studyCountry === studyCountryToggle.dataset.country) || studyCountryChoices[0];
+    active?.focus();
+  };
+  studyCountryToggle.addEventListener("click", () => {
+    if (studyCountryOptions.hidden) openStudyCountryOptions();
+    else closeStudyCountryOptions();
+  });
+  studyCountryToggle.addEventListener("keydown", event => {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    event.preventDefault();
+    openStudyCountryOptions();
+  });
+  studyCountryOptions.addEventListener("click", event => {
+    const option = event.target.closest("[data-study-country]");
+    if (!option) return;
+    studyCountryToggle.dataset.country = option.dataset.studyCountry;
+    studyCountryFlagArtwork(studyCountryFlag, option.dataset.studyCountry);
+    studyCountryValue.textContent = option.lastElementChild.textContent;
+    studyCountryChoices.forEach(choice => choice.setAttribute("aria-selected", String(choice === option)));
+    const savedCode = session?.user?.user_metadata?.study_country || "";
+    studyCountrySave.disabled = !client || !session?.user || option.dataset.studyCountry === savedCode;
+    studyCountryStatus.textContent = option.dataset.studyCountry === savedCode
+      ? `${option.lastElementChild.textContent} is already saved as your study destination.`
+      : `Selected ${option.lastElementChild.textContent}. Save to update your profile.`;
+    closeStudyCountryOptions(true);
+  });
+  studyCountryOptions.addEventListener("keydown", event => {
+    const currentIndex = studyCountryChoices.indexOf(document.activeElement);
+    let nextIndex = currentIndex;
+    if (event.key === "ArrowDown") nextIndex = (currentIndex + 1) % studyCountryChoices.length;
+    else if (event.key === "ArrowUp") nextIndex = (currentIndex - 1 + studyCountryChoices.length) % studyCountryChoices.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = studyCountryChoices.length - 1;
+    else if (event.key === "Escape") { event.preventDefault(); closeStudyCountryOptions(true); return; }
+    else if (event.key === "Tab") { closeStudyCountryOptions(); return; }
+    else return;
+    event.preventDefault();
+    studyCountryChoices[nextIndex]?.focus();
+  });
+  studyCountryPicker.addEventListener("focusout", event => {
+    if (event.relatedTarget && !studyCountryPicker.contains(event.relatedTarget)) closeStudyCountryOptions();
+  });
+  document.addEventListener("pointerdown", event => {
+    if (!studyCountryPicker.contains(event.target)) closeStudyCountryOptions();
+  });
+  studyCountrySave.addEventListener("click", async () => {
+    if (!client || !session?.user || security.status !== "ready" || studyCountrySave.disabled) return;
+    const countryCode = studyCountryToggle.dataset.country;
+    studyCountrySave.disabled = true;
+    studyCountrySave.textContent = "Saving…";
+    try {
+      const { data, error } = await client.auth.updateUser({ data: { study_country: countryCode } });
+      if (error) throw error;
+      updateCurrentUser(data?.user);
+      studyCountryStatus.textContent = `${studyCountryValue.textContent} is saved as your study destination.`;
+      say("Your study destination has been updated.", "success");
+    } catch (error) {
+      studyCountryStatus.textContent = errorText(error);
+      studyCountrySave.disabled = false;
+      say(errorText(error), "error");
+    } finally {
+      studyCountrySave.textContent = "Save country";
+    }
   });
   profilePhotoInput.addEventListener("change", () => {
     const file = profilePhotoInput.files?.[0];
