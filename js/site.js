@@ -43,6 +43,14 @@
     document.head.append(favicon);
   }
   const page = document.body.dataset.page || "home";
+  const themeStorageKey = "campusbridge-theme";
+  let blueThemeEnabled = false;
+  try {
+    blueThemeEnabled = window.localStorage.getItem(themeStorageKey) === "blue";
+  } catch (error) {
+    console.error("CampusBridge could not load the saved theme preference.", error);
+  }
+  if (blueThemeEnabled) document.body.dataset.theme = "blue";
   const headerTarget = document.getElementById("site-header");
   if (headerTarget) {
     const header = document.createElement("header"); header.id = "topbar"; header.className = "topbar";
@@ -98,11 +106,34 @@
     const planningGroup = groupControls.find(item => item.id === "planning");
     const moreGroup = groupControls.find(item => item.id === "more");
     nav.append(planningGroup.container, assistantLink, moreGroup.container);
+    const themeToggle = document.createElement("button"); themeToggle.type = "button"; themeToggle.className = "themeToggle";
+    const updateThemeToggle = () => {
+      const active = document.body.dataset.theme === "blue";
+      themeToggle.textContent = active ? "Original theme" : "Light blue theme";
+      themeToggle.setAttribute("aria-label", active ? "Switch to the original theme" : "Switch to the light blue theme");
+      themeToggle.setAttribute("aria-pressed", String(active));
+      document.querySelectorAll(".brandLogo").forEach(logo => {
+        logo.src = active ? "/assets/brand/logo-transparent.png" : "/assets/brand/logo-header.png";
+      });
+    };
+    updateThemeToggle();
+    themeToggle.addEventListener("click", () => {
+      const nextTheme = document.body.dataset.theme === "blue" ? "default" : "blue";
+      if (nextTheme === "blue") document.body.dataset.theme = "blue";
+      else delete document.body.dataset.theme;
+      updateThemeToggle();
+      try {
+        window.localStorage.setItem(themeStorageKey, nextTheme);
+      } catch (error) {
+        console.error("CampusBridge could not save the theme preference. The selected theme remains active on this page.", error);
+      }
+    });
+    wrap.append(brand, nav, themeToggle);
     const accountStatus = document.createElement("div"); accountStatus.id = "nav-auth-slot"; accountStatus.className = "navAuthSlot"; accountStatus.hidden = true; accountStatus.setAttribute("aria-busy", "true");
     nav.append(accountStatus);
     const menu = document.createElement("button"); menu.type = "button"; menu.id = "menu"; menu.className = "burger"; menu.append(createIcon("menu"));
     menu.setAttribute("aria-label", "Open navigation menu"); menu.setAttribute("aria-expanded", "false"); menu.setAttribute("aria-controls", "navlinks");
-    wrap.append(brand, nav, menu); header.append(wrap); headerTarget.replaceWith(header);
+    wrap.append(menu); header.append(wrap); headerTarget.replaceWith(header);
     function closeGroups() {
       for (const item of groupControls) { item.toggle.setAttribute("aria-expanded", "false"); item.submenu.hidden = true; }
     }

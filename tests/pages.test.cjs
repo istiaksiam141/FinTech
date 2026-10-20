@@ -150,6 +150,24 @@ test('all pages share the account page warm ivory and evergreen theme', () => {
   assert.match(css, /\.accountStory\{[^}]*background:radial-gradient[^}]*linear-gradient\(145deg,#0b514b,#073e3d 72%,#0b4a43\)/, 'the account story panel remains a dark green accent');
 });
 
+test('shared navigation offers a persistent accessible light-blue theme toggle', () => {
+  const site = fs.readFileSync(path.join(root, 'js/site.js'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(site, /themeStorageKey = "campusbridge-theme"/);
+  assert.match(site, /localStorage\.getItem\(themeStorageKey\) === "blue"/);
+  assert.match(site, /className = "themeToggle"/);
+  assert.match(site, /wrap\.append\(brand, nav, themeToggle\)/, 'the theme switch remains available outside the collapsed mobile menu');
+  assert.match(site, /aria-pressed", String\(active\)/);
+  assert.match(site, /localStorage\.setItem\(themeStorageKey, nextTheme\)/);
+  assert.match(site, /logo\.src = active \? "\/assets\/brand\/logo-transparent\.png" : "\/assets\/brand\/logo-header\.png"/);
+  assert.match(css, /body\[data-theme="blue"\]\{color-scheme:light;--ink:#1a2424/);
+  assert.match(css, /body\[data-theme="blue"\] \.themeToggle::before\{border-color:#4a898f;background:#a5c4c2\}/);
+  assert.match(css, /body\[data-theme="blue"\] \.topbar \.navlinks>a\.aiNavPill,body\[data-theme="blue"\] \.topbar \.navlinks>a\.aiNavPill\[aria-current=page\]\{border-color:#8fb2b1;background:#dce9e8;color:#294c4e/);
+  assert.match(css, /body\[data-theme="blue"\] \.topbar \.navlinks>\.navGroup>\.navGroupToggle\{border-color:#b7cecc;background:rgba\(226,237,236,\.68\);color:#355657\}/);
+  assert.match(css, /body\[data-theme="blue"\] \.topbar \.navDropdown\{border-color:#d4e1df/);
+  assert.match(css, /body\[data-theme="blue"\] \.topbar \.navlinks\{border-color:#c6d8d6;background:rgba\(237,244,243,\.98\)/);
+});
+
 test('every page keeps the footer at the viewport bottom when content is short', () => {
   const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
   assert.match(css, /body\[data-page\]\{display:flex;min-height:100vh;flex-direction:column\}/);
