@@ -113,6 +113,11 @@ test('planner setup and results use aligned responsive columns and styled curren
   assert.match(planner, /<label for="planningCurrency">Planning currency<\/label><select id="planningCurrency"/, 'currency selector retains its explicit accessible label');
 });
 
+test('planner mode help has clear spacing before the mode buttons', () => {
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(css, /body\[data-page="planner"\] \.plannerStepPanel>\.planningModeSelector>#planningModeHelp\{margin:0 0 12px\}/);
+});
+
 test('all pages share the account page warm ivory and evergreen theme', () => {
   const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
   assert.match(css, /:root\{color-scheme:light;--ink:#1a1a18;--muted:#606b63;--quiet:#77776f;--navy:#f5f3ec;--panel:#fffefa;--panel2:#f8f7f2;--line:#e7e5dc;--cyan:#267357;--mint:#8fc6a5;--gold:#c9a969\}/);
@@ -263,6 +268,7 @@ test('account route exposes email, OAuth, recovery, and explicit cloud-plan acti
   assert.match(html, /id="reset-request-form"[^>]*hidden/, 'the password-recovery view starts hidden and can be switched into without expanding a disclosure');
   assert.match(html, /\/lib\/mfa-flow\.js/);
   const account = fs.readFileSync(path.join(root, 'js/account-page.js'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
   for (const method of ['signUp(', 'signInWithPassword(', 'signInWithOAuth(', 'resetPasswordForEmail(', 'updateUser({ password']) assert.ok(account.includes(method), `account module is missing ${method}`);
   assert.match(account, /emailRedirectTo:.*location\.origin/);
   assert.match(account, /flow=recovery/);
@@ -270,7 +276,15 @@ test('account route exposes email, OAuth, recovery, and explicit cloud-plan acti
   assert.match(account, /security\.status !== "ready"/);
   assert.match(account, /mfa\.verifyEnrollment/);
   assert.match(account, /mfa\.disable/);
-  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(account, /accountAccess\.hidden = showAccountPanel/);
+  assert.match(account, /cloudPanel\.hidden = !showAccountPanel/);
+  assert.match(account, /document\.body\.classList\.toggle\("account-panel-only", showAccountPanel\)/);
+  assert.equal((html.match(/data-password-toggle/g) || []).length, 5, 'login, signup, and recovery passwords have visibility controls');
+  assert.match(account, /toggle\.setAttribute\("aria-label", visible \? "Hide password" : "Show password"\)/);
+  assert.ok(css.includes('.accountHero #cloud-plans-panel .mfaSettings{border-color:#e3e8df;background:#f7f8f3'), 'the authenticator panel uses the warm account palette');
+  assert.match(css, /\.passwordVisibilityToggle\{[^}]*position:absolute/);
+  assert.match(css, /\.accountPasswordField>\.passwordInputWrap\{grid-column:1\/-1\}/, 'password toggle retains a full-width login input');
+  assert.match(account, /input\.form\?\.addEventListener\("reset", resetVisibility\)/, 'reset forms restore hidden password text');
   assert.match(css, /\.accountLayout\{font-family:'DM Sans',sans-serif\}/, 'account copy uses the project body font');
   assert.match(css, /\.accountMain \.accountForm h2\{[^}]*font-family:Manrope,sans-serif/, 'account form headings use the project heading font');
   assert.match(css, /\.accountStory h2\{[^}]*font-family:Manrope,sans-serif/, 'the account story heading uses the project heading font');

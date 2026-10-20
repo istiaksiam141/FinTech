@@ -970,8 +970,8 @@ test('new plans begin with all supported planning currencies before financial in
   controls.planningCurrency.value='BDT';controls.exchangeRate.value='1';
   assert.equal(vm.runInNewContext('toBdtAmount("10")',context),'10');
   assert.match(app,/window\.confirm\(`Changing the planning currency starts a new plan/);
-  assert.match(app,/if\(!confirmed\)\{selector\.value=previous;return;\}/);
-  assert.match(app,/byId\("profileForm"\)\.reset\(\);selector\.value=next;/,'confirmed change clears old values while retaining the newly chosen planning currency');
+  assert.match(app,/if\(!confirmed\)\{selector\.value=previous;syncCustomSelect\(selector\);return;\}/);
+  assert.match(app,/byId\("profileForm"\)\.reset\(\);selector\.value=next;syncCustomSelect\(selector\);/,'confirmed change clears old values while retaining and displaying the newly chosen planning currency');
 });
 
 test('saved-plan reports use the selected planning currency while transfer sender costs remain BDT',()=>{

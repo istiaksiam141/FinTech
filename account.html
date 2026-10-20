@@ -13,11 +13,10 @@
   <div id="site-header"></div>
   <main id="main-content">
     <section class="pageHero accountHero"><div class="wrap">
-      <div class="accountLayout">
+      <div class="accountLayout" id="account-access-layout">
         <div class="accountMain">
           <span class="eyebrow">Student account</span><h1>Welcome <em>back.</em></h1>
           <p class="lead">Sign in to access your cloud-saved plans. You can keep planning without an account.</p>
-          <p id="account-message" class="pageSummary" role="status" aria-live="polite" hidden></p>
           <section id="auth-panel" class="surface accountPanel">
             <section id="mfa-challenge-panel" class="accountForm mfaPanel" aria-labelledby="mfa-challenge-title" hidden>
               <h2 id="mfa-challenge-title">Verify your sign-in</h2>
@@ -28,7 +27,7 @@
             <div class="accountGrid" id="account-auth-options">
               <form id="login-form" class="surface accountForm">
                 <h2>Sign in</h2><label for="login-email">Email</label><input id="login-email" type="email" autocomplete="username" placeholder="Enter your email" required maxlength="254">
-                <div class="accountPasswordField"><label for="login-password">Password</label><input id="login-password" type="password" autocomplete="current-password" placeholder="Enter your password" required><a href="#reset-request-form">Forgot your password?</a></div>
+                <div class="accountPasswordField"><label for="login-password">Password</label><div class="passwordInputWrap"><input id="login-password" type="password" autocomplete="current-password" placeholder="Enter your password" required><button class="passwordVisibilityToggle" type="button" data-password-toggle aria-controls="login-password" aria-label="Show password" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/><path class="passwordVisibilitySlash" d="m4 4 16 16"/></svg></button></div><a href="#reset-request-form">Forgot your password?</a></div>
                 <button class="button primary" type="submit">Log in</button>
                 <div class="accountFormDivider" aria-hidden="true"><span>or</span></div>
                 <button id="google-signin" class="button" type="button"><span class="googleMark" aria-hidden="true">G</span>Continue with Google</button>
@@ -37,14 +36,14 @@
               <form id="signup-form" class="surface accountForm" hidden>
                 <h2>Create your account</h2><p class="accountFormIntro">Save your plans and return to them whenever you need.</p>
                 <label for="signup-email">Email</label><input id="signup-email" type="email" autocomplete="email" required maxlength="254">
-                <label for="signup-password">Password</label><input id="signup-password" type="password" autocomplete="new-password" minlength="8" required>
-                <label for="signup-confirm-password">Confirm password</label><input id="signup-confirm-password" type="password" autocomplete="new-password" minlength="8" required>
+                <label for="signup-password">Password</label><div class="passwordInputWrap"><input id="signup-password" type="password" autocomplete="new-password" minlength="8" required><button class="passwordVisibilityToggle" type="button" data-password-toggle aria-controls="signup-password" aria-label="Show password" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/><path class="passwordVisibilitySlash" d="m4 4 16 16"/></svg></button></div>
+                <label for="signup-confirm-password">Confirm password</label><div class="passwordInputWrap"><input id="signup-confirm-password" type="password" autocomplete="new-password" minlength="8" required><button class="passwordVisibilityToggle" type="button" data-password-toggle aria-controls="signup-confirm-password" aria-label="Show password" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/><path class="passwordVisibilitySlash" d="m4 4 16 16"/></svg></button></div>
                 <button class="button primary" type="submit">Create account</button>
                 <p class="accountFormSwitch">Already have an account? <a href="#login-form">Sign in</a></p>
               </form>
             </div>
             <form id="reset-request-form" class="surface accountForm resetForm" hidden><h2>Reset your password</h2><p class="accountFormIntro">Enter the email linked to your account and we’ll send a secure reset link.</p><label for="reset-email">Account email</label><input id="reset-email" type="email" autocomplete="email" required maxlength="254"><button class="button primary" type="submit">Send reset link</button><p class="accountFormSwitch">Remembered your password? <a href="#login-form">Back to sign in</a></p></form>
-            <form id="recovery-complete-form" class="surface accountForm resetForm" hidden><h2>Choose a new password</h2><label for="new-password">New password</label><input id="new-password" type="password" autocomplete="new-password" minlength="8" required><label for="new-password-confirm">Confirm new password</label><input id="new-password-confirm" type="password" autocomplete="new-password" minlength="8" required><button class="button primary" type="submit">Update password</button></form>
+            <form id="recovery-complete-form" class="surface accountForm resetForm" hidden><h2>Choose a new password</h2><label for="new-password">New password</label><div class="passwordInputWrap"><input id="new-password" type="password" autocomplete="new-password" minlength="8" required><button class="passwordVisibilityToggle" type="button" data-password-toggle aria-controls="new-password" aria-label="Show password" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/><path class="passwordVisibilitySlash" d="m4 4 16 16"/></svg></button></div><label for="new-password-confirm">Confirm new password</label><div class="passwordInputWrap"><input id="new-password-confirm" type="password" autocomplete="new-password" minlength="8" required><button class="passwordVisibilityToggle" type="button" data-password-toggle aria-controls="new-password-confirm" aria-label="Show password" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/><path class="passwordVisibilitySlash" d="m4 4 16 16"/></svg></button></div><button class="button primary" type="submit">Update password</button></form>
             <p class="small muted accountConfirmNote">Email verification and password recovery are handled securely.</p>
           </section>
           <p class="small muted accountPrivacyLink">Cloud saving stores selected plan inputs in Supabase. <a href="/privacy.html">Read the privacy details.</a> Clearing local plan data does not delete cloud copies.</p>
@@ -64,6 +63,7 @@
           <div class="accountStoryOrb" aria-hidden="true"></div>
         </aside>
       </div>
+      <p id="account-message" class="pageSummary" role="status" aria-live="polite" hidden></p>
       <section id="cloud-plans-panel" class="surface accountPanel" hidden>
         <section id="mfa-settings" class="mfaSettings" aria-labelledby="mfa-settings-title">
           <h2 id="mfa-settings-title">Authenticator app</h2><p id="mfa-settings-status" class="small muted" aria-live="polite">Checking authenticator status…</p>

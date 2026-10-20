@@ -736,7 +736,7 @@ body[data-page=account] .accountHero>.wrap{width:min(1160px,calc(100% - 40px));m
 .accountMain #login-form h2{margin-bottom:2px}
 .accountPasswordField{display:grid;grid-template-columns:1fr auto;align-items:center;gap:7px 12px}
 .accountPasswordField label{grid-column:1/-1}
-.accountPasswordField input{grid-column:1/-1}
+.accountPasswordField>.passwordInputWrap{grid-column:1/-1}
 .accountPasswordField>a{grid-column:2;color:#176748;font-size:.76rem;font-weight:600;text-decoration:none}
 .accountPasswordField>a:hover{text-decoration:underline;text-underline-offset:3px}
 .accountPasswordField>a:focus-visible,.accountFormSwitch a:focus-visible{outline:3px solid rgba(39,132,95,.22);outline-offset:3px;border-radius:3px}
@@ -758,6 +758,24 @@ body[data-page=account] .accountHero>.wrap{width:min(1160px,calc(100% - 40px));m
 .accountMain .accountConfirmNote{margin-top:18px;color:#747970;font-size:.76rem;line-height:1.55}
 .accountMain .accountPrivacyLink{margin-top:20px;color:#656d65;font-size:.76rem;line-height:1.6}
 .accountMain .accountPrivacyLink a{color:#176748}
+.passwordInputWrap{position:relative;width:100%;min-width:0}
+.accountMain .passwordInputWrap input{padding-right:48px}
+.passwordVisibilityToggle{position:absolute;top:50%;right:8px;display:grid;width:34px;height:34px;place-items:center;padding:0;border:0;border-radius:8px;background:transparent;color:#61756a;transform:translateY(-50%);cursor:pointer}
+.accountMain .accountForm .passwordVisibilityToggle{width:34px;min-height:34px;justify-self:auto;padding:0}
+.passwordVisibilityToggle:hover{background:#eef4ed;color:#176748}
+.passwordVisibilityToggle:focus-visible{outline:3px solid rgba(39,132,95,.22);outline-offset:1px}
+.passwordVisibilityToggle svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.passwordVisibilityToggle[aria-pressed=true] .passwordVisibilitySlash{display:none}
+.accountHero #account-message{max-width:1120px;margin:0 auto 14px}
+.accountHero #cloud-plans-panel{max-width:1120px;margin:0 auto;background:#fffefa}
+.accountHero #cloud-plans-panel .mfaSettings{border-color:#e3e8df;background:#f7f8f3;color:#293d33}
+.accountHero #cloud-plans-panel .mfaSettings h2{color:#174f40}
+.accountHero #cloud-plans-panel .mfaSettings .muted{color:#687168}
+.accountHero #cloud-plans-panel .mfaPanel{border-color:#e3e8df;background:#fffefa;color:#293d33}
+.accountHero #cloud-plans-panel .mfaCodeForm input{border-color:#d9e1d9;background:#fff;color:#253d32}
+.accountHero #cloud-plans-panel .mfaCodeForm label{color:#48564d}
+body[data-page=account].account-panel-only .accountHero{min-height:100vh;padding:124px 0 64px}
+body[data-page=account] #account-access-layout[hidden]{display:none!important}
 .accountStory{position:relative;display:flex;min-width:0;flex-direction:column;justify-content:space-between;overflow:hidden;padding:clamp(34px,5vw,64px);background:radial-gradient(ellipse at 100% 0%,rgba(115,185,151,.36),transparent 42%),linear-gradient(145deg,#0b514b,#073e3d 72%,#0b4a43);color:#f4fbf5}
 .accountStoryContent,.accountStoryFoot{position:relative;z-index:1}
 .accountStoryLabel{display:inline-block;color:#c2e4cf;font-size:.68rem;font-weight:700;letter-spacing:.16em}
@@ -804,6 +822,7 @@ body[data-page="planner"] .plannerStepHeading h3{margin:0 0 4px;color:#14533f;fo
 body[data-page="planner"] .plannerStepHeading p{color:#68756c;font-size:.86rem;line-height:1.55}
 body[data-page="planner"] .plannerStepPanel>.formSection{margin-top:10px;padding:14px 0}
 body[data-page="planner"] .plannerStepPanel>.planningModeSelector{margin-top:0}
+body[data-page="planner"] .plannerStepPanel>.planningModeSelector>#planningModeHelp{margin:0 0 12px}
 body[data-page="planner"] .plannerStepPanel>.planningModeSelector .planningModeCard{min-height:108px;padding:12px 14px}
 body[data-page="planner"] .plannerStepPanel>.planningModeSelector .planningModeCard small{line-height:1.45}
 body[data-page="planner"] .plannerStepPanel>.requiredHint{margin:0 0 7px;font-size:.78rem}

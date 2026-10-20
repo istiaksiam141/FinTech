@@ -3,6 +3,7 @@
   const client = window.CampusBridgeSupabase?.client;
   const byId = id => document.getElementById(id);
   const status = byId("account-message"), authPanel = byId("auth-panel"), cloudPanel = byId("cloud-plans-panel");
+  const accountAccess = byId("account-access-layout");
   const authOptions = byId("account-auth-options"), challengePanel = byId("mfa-challenge-panel"), recoveryForm = byId("recovery-complete-form");
   const plansList = byId("cloud-plan-list"), saveForm = byId("cloud-save-form");
   const authForms = ["signup-form", "login-form", "reset-request-form", "recovery-complete-form", "cloud-save-form", "mfa-challenge-form", "mfa-enroll-form", "mfa-disable-form"].map(byId).filter(Boolean);
@@ -55,12 +56,31 @@
   let session = null, loadingPlans = false, security = { status: "checking" }, securityRevision = 0;
   let recoveryActive = new URLSearchParams(location.search).get("flow") === "recovery";
 
+  document.querySelectorAll("[data-password-toggle]").forEach(toggle => {
+    const input = toggle.parentElement.querySelector("input");
+    const resetVisibility = () => {
+      input.type = "password";
+      toggle.setAttribute("aria-label", "Show password");
+      toggle.setAttribute("aria-pressed", "false");
+    };
+    toggle.addEventListener("click", () => {
+      const visible = input.type === "password";
+      input.type = visible ? "text" : "password";
+      toggle.setAttribute("aria-label", visible ? "Hide password" : "Show password");
+      toggle.setAttribute("aria-pressed", String(visible));
+    });
+    input.form?.addEventListener("reset", resetVisibility);
+  });
+
   function setAuthVisible() {
     const signedIn = Boolean(session?.user), verified = security.status === "ready";
     const requiringFactor = security.status === "challenge-required";
     const unavailable = security.status === "error" || security.status === "unsupported-factor";
+    const showAccountPanel = signedIn && verified && !recoveryActive;
     authPanel.hidden = false;
-    cloudPanel.hidden = !signedIn || !verified;
+    accountAccess.hidden = showAccountPanel;
+    document.body.classList.toggle("account-panel-only", showAccountPanel);
+    cloudPanel.hidden = !showAccountPanel;
     authOptions.hidden = recoveryActive || (signedIn && (requiringFactor || unavailable || security.status === "checking"));
     challengePanel.hidden = !requiringFactor;
     recoveryForm.hidden = !recoveryActive;
