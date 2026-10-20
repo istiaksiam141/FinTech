@@ -156,7 +156,7 @@ test('shared navigation offers a persistent accessible light-blue theme toggle',
   assert.match(site, /themeStorageKey = "campusbridge-theme"/);
   assert.match(site, /localStorage\.getItem\(themeStorageKey\) === "blue"/);
   assert.match(site, /className = "themeToggle"/);
-  assert.match(site, /wrap\.append\(brand, nav, themeToggle\)/, 'the theme switch remains available outside the collapsed mobile menu');
+  assert.match(site, /moreGroup\.submenu\.append\(themeToggle\)/, 'the theme switch appears within the More dropdown');
   assert.match(site, /aria-pressed", String\(active\)/);
   assert.match(site, /logo\.src = document\.body\.dataset\.theme === "blue" \? "\/assets\/brand\/logo-transparent\.png" : "\/assets\/brand\/logo-header\.png"/, 'newly created shared logos use an asset with contrast for the active theme');
   assert.match(site, /localStorage\.setItem\(themeStorageKey, nextTheme\)/);
@@ -167,6 +167,7 @@ test('shared navigation offers a persistent accessible light-blue theme toggle',
   assert.match(css, /body\[data-theme="blue"\] \.topbar \.navlinks>\.navGroup>\.navGroupToggle\{border-color:#b7cecc;background:rgba\(226,237,236,\.68\);color:#355657\}/);
   assert.match(css, /body\[data-theme="blue"\] \.topbar \.navDropdown\{border-color:#d4e1df/);
   assert.match(css, /body\[data-theme="blue"\] \.topbar \.navlinks\{border-color:#c6d8d6;background:rgba\(237,244,243,\.98\)/);
+  assert.match(css, /\.topbar \.navlinks \.navDropdown>\.themeToggle\{width:100%;justify-content:flex-start/);
 });
 
 test('every page keeps the footer at the viewport bottom when content is short', () => {

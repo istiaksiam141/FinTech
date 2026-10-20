@@ -1156,6 +1156,9 @@ body[data-page="stress"] .pageHero{min-height:0}
 .themeToggle:hover{transform:translateY(-1px);border-color:#fff;background:rgba(255,255,255,.2)}
 .themeToggle:focus-visible{outline:3px solid #a5c4c2;outline-offset:3px}
 @media(max-width:360px){.themeToggle{gap:6px;padding:7px 9px;font-size:.72rem}}
+.topbar .navlinks .navDropdown>.themeToggle{width:100%;justify-content:flex-start;min-height:44px;margin-top:4px;padding:10px 14px;border-color:transparent;border-radius:11px;background:transparent;color:#31584b;font-size:.9rem}
+.topbar .navlinks .navDropdown>.themeToggle:hover{transform:none;border-color:#e1ebe3;background:#f0f6f1;color:#104b38}
+.topbar .navlinks .navDropdown>.themeToggle:focus-visible{outline:3px solid #8cbea5;outline-offset:2px}
 body[data-theme="blue"]{color-scheme:light;--ink:#1a2424;--muted:#536564;--quiet:#72817f;--navy:#eef3f2;--panel:#fbfdfc;--panel2:#e8efee;--line:#d7e2e0;--cyan:#4a898f;--mint:#a5c4c2;--gold:#c9a969}
 body[data-theme="blue"][data-page]{background-color:#eef3f2}
 body[data-theme="blue"][data-page="home"] .hero{background:radial-gradient(ellipse at 83% 16%,rgba(165,196,194,.38),transparent 38%),radial-gradient(ellipse at 8% 88%,rgba(210,225,223,.48),transparent 34%),#eef3f2}
@@ -1183,6 +1186,9 @@ body[data-theme="blue"] .topbar .navlinks .navDropdown a{color:#355657}
 body[data-theme="blue"] .topbar .navlinks .navDropdown a:hover,body[data-theme="blue"] .topbar .navlinks .navDropdown a[aria-current=page]{border-color:#c9dcda;background:#e5efee;color:#245457}
 body[data-theme="blue"] .topbar .navlinks .navDropdown a[aria-current=page]{box-shadow:inset 3px 0 #4a898f}
 body[data-theme="blue"] .topbar .navlinks .navDropdown a:focus-visible{outline-color:#4a898f}
+body[data-theme="blue"] .topbar .navlinks .navDropdown>.themeToggle{border-color:transparent;background:transparent;color:#355657}
+body[data-theme="blue"] .topbar .navlinks .navDropdown>.themeToggle:hover{border-color:#c9dcda;background:#e5efee;color:#245457}
+body[data-theme="blue"] .topbar .navlinks .navDropdown>.themeToggle:focus-visible{outline-color:#4a898f}
 body[data-theme="blue"] .navAuthSlot .authLoginLink{border-color:#9dbbb9;background:#e2edec;color:#294c4e}
 body[data-theme="blue"] .navAuthSlot .authLoginLink:hover{border-color:#a5c4c2;background:#a5c4c2;color:#173a3d}
 body[data-theme="blue"] .profileAvatar{border-color:#b4cecc;background:#a5c4c2;color:#173a3d}

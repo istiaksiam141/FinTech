@@ -129,7 +129,8 @@
         console.error("CampusBridge could not save the theme preference. The selected theme remains active on this page.", error);
       }
     });
-    wrap.append(brand, nav, themeToggle);
+    moreGroup.submenu.append(themeToggle);
+    wrap.append(brand, nav);
     const accountStatus = document.createElement("div"); accountStatus.id = "nav-auth-slot"; accountStatus.className = "navAuthSlot"; accountStatus.hidden = true; accountStatus.setAttribute("aria-busy", "true");
     nav.append(accountStatus);
     const menu = document.createElement("button"); menu.type = "button"; menu.id = "menu"; menu.className = "burger"; menu.append(createIcon("menu"));
