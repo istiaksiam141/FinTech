@@ -159,6 +159,20 @@ test('every page keeps the footer at the viewport bottom when content is short',
   assert.match(css, /\.pageHero\{min-height:75vh;padding:140px 0 72px\}/, 'other feature pages retain their shared hero spacing');
 });
 
+test('shared footer includes useful navigation, a planning note, and responsive layout', () => {
+  const site = fs.readFileSync(path.join(root, 'js/site.js'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  assert.match(site, /<nav class="footerNav" aria-label="Footer">/);
+  assert.match(site, /href="\/planner\.html">Planner/);
+  assert.match(site, /href="\/privacy\.html">Privacy and limitations/);
+  assert.match(site, /<strong>Planning note<\/strong> Estimates use your entries/);
+  assert.match(css, /\.footerMain\{display:grid;grid-template-columns:minmax\(0,1fr\) minmax\(320px,1\.15fr\)/);
+  assert.match(css, /\.footer\{padding:36px 0 18px;border-top:1px solid #e3e2d8/);
+  assert.doesNotMatch(css, /\.footer\{margin-top:(?:36|48)px/);
+  assert.match(css, /@media\(max-width:720px\)\{\.footer\{padding-top:28px\}\.footerMain\{grid-template-columns:1fr;gap:28px\}/);
+  assert.match(css, /@media\(max-width:480px\)\{\.footerContent\{gap:22px\}.*\.footerBottom\{flex-direction:column/);
+});
+
 test('each dependent page declares every static element its module initializes', () => {
   const modules = [
     ['roadmap.html', 'js/roadmap-page.js'], ['stress-tests.html', 'js/stress-tests-page.js'],

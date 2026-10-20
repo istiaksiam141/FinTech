@@ -1130,3 +1130,23 @@ body[data-page] main{flex:1 0 auto}
 body[data-page] .footer{flex-shrink:0}
 body[data-page="roadmap"] .pageHero,
 body[data-page="stress"] .pageHero{min-height:0}
+
+.footer{padding:36px 0 18px;border-top:1px solid #e3e2d8;background:linear-gradient(145deg,rgba(255,255,255,.82),rgba(246,245,237,.96));color:#59645c}
+.footerContent{display:grid;gap:28px}
+.footerMain{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,1.15fr);gap:56px;align-items:start}
+.footerIdentity .brand{display:inline-flex;align-items:center;gap:12px;color:#164d3e;font-size:1.08rem;font-weight:750;text-decoration:none}
+.footer .brandLogo{width:46px;height:46px}
+.footerIdentity>p{max-width:300px;margin:12px 0 0;color:#68736b;font-size:.92rem;line-height:1.65}
+.footerNav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px}
+.footerNavGroup{display:grid;align-content:start;gap:10px}
+.footerNavGroup h2{margin:0 0 2px;color:#25372e;font-size:.78rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.footerNavGroup a,.footerBottom a{width:fit-content;color:#5b685f;font-size:.9rem;text-decoration:none;transition:color .18s ease}
+.footerNavGroup a:hover,.footerBottom a:hover{color:#167656}
+.footerNavGroup a:focus-visible,.footerBottom a:focus-visible{outline:2px solid #267357;outline-offset:4px;border-radius:2px}
+.footerNote{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1px solid #e6e5db;border-radius:12px;background:rgba(255,255,255,.58)}
+.footerNoteMark{display:grid;flex:0 0 22px;width:22px;height:22px;place-items:center;border-radius:50%;background:#eaf3eb;color:#267357;font-size:.82rem;font-weight:800}
+.footerNote p{margin:0;color:#667067;font-size:.82rem;line-height:1.6}
+.footerNote strong{margin-right:5px;color:#35483d}
+.footerBottom{display:flex;justify-content:space-between;gap:16px;padding-top:15px;border-top:1px solid #e7e6dd;color:#7b817a;font-size:.78rem}
+@media(max-width:720px){.footer{padding-top:28px}.footerMain{grid-template-columns:1fr;gap:28px}.footerIdentity>p{max-width:440px}}
+@media(max-width:480px){.footerContent{gap:22px}.footerNav{gap:18px}.footerBottom{flex-direction:column;gap:7px}.footerNote{padding:12px}}

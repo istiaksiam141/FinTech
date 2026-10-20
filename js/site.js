@@ -130,7 +130,7 @@
   const footerTarget = document.getElementById("site-footer");
   if (footerTarget) {
     const footer = document.createElement("footer"); footer.className = "footer";
-    footer.innerHTML = '<div class="wrap footerRow"><span class="footerBrandSlot"></span><span>Planning estimates use your entries and are not guarantees.</span><a href="/privacy.html">Privacy and limitations</a><span>© 2026 CampusBridge · Product prototype</span></div>';
+    footer.innerHTML = '<div class="wrap footerContent"><div class="footerMain"><div class="footerIdentity"><span class="footerBrandSlot"></span><p>Clearer money planning for your next study-abroad step.</p></div><nav class="footerNav" aria-label="Footer"><div class="footerNavGroup"><h2>Plan</h2><a href="/planner.html">Planner</a><a href="/roadmap.html">Savings roadmap</a><a href="/report.html">Financial report</a></div><div class="footerNavGroup"><h2>Explore</h2><a href="/assistant.html">AI assistant</a><a href="/transfers.html">Transfers</a><a href="/privacy.html">Privacy and limitations</a></div></nav></div><div class="footerNote"><span class="footerNoteMark" aria-hidden="true">i</span><p><strong>Planning note</strong> Estimates use your entries and are for guidance only; they are not guarantees.</p></div><div class="footerBottom"><span>© 2026 CampusBridge · Product prototype</span><span>Built for students planning what comes next</span></div></div>';
     footer.querySelector(".footerBrandSlot").replaceWith(createBrand());
     footerTarget.replaceWith(footer);
   }
