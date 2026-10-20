@@ -3,6 +3,7 @@
   const client = window.CampusBridgeSupabase?.client;
   const byId = id => document.getElementById(id);
   const status = byId("account-message"), authPanel = byId("auth-panel"), cloudPanel = byId("cloud-plans-panel");
+  const mfaStatusBadge = byId("mfa-settings-badge");
   const accountAccess = byId("account-access-layout");
   const authOptions = byId("account-auth-options"), challengePanel = byId("mfa-challenge-panel"), recoveryForm = byId("recovery-complete-form");
   const plansList = byId("cloud-plan-list"), saveForm = byId("cloud-save-form");
@@ -229,9 +230,13 @@
   function updateMfaSettings() {
     const ready = security.status === "ready", factors = security.factors || [];
     const verifiedFactor = factors.find(factor => factor.status === "verified");
-    byId("mfa-settings-status").textContent = !ready ? "Authenticator settings are unavailable until your session is verified." : verifiedFactor ? "An authenticator app is enabled for this account." : "No authenticator app is enabled. Setup is optional.";
+    byId("mfa-settings-status").textContent = !ready ? "Authenticator settings are unavailable until your session is verified." : verifiedFactor ? "A second step is active when you sign in." : "Add a second step to help protect your account.";
+    mfaStatusBadge.dataset.state = !ready ? "checking" : verifiedFactor ? "active" : "available";
+    mfaStatusBadge.textContent = !ready ? "Checking" : verifiedFactor ? "Enabled" : "Not enabled";
     byId("mfa-enroll-start").hidden = !ready || Boolean(verifiedFactor);
     byId("mfa-disable-start").hidden = !ready || !verifiedFactor;
+    byId("mfa-enroll-start").setAttribute("aria-expanded", String(!byId("mfa-enroll-panel").hidden));
+    byId("mfa-disable-start").setAttribute("aria-expanded", String(!byId("mfa-disable-form").hidden));
   }
   async function reconcileSession(nextSession = session) {
     session = nextSession || null;
@@ -478,13 +483,15 @@
     const setup = await mfa.beginEnrollment();
     const image = byId("mfa-qr-code"); image.src = setup.qrCode; image.hidden = false;
     byId("mfa-enroll-panel").hidden = false; byId("mfa-enroll-start").hidden = true;
+    byId("mfa-enroll-start").setAttribute("aria-expanded", "true");
+    byId("mfa-enroll-code").focus();
     say("Scan the QR code, then enter a current code to complete setup.");
   }));
   byId("mfa-enroll-form").addEventListener("submit", event => {
     event.preventDefault(); const form = event.currentTarget;
     submit(form, async () => {
       await mfa.verifyEnrollment(codeValue("mfa-enroll-code"));
-      byId("mfa-enroll-panel").hidden = true; byId("mfa-qr-code").removeAttribute("src");
+      byId("mfa-enroll-panel").hidden = true; byId("mfa-enroll-start").setAttribute("aria-expanded", "false"); byId("mfa-qr-code").removeAttribute("src");
       await reconcileSession(session); say("Authenticator app enabled and verified.", "success");
     });
   });
@@ -494,14 +501,14 @@
     say("A fresh authenticator challenge is ready. Enter a current six-digit code to finish setup.");
   }));
   byId("mfa-enroll-cancel").addEventListener("click", () => submit(byId("mfa-enroll-form"), async () => {
-    await mfa.cancelEnrollment(); byId("mfa-enroll-panel").hidden = true; byId("mfa-qr-code").removeAttribute("src");
-    say("Authenticator setup was canceled."); await reconcileSession(session);
+    await mfa.cancelEnrollment(); byId("mfa-enroll-panel").hidden = true; byId("mfa-enroll-start").setAttribute("aria-expanded", "false"); byId("mfa-qr-code").removeAttribute("src");
+    say("Authenticator setup was canceled."); await reconcileSession(session); byId("mfa-enroll-start").focus();
   }));
   byId("mfa-disable-start").addEventListener("click", () => submit(byId("mfa-disable-form"), async () => {
     const factor = (security.factors || []).find(item => item.status === "verified");
     if (!factor) throw new Error("No verified authenticator was found.");
-    await mfa.startChallenge(factor.id, { purpose: "disable" }); security.disableFactorId = factor.id; byId("mfa-disable-form").hidden = false;
-    byId("mfa-disable-start").hidden = true; say("Enter a current authenticator code to confirm removal.");
+    await mfa.startChallenge(factor.id, { purpose: "disable" }); security.disableFactorId = factor.id; byId("mfa-disable-form").hidden = false; byId("mfa-disable-start").setAttribute("aria-expanded", "true");
+    byId("mfa-disable-start").hidden = true; byId("mfa-disable-code").focus(); say("Enter a current authenticator code to confirm removal.");
   }));
   byId("mfa-disable-form").addEventListener("submit", event => {
     event.preventDefault(); const form = event.currentTarget;
@@ -513,7 +520,7 @@
   });
   byId("mfa-disable-cancel").addEventListener("click", () => {
     mfa.cancelDisable(security.disableFactorId);
-    byId("mfa-disable-form").reset(); byId("mfa-disable-form").hidden = true; byId("mfa-disable-start").hidden = false;
+    byId("mfa-disable-form").reset(); byId("mfa-disable-form").hidden = true; byId("mfa-disable-start").hidden = false; byId("mfa-disable-start").setAttribute("aria-expanded", "false"); byId("mfa-disable-start").focus();
   });
   document.querySelectorAll("[data-auth-logout]").forEach(button => button.addEventListener("click", async () => {
     if (!client) return;

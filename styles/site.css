@@ -774,6 +774,39 @@ body[data-page=account] .accountHero>.wrap{width:min(1160px,calc(100% - 40px));m
 .accountHero #cloud-plans-panel .mfaPanel{border-color:#e3e8df;background:#fffefa;color:#293d33}
 .accountHero #cloud-plans-panel .mfaCodeForm input{border-color:#d9e1d9;background:#fff;color:#253d32}
 .accountHero #cloud-plans-panel .mfaCodeForm label{color:#48564d}
+.accountHero #cloud-plans-panel .mfaSettings{grid-template-columns:minmax(0,1fr) auto;align-items:center;justify-items:stretch;gap:16px;margin:0 0 28px;padding:22px;border-radius:18px;background:linear-gradient(135deg,#f8faf6,#f1f6f0)}
+.securityCardMain{display:grid;grid-column:1;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:14px}
+.securityIcon{display:grid;width:46px;height:46px;place-items:center;border:1px solid #dce9dc;border-radius:14px;background:#fff;color:#28714c}
+.securityIcon svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.securityCardCopy{display:grid;min-width:0;gap:3px}
+.accountHero #cloud-plans-panel .securityCardCopy h2{margin:0;color:#174f40;font:700 1.08rem/1.35 Manrope,sans-serif}
+.accountHero #cloud-plans-panel .securityCardCopy p{margin:0;color:#687168;font-size:.78rem;line-height:1.5}
+.securityStatusBadge{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid #e5e8e2;border-radius:999px;background:#fff;color:#69746b;font-size:.68rem;font-weight:700;white-space:nowrap}
+.securityStatusBadge:before{width:7px;height:7px;border-radius:50%;background:#a9b1a9;content:""}
+.securityStatusBadge[data-state=active]{border-color:#cfe5d2;background:#edf7ee;color:#236344}
+.securityStatusBadge[data-state=active]:before{background:#329363;box-shadow:0 0 0 3px rgba(50,147,99,.12)}
+.securityStatusBadge[data-state=available]{border-color:#eadfc8;background:#fff8e9;color:#806328}
+.securityStatusBadge[data-state=available]:before{background:#c49439}
+.securityActions{grid-column:2;grid-row:1;display:flex;justify-content:flex-end;gap:9px}
+.securityActions button[hidden]{display:none!important}
+.securityActions .button,.mfaCodeForm .button{width:auto;min-height:42px;justify-self:start;padding:9px 15px;white-space:normal}
+.securityRemoveButton,.securityCancelButton{border-color:#dfe6de;background:#fff;color:#526358}
+.securityRemoveButton:hover,.securityCancelButton:hover{border-color:#c9d9cb;background:#f6faf5;color:#24583c}
+.accountHero #cloud-plans-panel .mfaPanel{grid-column:1/-1;width:100%;max-width:none;margin:2px 0 0;padding:22px;border-radius:16px}
+.accountHero #cloud-plans-panel .mfaEnrollmentPanel{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,.85fr);align-items:center;gap:24px;background:linear-gradient(145deg,#fff,#f7faf6)}
+.accountHero #cloud-plans-panel .mfaEnrollmentPanel[hidden],.accountHero #cloud-plans-panel .mfaDisablePanel[hidden]{display:none}
+.mfaEnrollmentIntro{display:grid;justify-items:start;gap:9px}
+.accountHero #cloud-plans-panel .mfaEnrollmentIntro h3,.accountHero #cloud-plans-panel .mfaDisablePanel h3{margin:0;color:#244d38;font:700 1rem/1.4 Manrope,sans-serif}
+.accountHero #cloud-plans-panel .mfaEnrollmentIntro p,.accountHero #cloud-plans-panel .mfaDisablePanel p,.accountHero #cloud-plans-panel .mfaCodeForm>p{margin:0;color:#687168;font-size:.8rem;line-height:1.6}
+.mfaQrFrame{display:grid;width:min(100%,220px);aspect-ratio:1;place-items:center;margin-top:4px;padding:12px;border:1px solid #e5ebe3;border-radius:16px;background:#fff;box-shadow:0 5px 18px rgba(30,60,39,.05)}
+.accountHero #cloud-plans-panel .mfaQrCode{width:100%;height:100%;margin:0;padding:0;border-radius:8px;object-fit:contain}
+.accountHero #cloud-plans-panel .mfaCodeForm{display:grid;justify-items:start;align-content:center;gap:10px;min-width:0}
+.accountHero #cloud-plans-panel .mfaCodeForm input{width:min(100%,280px);min-height:50px;border-radius:12px;background:#fff;font-size:1.15rem;letter-spacing:.28em;text-align:center}
+.mfaEnrollmentPanel .mfaCodeForm button,.mfaDisablePanel button{width:100%;max-width:300px}
+.accountHero #cloud-plans-panel .mfaDisablePanel{grid-template-columns:minmax(0,1fr) minmax(190px,.7fr) auto auto;align-items:end;gap:12px;background:#fff}
+.mfaDisablePanel>div{grid-column:1/-1}
+.accountHero #cloud-plans-panel .mfaDisablePanel input{width:100%}
+.mfaDisablePanel .button{min-width:max-content}
 .profileSettings{display:grid;gap:20px;margin:0 0 28px;padding:0 0 28px;border-bottom:1px solid #e9ece5;color:#293d33}
 .accountSectionHeading{display:flex;align-items:flex-end;justify-content:space-between;gap:18px}
 .accountSectionHeading h2{margin:4px 0 0;color:#174f40;font-family:Manrope,sans-serif;font-size:1.3rem}
@@ -845,6 +878,7 @@ body[data-page=account] #account-access-layout[hidden]{display:none!important}
 @media(max-width:480px){body[data-page=account] .accountHero>.wrap{width:calc(100% - 28px)}body[data-page=account] .accountHero{padding-top:94px}.accountMain{padding:26px 20px}.accountHero h1{font-size:2.35rem}.accountJump{gap:6px}.accountJump a{padding:7px 9px;font-size:.72rem}.accountStory{min-height:360px;padding:30px 23px}}
 @media(max-width:760px){.profileSettingsGrid{grid-template-columns:1fr}}
 @media(max-width:640px){.accountHero #cloud-plans-panel{padding:20px;border-radius:19px}.accountSectionHeading{align-items:flex-start;flex-direction:column;gap:6px}.accountSectionHeading>p{text-align:left}.profileSettingsForm{padding:16px}.profileNameControls{grid-template-columns:1fr}.profileSettingsForm .profileNameControls .button{width:100%}.accountHero #cloud-plans-panel .cloudSaveForm{grid-template-columns:1fr}.accountSignOut{align-items:flex-start;flex-direction:column}}
+@media(max-width:700px){.accountHero #cloud-plans-panel .mfaSettings{grid-template-columns:minmax(0,1fr);padding:17px}.securityCardMain{grid-column:1;grid-template-columns:42px minmax(0,1fr);gap:11px}.securityIcon{width:40px;height:40px}.securityStatusBadge{grid-column:2;justify-self:start}.securityActions{grid-column:1;grid-row:2;justify-content:stretch}.securityActions .button{width:100%}.accountHero #cloud-plans-panel .mfaEnrollmentPanel{grid-template-columns:minmax(0,1fr);justify-items:stretch;gap:18px;padding:16px}.mfaEnrollmentIntro{justify-items:center;text-align:center}.mfaQrFrame{width:min(100%,210px)}.accountHero #cloud-plans-panel .mfaEnrollmentPanel .mfaCodeForm{width:100%}.accountHero #cloud-plans-panel .mfaEnrollmentPanel .mfaCodeForm input,.mfaEnrollmentPanel .mfaCodeForm button{width:100%;max-width:none}.accountHero #cloud-plans-panel .mfaDisablePanel{grid-template-columns:minmax(0,1fr);align-items:stretch;padding:16px}.mfaDisablePanel>div{grid-column:1}.mfaDisablePanel .button{min-width:0;width:100%}}
 
 /* Guided planner steps */
 body[data-page="planner"] .formIntro{gap:14px;padding:0 0 18px}

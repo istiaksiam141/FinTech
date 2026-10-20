@@ -103,11 +103,20 @@
           </div>
         </section>
         <section id="mfa-settings" class="mfaSettings" aria-labelledby="mfa-settings-title">
-          <div class="accountSectionHeading"><div><span class="accountSectionEyebrow">ACCOUNT SECURITY</span><h2 id="mfa-settings-title">Authenticator app</h2></div><p id="mfa-settings-status" class="small muted" aria-live="polite">Checking authenticator status…</p></div>
-          <button id="mfa-enroll-start" class="button" type="button" hidden>Set up an authenticator app</button>
-          <div id="mfa-enroll-panel" class="mfaPanel" hidden><p class="small">Scan this QR code with an authenticator app, then verify its current code to finish setup.</p><img id="mfa-qr-code" class="mfaQrCode" alt="QR code for CampusBridge AI authenticator setup"><form id="mfa-enroll-form" class="mfaCodeForm"><label for="mfa-enroll-code">First authenticator code</label><input id="mfa-enroll-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required><button class="button primary" type="submit">Verify and enable</button><button id="mfa-enroll-retry" class="button" type="button">Request a fresh code challenge</button><button id="mfa-enroll-cancel" class="button" type="button">Cancel setup</button></form></div>
-          <button id="mfa-disable-start" class="button" type="button" hidden>Disable authenticator</button>
-          <form id="mfa-disable-form" class="mfaCodeForm mfaPanel" hidden><p class="small muted">Verify with your authenticator app before disabling it.</p><label for="mfa-disable-code">Authenticator code</label><input id="mfa-disable-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required><button class="button" type="submit">Verify and disable</button><button id="mfa-disable-cancel" class="button" type="button">Cancel</button></form>
+          <div class="securityCardMain">
+            <span class="securityIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 19 6v5.2c0 4.5-2.9 7.8-7 9.8-4.1-2-7-5.3-7-9.8V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+            <div class="securityCardCopy"><span class="accountSectionEyebrow">ACCOUNT SECURITY</span><h2 id="mfa-settings-title">Authenticator app</h2><p id="mfa-settings-status" class="small muted" aria-live="polite">Checking authenticator status…</p></div>
+            <span id="mfa-settings-badge" class="securityStatusBadge" data-state="checking">Checking</span>
+          </div>
+          <div class="securityActions">
+            <button id="mfa-enroll-start" class="button primary" type="button" aria-controls="mfa-enroll-panel" aria-expanded="false" hidden>Set up authenticator</button>
+            <button id="mfa-disable-start" class="button securityRemoveButton" type="button" aria-controls="mfa-disable-form" aria-expanded="false" hidden>Remove authenticator</button>
+          </div>
+          <div id="mfa-enroll-panel" class="mfaPanel mfaEnrollmentPanel" hidden>
+            <div class="mfaEnrollmentIntro"><h3>Connect your authenticator</h3><p>Scan this one-time QR code with an authenticator app, then verify a current six-digit code to finish setup.</p><div class="mfaQrFrame"><img id="mfa-qr-code" class="mfaQrCode" alt="One-time QR code for CampusBridge AI authenticator setup"></div></div>
+            <form id="mfa-enroll-form" class="mfaCodeForm"><label for="mfa-enroll-code">Verification code</label><p class="small muted">Enter the current code from your authenticator app.</p><input id="mfa-enroll-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required placeholder="000000"><button class="button primary" type="submit">Verify and enable</button><button id="mfa-enroll-retry" class="button" type="button">Request a fresh code</button><button id="mfa-enroll-cancel" class="button securityCancelButton" type="button">Cancel setup</button></form>
+          </div>
+          <form id="mfa-disable-form" class="mfaCodeForm mfaPanel mfaDisablePanel" hidden><div><h3>Confirm removal</h3><p class="small muted">Enter a current authenticator code to turn off two-step verification.</p></div><label for="mfa-disable-code">Verification code</label><input id="mfa-disable-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required placeholder="000000"><button class="button" type="submit">Verify and remove</button><button id="mfa-disable-cancel" class="button securityCancelButton" type="button">Cancel</button></form>
         </section>
         <section class="accountPlansSection" aria-labelledby="account-plans-title">
         <div class="accountSectionHeading"><div><span class="accountSectionEyebrow">YOUR PLANNING</span><h2 id="account-plans-title">Cloud-saved plans</h2></div><p>Keep your plans available when you return.</p></div>

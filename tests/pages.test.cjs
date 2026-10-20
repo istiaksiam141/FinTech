@@ -259,7 +259,7 @@ test('shared authentication controls load after the Supabase client on every pag
 
 test('account route exposes email, OAuth, recovery, and explicit cloud-plan actions', () => {
   const html = fs.readFileSync(path.join(root, 'account.html'), 'utf8');
-  for (const id of ['signup-form', 'login-form', 'google-signin', 'reset-request-form', 'recovery-complete-form', 'profile-name-form', 'profile-display-name', 'profile-summary-name', 'profile-summary-email', 'profile-photo-form', 'profile-photo-file', 'profile-photo-dropzone', 'profile-photo-save', 'profile-photo-remove', 'cloud-save-form', 'cloud-plan-list', 'mfa-challenge-form', 'mfa-enroll-form', 'mfa-disable-form', 'mfa-qr-code']) assert.ok(html.includes(`id="${id}"`), `account page is missing #${id}`);
+  for (const id of ['signup-form', 'login-form', 'google-signin', 'reset-request-form', 'recovery-complete-form', 'profile-name-form', 'profile-display-name', 'profile-summary-name', 'profile-summary-email', 'profile-photo-form', 'profile-photo-file', 'profile-photo-dropzone', 'profile-photo-save', 'profile-photo-remove', 'cloud-save-form', 'cloud-plan-list', 'mfa-settings-badge', 'mfa-challenge-form', 'mfa-enroll-form', 'mfa-disable-form', 'mfa-qr-code']) assert.ok(html.includes(`id="${id}"`), `account page is missing #${id}`);
   assert.match(html, /role="button" tabindex="0" aria-describedby="profile-photo-help profile-photo-status"/, 'photo dropzone is keyboard and screen-reader accessible');
   assert.match(html, /Drop a photo here or/);
   assert.match(html, /browse files/);
@@ -279,6 +279,12 @@ test('account route exposes email, OAuth, recovery, and explicit cloud-plan acti
   assert.match(account, /security\.status !== "ready"/);
   assert.match(account, /mfa\.verifyEnrollment/);
   assert.match(account, /mfa\.disable/);
+  assert.match(account, /mfaStatusBadge\.dataset\.state = !ready \? "checking" : verifiedFactor \? "active" : "available"/);
+  assert.match(html, /aria-controls="mfa-enroll-panel" aria-expanded="false"/);
+  assert.match(html, /aria-controls="mfa-disable-form" aria-expanded="false"/);
+  assert.match(css, /\.securityStatusBadge\[data-state=active\]/);
+  assert.match(css, /\.accountHero #cloud-plans-panel \.mfaEnrollmentPanel\{display:grid;grid-template-columns:minmax\(0,1fr\) minmax\(250px,\.85fr\)/);
+  assert.match(css, /@media\(max-width:700px\)\{\.accountHero #cloud-plans-panel \.mfaSettings\{grid-template-columns:minmax\(0,1fr\)/);
   assert.match(account, /accountAccess\.hidden = showAccountPanel/);
   assert.match(account, /cloudPanel\.hidden = !showAccountPanel/);
   assert.match(account, /document\.body\.classList\.toggle\("account-panel-only", showAccountPanel\)/);
