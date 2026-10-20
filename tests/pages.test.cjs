@@ -98,6 +98,16 @@ test('planner section heading uses the display font at the shared section-headin
   assert.match(planner, /family=Fraunces:/, 'the planner loads the display font used by the reference title');
 });
 
+test('planner setup and results use aligned responsive columns and styled currency controls', () => {
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  const planner = fs.readFileSync(path.join(root, 'planner.html'), 'utf8');
+  assert.match(css, /body\[data-page="planner"\] \.plannerGrid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\);gap:24px\}/);
+  assert.match(css, /body\[data-page="planner"\] #planningCurrencyStep\{display:grid;gap:9px;margin:0 0 18px;padding:18px;border:1px solid #dfe9df;border-radius:15px/);
+  assert.match(css, /body\[data-page="planner"\] #planningCurrencyStep>select\{display:block;width:100%;min-height:46px/);
+  assert.match(css, /@media\(max-width:900px\)\{\s*body\[data-page="planner"\] \.plannerGrid\{grid-template-columns:minmax\(0,1fr\);gap:18px\}/);
+  assert.match(planner, /<label for="planningCurrency">Planning currency<\/label><select id="planningCurrency"/, 'currency selector retains its explicit accessible label');
+});
+
 test('all pages share the account page warm ivory and evergreen theme', () => {
   const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
   assert.match(css, /:root\{color-scheme:light;--ink:#1a1a18;--muted:#606b63;--quiet:#77776f;--navy:#f5f3ec;--panel:#fffefa;--panel2:#f8f7f2;--line:#e7e5dc;--cyan:#267357;--mint:#8fc6a5;--gold:#c9a969\}/);
