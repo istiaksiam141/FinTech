@@ -20,6 +20,30 @@ test('all static routes exist with useful titles, shared shell, and page-specifi
   }
 });
 
+test('the floating AI assistant is mounted across the shared shell and sends no planner or chat history', () => {
+  const site = fs.readFileSync(path.join(root, 'js/site.js'), 'utf8');
+  const widget = fs.readFileSync(path.join(root, 'js/assistant-widget.js'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'styles/site.css'), 'utf8');
+  for (const file of routes) {
+    assert.match(fs.readFileSync(path.join(root, file), 'utf8'), /\/js\/site\.js/, `${file} loads the shared shell`);
+  }
+  assert.match(site, /id = "campusbridge-assistant-widget"/);
+  assert.match(site, /assistant-widget\.js/);
+  assert.match(site, /aria-controls="assistant-widget-panel" aria-expanded="false"/);
+  assert.match(site, /role="dialog" aria-modal="false"/);
+  assert.match(site, /Saved planner inputs and quotes are never attached/);
+  assert.match(widget, /CampusBridgeAssistantTask\.run/);
+  assert.ok(widget.indexOf('if (task.handled)') < widget.indexOf('fetch("/api/assistant"'), 'planner explanations are handled locally before the remote API call');
+  assert.match(widget, /JSON\.stringify\(\{ question: text \}\)/, 'the remote request includes only the current question');
+  assert.doesNotMatch(widget, /conversationId|includeHistory|requestBody\.messages|profile:/);
+  assert.match(widget, /event\.key === "Escape"/);
+  assert.match(widget, /event\.key === "Enter" && !event\.shiftKey/);
+  assert.match(css, /\.assistantWidgetPanel\[hidden\]\{display:none\}/);
+  assert.match(css, /@media\(max-width:540px\)\{\s*\.assistantWidget/);
+  assert.match(css, /@media\(prefers-reduced-motion:reduce\)/);
+  new vm.Script(widget, { filename: 'js/assistant-widget.js' });
+});
+
 test('planner loads its validated guided steps and review stage', () => {
   const html = fs.readFileSync(path.join(root, 'planner.html'), 'utf8');
   const steps = fs.readFileSync(path.join(root, 'js/planner-steps.js'), 'utf8');
