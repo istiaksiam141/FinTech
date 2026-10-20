@@ -294,8 +294,12 @@ test('account route exposes email, OAuth, recovery, and explicit cloud-plan acti
   assert.equal((html.match(/data-profile-avatar=/g) || []).length, 6, 'the profile provides six pre-made avatar choices');
   assert.doesNotMatch(html, /type="file"|browse files|Drop a photo here/, 'the profile no longer prompts users to upload a photo');
   const avatarIds = ['sage', 'sky', 'sunset', 'ocean', 'berry', 'gold'];
+  const masculineAvatars = ['sage', 'sky', 'sunset'];
+  const feminineAvatars = ['ocean', 'berry', 'gold'];
   for (const id of avatarIds) {
-    assert.match(html, new RegExp(`data-profile-avatar="${id}"[^>]*aria-pressed="false"`), `${id} avatar is a selectable button`);
+    const gender = masculineAvatars.includes(id) ? 'Male' : 'Female';
+    assert.match(html, new RegExp(`data-profile-avatar="${id}"[^>]*aria-label="Choose [^"]+, ${gender.toLowerCase()} avatar"[^>]*aria-pressed="false"`), `${id} ${gender.toLowerCase()} avatar is a selectable button`);
+    assert.match(html, new RegExp(`data-profile-avatar="${id}"[\\s\\S]*?<small>${gender}<\\/small>`), `${id} displays its avatar style`);
     assert.equal(fs.existsSync(path.join(root, 'assets', 'profile-avatars', `${id}.svg`)), true, `${id} avatar artwork exists locally`);
   }
   assert.match(html, /class="accountLayout"[\s\S]*class="accountMain"[\s\S]*class="accountStory"/, 'account access uses a split-panel layout');

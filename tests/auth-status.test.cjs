@@ -148,6 +148,7 @@ test('account form links remain available after login and direct hashes are rest
   assert.match(page, /window\.addEventListener\("hashchange", scrollToAccountHash\)/);
   assert.match(page, /showAccountForm\(target\?\.id\)/, 'direct links switch to the requested account form');
   assert.match(page, /for \(const id of accountFormIds\) byId\(id\)\.hidden = id !== activeAccountForm/, 'only the selected account form is visible');
-  assert.match(page, /target\.scrollIntoView\(\{ block: "start" \}\)/);
+  assert.match(page, /window\.scrollTo\(0, 0\)/, 'direct login links keep the account page positioned at its top');
+  assert.doesNotMatch(page, /target\.scrollIntoView/, 'the login tab does not scroll the viewport down to its anchor');
   assert.match(page, /If the email belongs to an account, Supabase will send a password-reset link\./, 'reset requests do not reveal whether an address is registered');
 });

@@ -6,8 +6,10 @@
   <circle cx="48" cy="48" r="48" fill="url(#bg)"/>
   <path d="M12 96c3-18 17-29 36-29s33 11 36 29" fill="#247d80"/>
   <path d="M40 63h16v15H40z" fill="url(#skin)"/>
+  <path d="M24 43c-2-20 7-33 24-33 16 0 26 12 24 33l3 25c-5 8-10 12-15 14l-4-26H39l-4 26c-6-3-11-8-15-14z" fill="#614b38"/>
   <path d="M26 41c0-16 9-26 22-26s22 10 22 26v11c0 15-9 25-22 25S26 67 26 52z" fill="url(#skin)"/>
-  <path d="M24 43c-2-20 7-33 24-33 16 0 26 12 24 33-5-2-9-7-11-14-8 6-20 8-34 7l-3 7z" fill="#614b38"/>
+  <path d="M24 42c-1-18 8-32 24-32 15 0 24 10 24 30-5-4-9-9-11-16-7 7-18 10-34 9l-2 10z" fill="#614b38"/>
+  <path d="M29 70c-3 5-4 9-4 13m42-13c3 5 4 9 4 13" fill="none" stroke="#82664e" stroke-linecap="round" stroke-width="2"/>
   <path d="M35 49c2-2 5-2 8 0m10 0c2-2 5-2 8 0" fill="none" stroke="#614839" stroke-linecap="round" stroke-width="2"/>
   <path d="M44 61c3 2 7 2 10 0" fill="none" stroke="#a75e57" stroke-linecap="round" stroke-width="2"/>
   <circle cx="48" cy="48" r="46.5" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="3"/>

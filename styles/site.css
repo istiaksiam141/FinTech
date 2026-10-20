@@ -704,6 +704,7 @@ body:before{background-image:linear-gradient(rgba(120,139,119,.025) 1px,transpar
 .assistantTurnQuestion,.assistantTurnQuestion strong,.assistantTurnLabel{color:#193a32}
 .assistantTurnReply{border-top-color:#e8e5de}
 .assistantTurnResponse[aria-busy=true]{color:#6b6b66}
+html:has(body[data-page=account]){scroll-behavior:auto}
 body[data-page=account]{background:#f5f3ec}
 body[data-page=account] .accountHero{min-height:100vh;padding:124px 0 64px}
 body[data-page=account] .accountHero>.wrap{width:min(1160px,calc(100% - 40px));max-width:none}
@@ -864,6 +865,7 @@ body[data-page=account] .accountHero>.wrap{width:min(1160px,calc(100% - 40px));m
 .profileAvatarOption[aria-pressed=true]{border-color:#398460;background:#edf6ef;color:#145640;box-shadow:0 0 0 2px rgba(39,132,95,.12)}
 .profileAvatarOption img{display:block;width:54px;height:54px;border-radius:50%;object-fit:cover;box-shadow:0 2px 6px rgba(32,65,43,.12)}
 .profileAvatarOption span{overflow:hidden;max-width:100%;text-overflow:ellipsis}
+.profileAvatarOption small{color:#87938a;font-size:.58rem;font-weight:600;line-height:1;text-transform:uppercase;letter-spacing:.07em}
 @media(prefers-reduced-motion:reduce){.profileAvatarOption{transition:none!important}}
 .profileAvatarActions{display:flex;flex-wrap:wrap;gap:8px}
 .profileAvatarActions .button[hidden]{display:none!important}

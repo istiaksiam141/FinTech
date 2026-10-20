@@ -62,7 +62,7 @@
     requestAnimationFrame(() => {
       const target = byId(location.hash.slice(1));
       showAccountForm(target?.id);
-      if (target && !target.closest("[hidden]")) target.scrollIntoView({ block: "start" });
+      if (target && !target.closest("[hidden]")) window.scrollTo(0, 0);
     });
   }
   window.addEventListener("hashchange", scrollToAccountHash);
