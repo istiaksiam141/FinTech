@@ -21,7 +21,8 @@ const AssistantRenderer = window.CampusBridgeAssistantRenderer;
 const PlanState = window.CampusBridgePlanState;
 const byId = id => document.getElementById(id);
 const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const corridorMap = { US: { country: "United States", currency: "USD", label: "United States" }, EU: { country: "Euro area", currency: "EUR", label: "Euro area" }, UK: { country: "United Kingdom", currency: "GBP", label: "United Kingdom" }, AU: { country: "Australia", currency: "AUD", label: "Australia" }, JP: { country: "Japan", currency: "JPY", label: "Japan" }, CA: { country: "Canada", currency: "CAD", label: "Canada" }, SE: { country: "Sweden", currency: "SEK", label: "Sweden" }, SG: { country: "Singapore", currency: "SGD", label: "Singapore" }, CN: { country: "China", currency: "CNH", label: "China · offshore yuan" }, IN: { country: "India", currency: "INR", label: "India" }, LK: { country: "Sri Lanka", currency: "LKR", label: "Sri Lanka" } };
+const corridorMap = { US: { country: "United States", currency: "USD", label: "United States" }, EU: { country: "Euro area", currency: "EUR", label: "Euro area" }, UK: { country: "United Kingdom", currency: "GBP", label: "United Kingdom" }, AU: { country: "Australia", currency: "AUD", label: "Australia" }, JP: { country: "Japan", currency: "JPY", label: "Japan" }, CA: { country: "Canada", currency: "CAD", label: "Canada" }, SE: { country: "Sweden", currency: "SEK", label: "Sweden" }, SG: { country: "Singapore", currency: "SGD", label: "Singapore" }, CN: { country: "China", currency: "CNH", label: "China · offshore yuan" }, IN: { country: "India", currency: "INR", label: "India" }, LK: { country: "Sri Lanka", currency: "LKR", label: "Sri Lanka" }, DK: { country: "Denmark", currency: "DKK", label: "Denmark" }, FI: { country: "Finland", currency: "EUR", label: "Finland" }, FR: { country: "France", currency: "EUR", label: "France" }, DE: { country: "Germany", currency: "EUR", label: "Germany" }, IE: { country: "Ireland", currency: "EUR", label: "Ireland" }, NL: { country: "Netherlands", currency: "EUR", label: "Netherlands" }, ES: { country: "Spain", currency: "EUR", label: "Spain" }, NZ: { country: "New Zealand", currency: "NZD", label: "New Zealand" }, NO: { country: "Norway", currency: "NOK", label: "Norway" }, KR: { country: "South Korea", currency: "KRW", label: "South Korea" }, CH: { country: "Switzerland", currency: "CHF", label: "Switzerland" }, AE: { country: "United Arab Emirates", currency: "AED", label: "United Arab Emirates" } };
+const studyDestinationCorridors = { AU: "AU", CA: "CA", CN: "CN", DK: "DK", FI: "FI", FR: "FR", DE: "DE", IN: "IN", IE: "IE", JP: "JP", NL: "NL", NZ: "NZ", NO: "NO", SG: "SG", KR: "KR", ES: "ES", SE: "SE", CH: "CH", AE: "AE", GB: "UK", US: "US" };
 const providerDefs=[{id:"convera",name:"Convera GlobalPay for Students",note:"Institution participation and Bangladesh-origin route must be confirmed."},{id:"flywire",name:"Flywire",note:"Use the payment link supplied by your university; origin options vary."},{id:"bank",name:"Authorized-dealer bank wire",note:"Get current written terms directly from your bank."}];
 const localDate = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
 function contributionScheduleText(result) {
@@ -934,6 +935,29 @@ initializeCustomSelect(byId("corridor"));
 initializeCustomSelect(byId("sortBy"));
 initializeCustomSelect(byId("planningCurrency"));
 byId("corridor").addEventListener("change",()=>{renderQuoteForms();renderTransfers();});
+function applyStudyDestinationPreference(countryCode){
+  const corridorCode=studyDestinationCorridors[countryCode],destination=corridorMap[corridorCode];
+  if(!destination)return;
+  const currencySelector=byId("planningCurrency"),corridorSelector=byId("corridor"),currentCurrency=planCurrency(),populated=hasPlanEntries();
+  if(populated&&destination.currency!==currentCurrency){
+    byId("planningCurrencyStatus").textContent=`Your saved destination is ${destination.country} (${destination.currency}), but your current ${currentCurrency} plan was kept unchanged. Clear or finish this plan before applying the destination currency.`;
+    return;
+  }
+  corridorSelector.value=corridorCode;
+  corridorSelector.dispatchEvent(new Event("change"));
+  syncCustomSelect(corridorSelector);
+  if(destination.currency!==currentCurrency){
+    currencySelector.value=destination.currency;
+    syncCustomSelect(currencySelector);
+    activatePlanningCurrency(destination.currency);
+  }else if(populated){
+    byId("planningCurrencyStatus").textContent=`${destination.country} is selected as your study destination. Your existing ${currentCurrency} plan was preserved.`;
+    if(planRequested)compute();
+  }else{
+    byId("planningCurrencyStatus").textContent=`${destination.country} is selected as your study destination. Planning currency set to ${currentCurrency}.`;
+  }
+}
+window.addEventListener("campusbridge:study-destination",event=>applyStudyDestinationPreference(event.detail?.studyCountry));
 byId("transferAmount").addEventListener("input",renderTransfers); byId("sortBy").addEventListener("change",renderTransfers);
 byId("providerQuoteForms").addEventListener("input",renderTransfers);
 byId("addQuoteProvider").addEventListener("click", () => {

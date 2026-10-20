@@ -32,10 +32,11 @@
   }
 
   function getNavigationState(user) {
-    if (!user) return { authenticated: false, displayName: "", email: "", initial: "", avatarPath: "" };
+    if (!user) return { authenticated: false, displayName: "", email: "", initial: "", avatarPath: "", studyCountry: "" };
     const displayName = getDisplayName(user);
     const email = typeof user.email === "string" ? user.email.trim() : "";
-    return { authenticated: true, displayName, email, initial: Array.from(displayName)[0].toLocaleUpperCase(), avatarPath: getAvatarPath(user) };
+    const studyCountry = typeof user.user_metadata?.study_country === "string" ? user.user_metadata.study_country : "";
+    return { authenticated: true, displayName, email, initial: Array.from(displayName)[0].toLocaleUpperCase(), avatarPath: getAvatarPath(user), studyCountry };
   }
 
   function createSessionController(client, onSession, onUnavailable = () => {}) {
@@ -155,6 +156,7 @@
     let renderRevision = 0;
     function renderUser(user) {
       const revision = ++renderRevision, view = getNavigationState(user);
+      root.dispatchEvent(new root.CustomEvent("campusbridge:study-destination", { detail: { studyCountry: view.studyCountry } }));
       closeMenu();
       neutral.hidden = true;
       login.hidden = view.authenticated;

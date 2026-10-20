@@ -100,11 +100,13 @@ function bbResponse(overrides={}) { const row=(baseCurrency,bid,ask,weightedAver
 
 test('all primary corridors have real-currency support without preset conversion rates',()=>{
   const wanted=['USD','EUR','GBP','AUD','JPY','CAD','SEK','SGD','CNH','INR','LKR'];
-  assert.deepEqual(Finance.CURRENCIES,['BDT',...wanted]);
+  const manualOnly=['DKK','NZD','NOK','KRW','CHF','AED'];
+  assert.deepEqual(Finance.CURRENCIES,['BDT',...wanted,...manualOnly]);
   assert.deepEqual(BangladeshBankRates.CURRENCIES,wanted);
   assert.deepEqual(ExchangeRates.DESTINATION_CURRENCIES,wanted);
   for(const c of wanted) assert.ok(Finance.CURRENCIES.includes(c));
-  for(const unwanted of ['CNY','KRW','MYR']) assert.ok(!Finance.CURRENCIES.includes(unwanted),`${unwanted} is outside the requested set`);
+  for(const c of manualOnly){assert.ok(Finance.CURRENCIES.includes(c));assert.ok(!BangladeshBankRates.CURRENCIES.includes(c),`${c} must remain manual-rate only`);assert.ok(!ExchangeRates.DESTINATION_CURRENCIES.includes(c),`${c} must not be requested from the official feed`);}
+  for(const unwanted of ['CNY','MYR']) assert.ok(!Finance.CURRENCIES.includes(unwanted),`${unwanted} is outside the supported set`);
   assert.match(Finance.CURRENCY_NAMES.CNH,/offshore/);
   const referenceRates={GBP:0.79,BDT:120};
   assert.ok(Math.abs(Finance.convert(100,'GBP','BDT',referenceRates)-100*120/.79)<1e-8);
@@ -972,6 +974,52 @@ test('new plans begin with all supported planning currencies before financial in
   assert.match(app,/window\.confirm\(`Changing the planning currency starts a new plan/);
   assert.match(app,/if\(!confirmed\)\{selector\.value=previous;syncCustomSelect\(selector\);return;\}/);
   assert.match(app,/byId\("profileForm"\)\.reset\(\);selector\.value=next;syncCustomSelect\(selector\);/,'confirmed change clears old values while retaining and displaying the newly chosen planning currency');
+});
+
+test('saved study destinations map to native planning currencies and preserve populated plans',()=>{
+  const app=fs.readFileSync(path.join(__dirname,'..','app.js'),'utf8');
+  const planner=fs.readFileSync(path.join(__dirname,'..','planner.html'),'utf8');
+  const account=fs.readFileSync(path.join(__dirname,'..','account.html'),'utf8');
+  const corridor=app.match(/const corridorMap = [^;]+;/)?.[0]||'';
+  const mapping=app.match(/const studyDestinationCorridors = [^;]+;/)?.[0]||'';
+  const preference=app.match(/function applyStudyDestinationPreference\(countryCode\)\{[\s\S]*?\n\}/)?.[0]||'';
+  const source=`${corridor}\n${mapping}\n${preference}`;
+  const controls={planningCurrency:{value:'BDT'},corridor:{value:'CN',dispatchEvent(){}},planningCurrencyStatus:{textContent:''}};
+  const activated=[],synced=[],computed=[];
+  const context={
+    byId:id=>controls[id],
+    planCurrency:()=>controls.planningCurrency.value,
+    hasPlanEntries:()=>context.populated,
+    activatePlanningCurrency:currency=>activated.push(currency),
+    syncCustomSelect:element=>synced.push(element),
+    Event:class{constructor(type){this.type=type;}},
+    planRequested:false,compute:()=>computed.push(true),
+    populated:false
+  };
+  const {applyStudyDestinationPreference,studyDestinationCorridors,corridorMap}=vm.runInNewContext(`${source};({applyStudyDestinationPreference,studyDestinationCorridors,corridorMap})`,context);
+  assert.deepEqual(JSON.parse(JSON.stringify(studyDestinationCorridors)),{
+    AU:'AU',CA:'CA',CN:'CN',DK:'DK',FI:'FI',FR:'FR',DE:'DE',IN:'IN',IE:'IE',JP:'JP',NL:'NL',
+    NZ:'NZ',NO:'NO',SG:'SG',KR:'KR',ES:'ES',SE:'SE',CH:'CH',AE:'AE',GB:'UK',US:'US'
+  });
+  for(const [countryCode,corridorCode] of Object.entries(studyDestinationCorridors)){
+    assert.ok(account.includes(`data-study-country="${countryCode}"`),`${countryCode} is offered in the profile picker`);
+    assert.ok(planner.includes(`<option value="${corridorCode}"`),`${countryCode} has a planner destination option`);
+    assert.ok(Finance.CURRENCIES.includes(corridorMap[corridorCode].currency),`${countryCode} maps to a supported native currency`);
+  }
+  assert.equal(corridorMap.FI.currency,'EUR');
+  applyStudyDestinationPreference('NZ');
+  assert.equal(controls.corridor.value,'NZ');
+  assert.equal(controls.planningCurrency.value,'NZD');
+  assert.deepEqual(activated,['NZD']);
+  context.populated=true;
+  controls.planningCurrency.value='USD';
+  controls.corridor.value='US';
+  applyStudyDestinationPreference('NZ');
+  assert.equal(controls.corridor.value,'US','the existing destination is kept when applying would change currency');
+  assert.equal(controls.planningCurrency.value,'USD','existing plan currency is not overwritten');
+  assert.match(controls.planningCurrencyStatus.textContent,/current USD plan was kept unchanged/);
+  assert.deepEqual(activated,['NZD'],'the populated plan does not activate a new currency');
+  assert.equal(synced.length,2,'only the safe empty-plan destination choice updates the custom selector');
 });
 
 test('saved-plan reports use the selected planning currency while transfer sender costs remain BDT',()=>{

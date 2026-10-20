@@ -18,7 +18,7 @@ The application does not connect to a bank, verify a manually entered provider q
 ### In scope
 
 - A browser planner with two modes: **All Study-Abroad Costs** and **Tuition Only**.
-- Planning in 12 supported currencies: BDT, USD, EUR, GBP, AUD, JPY, CAD, SEK, SGD, CNH, INR, and LKR.
+- Planning in 18 supported currencies: BDT, USD, EUR, GBP, AUD, JPY, CAD, SEK, SGD, CNH, INR, LKR, DKK, NZD, NOK, KRW, CHF, and AED. Bangladesh Bank reference rates remain available only for the 11 currencies published in its feed; the additional six currencies require a manually sourced rate.
 - Local, deterministic planning, contribution schedule, roadmap, stress scenarios, and report generation.
 - On-demand Bangladesh Bank reference-rate retrieval through a same-origin Vercel function.
 - Validation and ranking of student-entered transfer quotes.
@@ -89,7 +89,7 @@ The pages are static HTML, CSS, and browser JavaScript. Shared business rules ar
 
 ### Create a financial plan
 
-1. A new planning session begins with a choice from the 12 planning currencies. `planner.html` keeps financial inputs in the disabled and hidden `#planningDetails` fieldset until selection.
+1. A new planning session begins with a choice from the 18 planning currencies. `planner.html` keeps financial inputs in the disabled and hidden `#planningDetails` fieldset until selection. A signed-in profile's saved study destination selects its corridor and matching currency when the plan has no entries; a populated plan is preserved and the user is told why the preference was not applied.
 2. `app.js` updates labels using `Finance.CURRENCY_NAMES` and `Finance.CURRENCY_SYMBOLS`. The user enters tuition, rate/source/time, funds, costs, income/expenses, and a deadline.
 3. The planner converts selected-currency monetary entries to BDT for the finance engine. It passes tuition in the selected currency with a rate expressed as BDT per selected-currency unit.
 4. `lib/finance.js` validates the profile and calculates results locally. The planner stores validated inputs, not trusted calculated output, in tab `sessionStorage` through `lib/plan-state.js`.
@@ -98,6 +98,8 @@ The pages are static HTML, CSS, and browser JavaScript. Shared business rules ar
 ### Change planning currency
 
 When a populated unsaved planner session changes currency, `app.js` explains that it starts a new plan and requests confirmation. Cancel restores the previous selection. Confirm clears the current planner form and active plan state, then selects the new currency. Historical local roadmaps and explicit cloud-saved plans are separate records and keep their original currency.
+
+DKK, NZD, NOK, KRW, CHF, and AED are supported for manually sourced, timestamped rates only; Bangladesh Bank's published-rate feed continues to cover its existing 11 currencies.
 
 ### Compare provider quotes
 
